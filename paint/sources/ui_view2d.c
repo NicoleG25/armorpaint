@@ -13,6 +13,7 @@ f32                  _ui_view2d_render_tw;
 f32                  _ui_view2d_render_th;
 gpu_texture_t       *ui_view2d_grid          = NULL;
 bool                 ui_view2d_layer_touched = false;
+gpu_texture_t       *ui_view2d_tex           = NULL;
 
 void ui_view2d_init() {
 	ui_view2d_pipe = gpu_create_pipeline();
@@ -32,6 +33,30 @@ void ui_view2d_init() {
 	pipes_offset = 0;
 	pipes_get_constant_location("float4"); // empty
 	ui_view2d_channel_loc = pipes_get_constant_location("int");
+}
+
+void ui_view2d_capture_output(void *_) {
+	util_texture_capture_output(ui_view2d_tex, "tex_capture");
+}
+
+void ui_view2d_context_menu_draw() {
+	if (ui_menu_button(tr("Zoom to Fit"), "", ICON_NONE)) {
+		ui_view2d_pan_x         = 0.0;
+		ui_view2d_pan_y         = 0.0;
+		ui_view2d_pan_scale     = 1.0;
+		ui_view2d_hwnd->redraws = 2;
+	}
+	if (ui_menu_button(tr("Zoom to 100%"), "", ICON_NONE)) {
+		if (ui_view2d_tex != NULL) {
+			f32 wm              = fmin(ui_view2d_ww, ui_view2d_wh);
+			ui_view2d_pan_scale = ui_view2d_tex->width / (wm * 0.9);
+		}
+		ui_view2d_hwnd->redraws = 2;
+	}
+	ui_menu_separator();
+	if (ui_menu_button(tr("Capture Output"), "", ICON_PHOTO)) {
+		sys_notify_on_next_frame(&ui_view2d_capture_output, NULL);
+	}
 }
 
 void ui_view2d_draw_image(gpu_texture_t *image, f32 dx, f32 dy, f32 dw, f32 dh, i32 channel) {
@@ -278,6 +303,14 @@ void ui_view2d_render(void *_) {
 			edit_uvmap_update();
 		}
 
+		// Context menu
+		if (tex != NULL && ui->input_released_r && math_abs(ui->input_x - ui->input_started_x) < 2 && math_abs(ui->input_y - ui->input_started_y) < 2) {
+			gc_unroot(ui_view2d_tex);
+			ui_view2d_tex = tex;
+			gc_root(ui_view2d_tex);
+			ui_menu_draw(&ui_view2d_context_menu_draw, -1, -1);
+		}
+
 		// Menu
 		i32 top_y = ui_menu_top_y();
 		i32 ew    = math_floor(UI_ELEMENT_W());
@@ -402,10 +435,7 @@ void ui_view2d_render(void *_) {
 			if (tex != NULL) {
 				ui->_w            = math_floor(ew * 0.5 + 3);
 				i32 scale_percent = math_round((tw / (float)tex->width) * 100);
-				if (ui_text(string("%d%%", scale_percent), UI_ALIGN_LEFT, 0x00000000) == UI_STATE_STARTED) {
-					f32 wm              = fmin(ui_view2d_ww, ui_view2d_wh);
-					ui_view2d_pan_scale = tex->width / (float)(wm * 0.9);
-				}
+				ui_text(string("%d%%", scale_percent), UI_ALIGN_LEFT, 0x00000000);
 				ui->_x += ew * 0.5 + 3;
 				ui->_y = 2 + start_y;
 			}
