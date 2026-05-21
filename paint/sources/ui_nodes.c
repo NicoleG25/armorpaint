@@ -319,30 +319,7 @@ void ui_nodes_capture_output() {
 	ui_nodes_t       *ui_nodes = ui_nodes_get_nodes();
 	ui_node_canvas_t *c        = ui_nodes_get_canvas(true);
 	ui_node_t        *sel      = ui_get_node(c->nodes, ui_nodes->nodes_selected_id->buffer[0]);
-	gpu_texture_t    *img      = ui_nodes_get_node_preview_image(sel);
-	if (img == NULL) {
-		return;
-	}
-
-	if (g_project->packed_assets == NULL) {
-		g_project->packed_assets = any_array_create_from_raw((void *[]){}, 0);
-	}
-
-	i32   num = 0;
-	char *abs = "/packed/node_preview0.png";
-	for (i32 i = 0; i < g_project->packed_assets->length; ++i) {
-		packed_asset_t *pa = g_project->packed_assets->buffer[i];
-		if (string_equals(pa->name, abs)) {
-			i = 0;
-			num++;
-			abs = string("/packed/node_preview%d.png", num);
-		}
-	}
-
-	packed_asset_t *pa = GC_ALLOC_INIT(packed_asset_t, {.name = abs, .bytes = iron_encode_png(gpu_get_texture_pixels(img), img->width, img->height, 0)});
-	any_array_push(g_project->packed_assets, pa);
-	any_map_set(data_cached_images, abs, img);
-	import_texture_run(abs, true);
+	util_texture_capture_output(ui_nodes_get_node_preview_image(sel), "node_preview");
 }
 
 void ui_viewnodes_on_canvas_capture_output(void *_) {
@@ -1287,7 +1264,7 @@ void ui_nodes_render(void *_) {
 			_ui_nodes_render_tmp = ui_nodes->color_picker_callback;
 			gc_root(_ui_nodes_render_tmp);
 			g_context->color_picker_callback = &ui_nodes_render_color_picker_callback;
-			ui_nodes->color_picker_callback = NULL;
+			ui_nodes->color_picker_callback  = NULL;
 		}
 
 		// Remove nodes with unknown id for this canvas type

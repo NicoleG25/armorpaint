@@ -202,6 +202,7 @@
 #include "util_mesh.c"
 #include "util_particle.c"
 #include "util_render.c"
+#include "util_texture.c"
 #include "util_uv.c"
 #include "viewport.c"
 

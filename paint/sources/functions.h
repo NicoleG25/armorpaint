@@ -592,6 +592,7 @@ void                         util_uv_cache_uv_map();
 void                         util_uv_cache_triangle_map();
 void                         util_uv_cache_dilate_map();
 void                         util_uv_cache_uv_island_map();
+void                         util_texture_capture_output(gpu_texture_t *img, char *basename);
 void                         render_path_raytrace_init();
 void                         render_path_raytrace_raytrace_init(char *shader_name, bool build);
 void                         render_path_raytrace_draw(bool use_live_layer);
