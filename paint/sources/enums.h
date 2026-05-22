@@ -382,7 +382,7 @@ typedef enum {
 	ICON_LAYER_NEW        = 77,
 	ICON_WINDOW           = 78,
 	ICON_GESTURE          = 79,
-	ICON_FLAG             = 80,
+	ICON_NODES            = 80,
 	ICON_CURVE            = 81,
 	ICON_PATH             = 82,
 	ICON_ACCOUNT          = 83,

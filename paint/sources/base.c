@@ -2104,7 +2104,7 @@ tab_draw_array_t_array_t *ui_base_init_hwnd_tabs() {
 	tab_draw_array_t *a0 = any_array_create_from_raw(
 	    (void *[]){
 	        _draw_callback_create(tab_layers_draw),
-	        _draw_callback_create(tab_history_draw),
+	        _draw_callback_create(tab_stages_draw),
 	        _draw_callback_create(tab_scripts_draw),
 	    },
 	    3);

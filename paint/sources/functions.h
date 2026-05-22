@@ -364,7 +364,7 @@ char                     *strings_failed_to_read_mesh_data();
 char                     *strings_check_internet_connection();
 char                     *strings_asset_already_imported();
 char                     *strings_graphics_api();
-void                      tab_history_draw(ui_handle_t *htab);
+void                      tab_stages_draw(ui_handle_t *htab);
 void                      project_open();
 void                      project_save(bool save_and_quit);
 void                      project_save_as(bool save_and_quit);
