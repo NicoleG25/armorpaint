@@ -198,9 +198,13 @@ void config_init() {
 #else
 		g_config->keymap = "default.json";
 #endif
-		g_config->theme                = "default.json";
-		g_config->server               = "https://cloud.armory3d.com";
-		g_config->undo_steps           = 4;
+		g_config->theme  = "default.json";
+		g_config->server = "https://cloud.armory3d.com";
+#if defined(IRON_ANDROID) || defined(IRON_IOS)
+		g_config->undo_steps = 4;
+#else
+		g_config->undo_steps = 6;
+#endif
 		g_config->pressure_radius      = true;
 		g_config->pressure_sensitivity = 2.0;
 		g_config->camera_fov           = 0.69;
