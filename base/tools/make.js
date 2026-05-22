@@ -1536,7 +1536,7 @@ class XCodeExporter extends Exporter {
 		this.p('GCC_WARN_UNUSED_FUNCTION = YES;', 4);
 		this.p('GCC_WARN_UNUSED_VARIABLE = YES;', 4);
 		if (platform === 'ios') {
-			this.p('IPHONEOS_DEPLOYMENT_TARGET = 16.0;', 4);
+			this.p('IPHONEOS_DEPLOYMENT_TARGET = 18.0;', 4);
 		}
 		else {
 			this.p('MACOSX_DEPLOYMENT_TARGET = 13.0;', 4);
