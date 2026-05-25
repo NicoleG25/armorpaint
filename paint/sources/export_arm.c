@@ -494,13 +494,15 @@ void export_arm_run_brush(char *path) {
 	    project_t,
 	    {.version = manifest_version_project, .brush_nodes = bnodes, .brush_icons = bicons, .assets = texture_files, .packed_assets = packed_assets});
 
-	if (g_context->write_icon_on_export) { // Separate icon file
-		buffer_t *buf = export_arm_rgba64_to_rgba32(gpu_get_texture_pixels(b->image));
+	if (g_context->write_icon_on_export) { // Separate icon files
+		buffer_t *buf = gpu_get_texture_pixels(b->image);
 #ifdef IRON_BGRA
 		buf = export_arm_bgra_swap(buf);
 #endif
 		iron_write_png(string("%s_icon.png", substring(path, 0, string_length(path) - 4)), buf, b->image->width, b->image->height, 0);
+		iron_write_jpg(string("%s_icon.jpg", substring(path, 0, string_length(path) - 4)), buf, b->image->width, b->image->height, 0, 50);
 	}
+
 
 	if (g_context->pack_assets_on_export) { // Pack textures
 		export_arm_pack_assets(raw, assets);

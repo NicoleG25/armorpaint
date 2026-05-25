@@ -9,6 +9,7 @@ void tab_brushes_draw_make_brush_preview(void *_) {
 	slot_brush_t *_brush = g_context->brush;
 	g_context->brush     = project_brushes->buffer[i];
 	make_material_parse_brush();
+	brush_output_node_parse_inputs();
 	util_render_make_brush_preview();
 	g_context->brush = _brush;
 }
