@@ -705,22 +705,23 @@ void render_path_paint_commands_cursor() {
 
 	f32 mx = g_context->paint_vec.x;
 	f32 my = 1.0 - g_context->paint_vec.y;
+	f32 brush_nodes_radius = 1.0; // g_context->brush_nodes_radius; // Prevent cursor jumping constantly if randomness is used in brush nodes
 
 	if (context_is_decal() && !g_context->paint2d) {
 		f32            scale2d = (900 / (f32)base_h()) * g_config->window_scale;
-		f32            radius  = g_context->brush_nodes_radius * g_context->brush_radius / 15.0 * scale2d * 2.0;
+		f32            radius  = brush_nodes_radius * g_context->brush_radius / 15.0 * scale2d * 2.0;
 		f32            cmx     = decal_mask ? g_context->decal_x : mx;
 		f32            cmy     = decal_mask ? 1.0f - g_context->decal_y : my;
 		gpu_texture_t *image   = g_context->decal_image;
 		render_path_paint_draw_cursor_decal(cmx, cmy, radius, decal_mask ? 0.3f : 0.9f, image);
 		if (decal_mask) {
-			render_path_paint_draw_cursor(mx, my, g_context->brush_nodes_radius * g_context->brush_decal_mask_radius / 3.4, 1.0, 1.0, 1.0);
+			render_path_paint_draw_cursor(mx, my, brush_nodes_radius * g_context->brush_decal_mask_radius / 3.4, 1.0, 1.0, 1.0);
 		}
 		return;
 	}
 
 	f32 radius = decal_mask ? g_context->brush_decal_mask_radius : g_context->brush_radius;
-	render_path_paint_draw_cursor(mx, my, g_context->brush_nodes_radius * radius / 3.4, 1.0, 1.0, 1.0);
+	render_path_paint_draw_cursor(mx, my, brush_nodes_radius * radius / 3.4, 1.0, 1.0, 1.0);
 }
 
 bool render_path_paint_paint_enabled() {
