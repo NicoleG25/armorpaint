@@ -316,6 +316,18 @@ void tab_meshes_draw_edit() {
 	if (g_config->experimental && ui_menu_button(tr("Decimate"), "", ICON_NONE)) {
 		util_mesh_decimate(0.5);
 	}
+
+	if (g_config->experimental && ui_menu_button(tr("Smooth"), "", ICON_NONE)) {
+		util_mesh_smooth();
+	}
+
+	if (g_config->experimental && ui_menu_button(tr("Subdivide"), "", ICON_NONE)) {
+		util_mesh_subdivide();
+	}
+
+	if (g_config->experimental && ui_menu_button(tr("Bevel"), "", ICON_NONE)) {
+		util_mesh_bevel(0.1);
+	}
 }
 
 void tab_meshes_append_shape(char *mesh_name) {

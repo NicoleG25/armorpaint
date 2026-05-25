@@ -585,3 +585,532 @@ void util_mesh_pack_uvs(i16_array_t *texa) {
 		texa->buffer[i * 2 + 1] = texa->buffer[i * 2 + 1] / (float)atlas_stride + item_y;
 	}
 }
+
+static i32 *_cc_he_vlo;
+static i32 *_cc_he_vhi;
+
+static i32 _util_mesh_subdivide_sort(i32 *pa, i32 *pb) {
+	i32 a    = *pa;
+	i32 b    = *pb;
+	i32 diff = _cc_he_vlo[a] - _cc_he_vlo[b];
+	if (diff != 0)
+		return diff;
+	return _cc_he_vhi[a] - _cc_he_vhi[b];
+}
+
+void util_mesh_smooth() {
+	mesh_object_t *o        = project_paint_objects->buffer[0];
+	mesh_data_t   *g        = o->data;
+	i16_array_t   *va0      = g->vertex_arrays->buffer[0]->values;
+	u32_array_t   *oinda    = g->index_array;
+	i32            overts   = math_floor(va0->length / 4.0);
+	i32            num_tris = math_floor(oinda->length / 3.0);
+
+	// Position-weld
+	i32_array_t *weld_sort = i32_array_create(overts);
+	for (i32 i = 0; i < overts; ++i)
+		weld_sort->buffer[i] = i;
+	gc_unroot(util_mesh_va0);
+	util_mesh_va0 = va0;
+	gc_root(util_mesh_va0);
+	i32_array_sort(weld_sort, &util_mesh_calc_normals_sort);
+
+	i32_array_t *weld_id = i32_array_create(overts);
+	if (overts > 0) {
+		i32 rep              = weld_sort->buffer[0];
+		weld_id->buffer[rep] = rep;
+		for (i32 i = 1; i < overts; ++i) {
+			i32 curr = weld_sort->buffer[i];
+			i32 prev = weld_sort->buffer[i - 1];
+			if (va0->buffer[curr * 4] == va0->buffer[prev * 4] && va0->buffer[curr * 4 + 1] == va0->buffer[prev * 4 + 1] &&
+			    va0->buffer[curr * 4 + 2] == va0->buffer[prev * 4 + 2]) {
+				weld_id->buffer[curr] = rep;
+			}
+			else {
+				rep                   = curr;
+				weld_id->buffer[curr] = rep;
+			}
+		}
+	}
+
+	i32_array_t *compact_id = i32_array_create(overts);
+	i32          num_verts  = 0;
+	for (i32 i = 0; i < overts; ++i)
+		if (weld_id->buffer[i] == i)
+			compact_id->buffer[i] = num_verts++;
+	for (i32 i = 0; i < overts; ++i)
+		if (weld_id->buffer[i] != i)
+			compact_id->buffer[i] = compact_id->buffer[weld_id->buffer[i]];
+
+	// Build half-edges on compact vertices
+	i32          num_he = num_tris * 3;
+	i32_array_t *he_vlo = i32_array_create(num_he);
+	i32_array_t *he_vhi = i32_array_create(num_he);
+
+	for (i32 t = 0; t < num_tris; ++t) {
+		i32 v[3] = {(i32)compact_id->buffer[oinda->buffer[t * 3]], (i32)compact_id->buffer[oinda->buffer[t * 3 + 1]],
+		            (i32)compact_id->buffer[oinda->buffer[t * 3 + 2]]};
+		for (i32 k = 0; k < 3; ++k) {
+			i32 a = v[k], b = v[(k + 1) % 3];
+			i32 h             = t * 3 + k;
+			he_vlo->buffer[h] = a < b ? a : b;
+			he_vhi->buffer[h] = a < b ? b : a;
+		}
+	}
+
+	i32_array_t *he_order = i32_array_create(num_he);
+	for (i32 i = 0; i < num_he; ++i)
+		he_order->buffer[i] = i;
+	_cc_he_vlo = he_vlo->buffer;
+	_cc_he_vhi = he_vhi->buffer;
+	i32_array_sort(he_order, &_util_mesh_subdivide_sort);
+
+	i32 num_edges = 0;
+	for (i32 i = 0; i < num_he;) {
+		i32 j = i + 1;
+		while (j < num_he && he_vlo->buffer[he_order->buffer[j]] == he_vlo->buffer[he_order->buffer[i]] &&
+		       he_vhi->buffer[he_order->buffer[j]] == he_vhi->buffer[he_order->buffer[i]])
+			++j;
+		num_edges++;
+		i = j;
+	}
+
+	i32_array_t *edge_vlo = i32_array_create(num_edges);
+	i32_array_t *edge_vhi = i32_array_create(num_edges);
+	i32_array_t *edge_bnd = i32_array_create(num_edges);
+
+	i32 ei = 0;
+	for (i32 i = 0; i < num_he;) {
+		i32 j = i + 1;
+		while (j < num_he && he_vlo->buffer[he_order->buffer[j]] == he_vlo->buffer[he_order->buffer[i]] &&
+		       he_vhi->buffer[he_order->buffer[j]] == he_vhi->buffer[he_order->buffer[i]])
+			++j;
+		i32 h0               = he_order->buffer[i];
+		edge_vlo->buffer[ei] = he_vlo->buffer[h0];
+		edge_vhi->buffer[ei] = he_vhi->buffer[h0];
+		edge_bnd->buffer[ei] = (j - i < 2) ? 1 : 0;
+		ei++;
+		i = j;
+	}
+
+	// Normalized float positions for compact vertices
+	f32_array_t *np = f32_array_create(num_verts * 3);
+	for (i32 i = 0; i < overts; ++i) {
+		if (weld_id->buffer[i] == i) {
+			i32 ci                 = compact_id->buffer[i];
+			np->buffer[ci * 3]     = va0->buffer[i * 4] / 32767.0f;
+			np->buffer[ci * 3 + 1] = va0->buffer[i * 4 + 1] / 32767.0f;
+			np->buffer[ci * 3 + 2] = va0->buffer[i * 4 + 2] / 32767.0f;
+		}
+	}
+
+	f32_array_t *vsum  = f32_array_create(num_verts * 3);
+	f32_array_t *vbsum = f32_array_create(num_verts * 3);
+	i32_array_t *vn    = i32_array_create(num_verts);
+	i32_array_t *vbn   = i32_array_create(num_verts);
+
+	for (i32 e = 0; e < num_edges; ++e) {
+		i32 vlo = edge_vlo->buffer[e];
+		i32 vhi = edge_vhi->buffer[e];
+		vsum->buffer[vlo * 3] += np->buffer[vhi * 3];
+		vsum->buffer[vlo * 3 + 1] += np->buffer[vhi * 3 + 1];
+		vsum->buffer[vlo * 3 + 2] += np->buffer[vhi * 3 + 2];
+		vsum->buffer[vhi * 3] += np->buffer[vlo * 3];
+		vsum->buffer[vhi * 3 + 1] += np->buffer[vlo * 3 + 1];
+		vsum->buffer[vhi * 3 + 2] += np->buffer[vlo * 3 + 2];
+		vn->buffer[vlo]++;
+		vn->buffer[vhi]++;
+		if (edge_bnd->buffer[e]) {
+			vbsum->buffer[vlo * 3] += np->buffer[vhi * 3];
+			vbsum->buffer[vlo * 3 + 1] += np->buffer[vhi * 3 + 1];
+			vbsum->buffer[vlo * 3 + 2] += np->buffer[vhi * 3 + 2];
+			vbsum->buffer[vhi * 3] += np->buffer[vlo * 3];
+			vbsum->buffer[vhi * 3 + 1] += np->buffer[vlo * 3 + 1];
+			vbsum->buffer[vhi * 3 + 2] += np->buffer[vlo * 3 + 2];
+			vbn->buffer[vlo]++;
+			vbn->buffer[vhi]++;
+		}
+	}
+
+	for (i32 vi = 0; vi < num_verts; ++vi) {
+		i32 n = vn->buffer[vi];
+		if (n == 0)
+			continue;
+		f32 vx = np->buffer[vi * 3], vy = np->buffer[vi * 3 + 1], vz = np->buffer[vi * 3 + 2];
+		if (vbn->buffer[vi] == 0) {
+			f32 tmp                = 3.0f / 8.0f + 0.25f * math_cos(2.0f * math_pi() / (f32)n);
+			f32 s                  = 5.0f / 8.0f - tmp * tmp;
+			f32 beta               = s / (f32)n;
+			np->buffer[vi * 3]     = (1.0f - s) * vx + beta * vsum->buffer[vi * 3];
+			np->buffer[vi * 3 + 1] = (1.0f - s) * vy + beta * vsum->buffer[vi * 3 + 1];
+			np->buffer[vi * 3 + 2] = (1.0f - s) * vz + beta * vsum->buffer[vi * 3 + 2];
+		}
+		else if (vbn->buffer[vi] == 2) {
+			np->buffer[vi * 3]     = 0.75f * vx + 0.125f * vbsum->buffer[vi * 3];
+			np->buffer[vi * 3 + 1] = 0.75f * vy + 0.125f * vbsum->buffer[vi * 3 + 1];
+			np->buffer[vi * 3 + 2] = 0.75f * vz + 0.125f * vbsum->buffer[vi * 3 + 2];
+		}
+	}
+
+	for (i32 i = 0; i < overts; ++i) {
+		i32 ci                 = compact_id->buffer[i];
+		va0->buffer[i * 4]     = (i16)math_floor(np->buffer[ci * 3] * 32767.0f);
+		va0->buffer[i * 4 + 1] = (i16)math_floor(np->buffer[ci * 3 + 1] * 32767.0f);
+		va0->buffer[i * 4 + 2] = (i16)math_floor(np->buffer[ci * 3 + 2] * 32767.0f);
+	}
+
+	util_mesh_calc_normals(true);
+#ifdef WITH_PLUGINS
+	plugin_uv_unwrap_button();
+#endif
+}
+
+void util_mesh_bevel(f32 amount) {
+	mesh_object_t *o         = project_paint_objects->buffer[0];
+	mesh_data_t   *g         = o->data;
+	i16_array_t   *va0       = g->vertex_arrays->buffer[0]->values;
+	i16_array_t   *va2       = g->vertex_arrays->buffer[2]->values;
+	u32_array_t   *inda      = g->index_array;
+	i32            num_verts = math_floor(va0->length / 4.0);
+	i32            num_tris  = math_floor(inda->length / 3.0);
+
+	if (amount < 0.0f)
+		amount = 0.0f;
+	if (amount > 0.49f)
+		amount = 0.49f;
+
+	// Position-weld
+	i32_array_t *weld_sort = i32_array_create(num_verts);
+	for (i32 i = 0; i < num_verts; ++i)
+		weld_sort->buffer[i] = i;
+	gc_unroot(util_mesh_va0);
+	util_mesh_va0 = va0;
+	gc_root(util_mesh_va0);
+	i32_array_sort(weld_sort, &util_mesh_calc_normals_sort);
+
+	i32_array_t *weld_id = i32_array_create(num_verts);
+	if (num_verts > 0) {
+		i32 rep              = weld_sort->buffer[0];
+		weld_id->buffer[rep] = rep;
+		for (i32 i = 1; i < num_verts; ++i) {
+			i32 curr = weld_sort->buffer[i];
+			i32 prev = weld_sort->buffer[i - 1];
+			if (va0->buffer[curr * 4] == va0->buffer[prev * 4] && va0->buffer[curr * 4 + 1] == va0->buffer[prev * 4 + 1] &&
+			    va0->buffer[curr * 4 + 2] == va0->buffer[prev * 4 + 2]) {
+				weld_id->buffer[curr] = rep;
+			}
+			else {
+				rep                   = curr;
+				weld_id->buffer[curr] = rep;
+			}
+		}
+	}
+
+	// One integer per unique position
+	i32_array_t *compact_id  = i32_array_create(num_verts);
+	i32          num_compact = 0;
+	for (i32 i = 0; i < num_verts; ++i)
+		if (weld_id->buffer[i] == i)
+			compact_id->buffer[i] = num_compact++;
+	for (i32 i = 0; i < num_verts; ++i)
+		if (weld_id->buffer[i] != i)
+			compact_id->buffer[i] = compact_id->buffer[weld_id->buffer[i]];
+
+	i32          inner_base  = num_verts;
+	i32          cap_base    = num_verts + num_tris * 3;
+	i32          total_verts = cap_base + num_compact;
+	i16_array_t *new_va0     = i16_array_create(total_verts * 4);
+	i16_array_t *new_va1     = i16_array_create(total_verts * 2);
+	i16_array_t *new_va2     = i16_array_create(total_verts * 2);
+
+	for (i32 i = 0; i < num_verts; ++i) {
+		new_va0->buffer[i * 4]     = va0->buffer[i * 4];
+		new_va0->buffer[i * 4 + 1] = va0->buffer[i * 4 + 1];
+		new_va0->buffer[i * 4 + 2] = va0->buffer[i * 4 + 2];
+		new_va0->buffer[i * 4 + 3] = 0;
+		new_va2->buffer[i * 2]     = va2->buffer[i * 2];
+		new_va2->buffer[i * 2 + 1] = va2->buffer[i * 2 + 1];
+	}
+
+	for (i32 t = 0; t < num_tris; ++t) {
+		i32 i0  = inda->buffer[t * 3];
+		i32 i1  = inda->buffer[t * 3 + 1];
+		i32 i2  = inda->buffer[t * 3 + 2];
+		f32 cx  = (va0->buffer[i0 * 4] + va0->buffer[i1 * 4] + va0->buffer[i2 * 4]) / 3.0f;
+		f32 cy  = (va0->buffer[i0 * 4 + 1] + va0->buffer[i1 * 4 + 1] + va0->buffer[i2 * 4 + 1]) / 3.0f;
+		f32 cz  = (va0->buffer[i0 * 4 + 2] + va0->buffer[i1 * 4 + 2] + va0->buffer[i2 * 4 + 2]) / 3.0f;
+		f32 ctx = (va2->buffer[i0 * 2] + va2->buffer[i1 * 2] + va2->buffer[i2 * 2]) / 3.0f;
+		f32 cty = (va2->buffer[i0 * 2 + 1] + va2->buffer[i1 * 2 + 1] + va2->buffer[i2 * 2 + 1]) / 3.0f;
+		for (i32 k = 0; k < 3; ++k) {
+			i32 vi                      = inda->buffer[t * 3 + k];
+			i32 ni                      = inner_base + t * 3 + k;
+			new_va0->buffer[ni * 4]     = (i16)math_floor(va0->buffer[vi * 4] * (1.0f - amount) + cx * amount);
+			new_va0->buffer[ni * 4 + 1] = (i16)math_floor(va0->buffer[vi * 4 + 1] * (1.0f - amount) + cy * amount);
+			new_va0->buffer[ni * 4 + 2] = (i16)math_floor(va0->buffer[vi * 4 + 2] * (1.0f - amount) + cz * amount);
+			new_va0->buffer[ni * 4 + 3] = 0;
+			new_va2->buffer[ni * 2]     = (i16)math_floor(va2->buffer[vi * 2] * (1.0f - amount) + ctx * amount);
+			new_va2->buffer[ni * 2 + 1] = (i16)math_floor(va2->buffer[vi * 2 + 1] * (1.0f - amount) + cty * amount);
+		}
+	}
+
+	f32_array_t *cap_sx  = f32_array_create(num_compact);
+	f32_array_t *cap_sy  = f32_array_create(num_compact);
+	f32_array_t *cap_sz  = f32_array_create(num_compact);
+	f32_array_t *cap_su  = f32_array_create(num_compact);
+	f32_array_t *cap_sv  = f32_array_create(num_compact);
+	i32_array_t *cap_cnt = i32_array_create(num_compact);
+
+	for (i32 t = 0; t < num_tris; ++t) {
+		for (i32 k = 0; k < 3; ++k) {
+			i32 c  = compact_id->buffer[(i32)inda->buffer[t * 3 + k]];
+			i32 ni = inner_base + t * 3 + k;
+			cap_sx->buffer[c] += new_va0->buffer[ni * 4];
+			cap_sy->buffer[c] += new_va0->buffer[ni * 4 + 1];
+			cap_sz->buffer[c] += new_va0->buffer[ni * 4 + 2];
+			cap_su->buffer[c] += new_va2->buffer[ni * 2];
+			cap_sv->buffer[c] += new_va2->buffer[ni * 2 + 1];
+			cap_cnt->buffer[c]++;
+		}
+	}
+	for (i32 c = 0; c < num_compact; ++c) {
+		i32 ni  = cap_base + c;
+		i32 cnt = cap_cnt->buffer[c];
+		if (cnt > 0) {
+			new_va0->buffer[ni * 4]     = (i16)math_floor(cap_sx->buffer[c] / cnt);
+			new_va0->buffer[ni * 4 + 1] = (i16)math_floor(cap_sy->buffer[c] / cnt);
+			new_va0->buffer[ni * 4 + 2] = (i16)math_floor(cap_sz->buffer[c] / cnt);
+			new_va0->buffer[ni * 4 + 3] = 0;
+			new_va2->buffer[ni * 2]     = (i16)math_floor(cap_su->buffer[c] / cnt);
+			new_va2->buffer[ni * 2 + 1] = (i16)math_floor(cap_sv->buffer[c] / cnt);
+		}
+	}
+
+	i32          num_he = num_tris * 3;
+	i32_array_t *he_vlo = i32_array_create(num_he);
+	i32_array_t *he_vhi = i32_array_create(num_he);
+	i32_array_t *he_tri = i32_array_create(num_he);
+	i32_array_t *he_cor = i32_array_create(num_he);
+
+	for (i32 t = 0; t < num_tris; ++t) {
+		for (i32 k = 0; k < 3; ++k) {
+			i32 ca            = compact_id->buffer[inda->buffer[t * 3 + k]];
+			i32 cb            = compact_id->buffer[inda->buffer[t * 3 + (k + 1) % 3]];
+			i32 h             = t * 3 + k;
+			he_vlo->buffer[h] = ca < cb ? ca : cb;
+			he_vhi->buffer[h] = ca < cb ? cb : ca;
+			he_tri->buffer[h] = t;
+			he_cor->buffer[h] = k;
+		}
+	}
+
+	i32_array_t *he_order = i32_array_create(num_he);
+	for (i32 i = 0; i < num_he; ++i)
+		he_order->buffer[i] = i;
+	_cc_he_vlo = he_vlo->buffer;
+	_cc_he_vhi = he_vhi->buffer;
+	i32_array_sort(he_order, &_util_mesh_subdivide_sort);
+
+	u32_array_t *new_inda = u32_array_create_from_raw((u32[]){}, 0);
+
+	for (i32 t = 0; t < num_tris; ++t) {
+		u32_array_push(new_inda, (u32)(inner_base + t * 3));
+		u32_array_push(new_inda, (u32)(inner_base + t * 3 + 1));
+		u32_array_push(new_inda, (u32)(inner_base + t * 3 + 2));
+	}
+
+	for (i32 i = 0; i < num_he;) {
+		i32 j = i + 1;
+		while (j < num_he && he_vlo->buffer[he_order->buffer[j]] == he_vlo->buffer[he_order->buffer[i]] &&
+		       he_vhi->buffer[he_order->buffer[j]] == he_vhi->buffer[he_order->buffer[i]])
+			++j;
+
+		if (j - i >= 2) {
+			i32 h0   = he_order->buffer[i];
+			i32 h1   = he_order->buffer[i + 1];
+			i32 cvlo = he_vlo->buffer[h0];
+			i32 cvhi = he_vhi->buffer[h0];
+
+			i32 hf, hr;
+			if (compact_id->buffer[(i32)inda->buffer[he_tri->buffer[h0] * 3 + he_cor->buffer[h0]]] == cvlo) {
+				hf = h0;
+				hr = h1;
+			}
+			else {
+				hf = h1;
+				hr = h0;
+			}
+			i32 tf = he_tri->buffer[hf], kf = he_cor->buffer[hf];
+			i32 tr2 = he_tri->buffer[hr], kr2 = he_cor->buffer[hr];
+
+			i32 s0_vlo = inner_base + tf * 3 + kf;
+			i32 s0_vhi = inner_base + tf * 3 + (kf + 1) % 3;
+
+			i32 s1_vhi = inner_base + tr2 * 3 + kr2;
+			i32 s1_vlo = inner_base + tr2 * 3 + (kr2 + 1) % 3;
+
+			i32 cap_vlo = cap_base + cvlo;
+			i32 cap_vhi = cap_base + cvhi;
+
+			u32_array_push(new_inda, (u32)s0_vlo);
+			u32_array_push(new_inda, (u32)s1_vhi);
+			u32_array_push(new_inda, (u32)s0_vhi);
+			u32_array_push(new_inda, (u32)s0_vlo);
+			u32_array_push(new_inda, (u32)s1_vlo);
+			u32_array_push(new_inda, (u32)s1_vhi);
+
+			u32_array_push(new_inda, (u32)cap_vlo);
+			u32_array_push(new_inda, (u32)s1_vlo);
+			u32_array_push(new_inda, (u32)s0_vlo);
+
+			u32_array_push(new_inda, (u32)cap_vhi);
+			u32_array_push(new_inda, (u32)s0_vhi);
+			u32_array_push(new_inda, (u32)s1_vhi);
+		}
+
+		i = j;
+	}
+
+	mesh_data_t *raw      = GC_ALLOC_INIT(mesh_data_t, {.name          = string("%s_beveled", o->base->name),
+	                                                    .vertex_arrays = any_array_create_from_raw(
+                                                       (void *[]){
+                                                           GC_ALLOC_INIT(vertex_array_t, {.values = new_va0, .attrib = "pos", .data = "short4norm"}),
+                                                           GC_ALLOC_INIT(vertex_array_t, {.values = new_va1, .attrib = "nor", .data = "short2norm"}),
+                                                           GC_ALLOC_INIT(vertex_array_t, {.values = new_va2, .attrib = "tex", .data = "short2norm"}),
+                                                       },
+                                                       3),
+	                                                    .index_array = new_inda,
+	                                                    .scale_pos   = o->data->scale_pos,
+	                                                    .scale_tex   = 1.0});
+	mesh_data_t *new_data = mesh_data_create(raw);
+	o->data               = new_data;
+	util_mesh_calc_normals(true);
+#ifdef WITH_PLUGINS
+	plugin_uv_unwrap_button();
+#endif
+}
+
+void util_mesh_subdivide() {
+	mesh_object_t *o         = project_paint_objects->buffer[0];
+	mesh_data_t   *g         = o->data;
+	i16_array_t   *va0       = g->vertex_arrays->buffer[0]->values;
+	i16_array_t   *va2       = g->vertex_arrays->buffer[2]->values;
+	u32_array_t   *inda      = g->index_array;
+	i32            num_verts = math_floor(va0->length / 4.0);
+	i32            num_tris  = math_floor(inda->length / 3.0);
+
+	i32          num_he  = num_tris * 3;
+	i32_array_t *he_vlo  = i32_array_create(num_he);
+	i32_array_t *he_vhi  = i32_array_create(num_he);
+	i32_array_t *he_edge = i32_array_create(num_he);
+
+	for (i32 t = 0; t < num_tris; ++t) {
+		i32 v[3] = {(i32)inda->buffer[t * 3], (i32)inda->buffer[t * 3 + 1], (i32)inda->buffer[t * 3 + 2]};
+		for (i32 k = 0; k < 3; ++k) {
+			i32 a = v[k], b = v[(k + 1) % 3];
+			i32 h             = t * 3 + k;
+			he_vlo->buffer[h] = a < b ? a : b;
+			he_vhi->buffer[h] = a < b ? b : a;
+		}
+	}
+
+	i32_array_t *he_order = i32_array_create(num_he);
+	for (i32 i = 0; i < num_he; ++i)
+		he_order->buffer[i] = i;
+	_cc_he_vlo = he_vlo->buffer;
+	_cc_he_vhi = he_vhi->buffer;
+	i32_array_sort(he_order, &_util_mesh_subdivide_sort);
+
+	i32 num_edges = 0;
+	for (i32 i = 0; i < num_he;) {
+		i32 j = i + 1;
+		while (j < num_he && he_vlo->buffer[he_order->buffer[j]] == he_vlo->buffer[he_order->buffer[i]] &&
+		       he_vhi->buffer[he_order->buffer[j]] == he_vhi->buffer[he_order->buffer[i]])
+			++j;
+		num_edges++;
+		i = j;
+	}
+
+	i32_array_t *edge_vlo = i32_array_create(num_edges);
+	i32_array_t *edge_vhi = i32_array_create(num_edges);
+
+	i32 ei = 0;
+	for (i32 i = 0; i < num_he;) {
+		i32 j = i + 1;
+		while (j < num_he && he_vlo->buffer[he_order->buffer[j]] == he_vlo->buffer[he_order->buffer[i]] &&
+		       he_vhi->buffer[he_order->buffer[j]] == he_vhi->buffer[he_order->buffer[i]])
+			++j;
+		i32 h0               = he_order->buffer[i];
+		edge_vlo->buffer[ei] = he_vlo->buffer[h0];
+		edge_vhi->buffer[ei] = he_vhi->buffer[h0];
+		for (i32 k = i; k < j; ++k)
+			he_edge->buffer[he_order->buffer[k]] = ei;
+		ei++;
+		i = j;
+	}
+
+	i32          ep_base      = num_verts;
+	i32          num_new_vert = num_verts + num_edges;
+	i16_array_t *new_va0      = i16_array_create(num_new_vert * 4);
+	i16_array_t *new_va1      = i16_array_create(num_new_vert * 2);
+	i16_array_t *new_va2      = i16_array_create(num_new_vert * 2);
+	u32_array_t *new_inda     = u32_array_create(num_tris * 12);
+
+	for (i32 i = 0; i < num_verts; ++i) {
+		new_va0->buffer[i * 4]     = va0->buffer[i * 4];
+		new_va0->buffer[i * 4 + 1] = va0->buffer[i * 4 + 1];
+		new_va0->buffer[i * 4 + 2] = va0->buffer[i * 4 + 2];
+		new_va0->buffer[i * 4 + 3] = 0;
+		new_va2->buffer[i * 2]     = va2->buffer[i * 2];
+		new_va2->buffer[i * 2 + 1] = va2->buffer[i * 2 + 1];
+	}
+
+	for (i32 e = 0; e < num_edges; ++e) {
+		i32 vlo                      = edge_vlo->buffer[e];
+		i32 vhi                      = edge_vhi->buffer[e];
+		i32 epi                      = ep_base + e;
+		new_va0->buffer[epi * 4]     = (i16)math_floor((va0->buffer[vlo * 4] + va0->buffer[vhi * 4]) * 0.5f);
+		new_va0->buffer[epi * 4 + 1] = (i16)math_floor((va0->buffer[vlo * 4 + 1] + va0->buffer[vhi * 4 + 1]) * 0.5f);
+		new_va0->buffer[epi * 4 + 2] = (i16)math_floor((va0->buffer[vlo * 4 + 2] + va0->buffer[vhi * 4 + 2]) * 0.5f);
+		new_va0->buffer[epi * 4 + 3] = 0;
+		new_va2->buffer[epi * 2]     = (i16)math_floor((va2->buffer[vlo * 2] + va2->buffer[vhi * 2]) * 0.5f);
+		new_va2->buffer[epi * 2 + 1] = (i16)math_floor((va2->buffer[vlo * 2 + 1] + va2->buffer[vhi * 2 + 1]) * 0.5f);
+	}
+
+	for (i32 t = 0; t < num_tris; ++t) {
+		i32 v0 = inda->buffer[t * 3], v1 = inda->buffer[t * 3 + 1], v2 = inda->buffer[t * 3 + 2];
+		i32 e0                   = ep_base + he_edge->buffer[t * 3];
+		i32 e1                   = ep_base + he_edge->buffer[t * 3 + 1];
+		i32 e2                   = ep_base + he_edge->buffer[t * 3 + 2];
+		i32 b                    = t * 12;
+		new_inda->buffer[b]      = v0;
+		new_inda->buffer[b + 1]  = e0;
+		new_inda->buffer[b + 2]  = e2;
+		new_inda->buffer[b + 3]  = e0;
+		new_inda->buffer[b + 4]  = v1;
+		new_inda->buffer[b + 5]  = e1;
+		new_inda->buffer[b + 6]  = e2;
+		new_inda->buffer[b + 7]  = e1;
+		new_inda->buffer[b + 8]  = v2;
+		new_inda->buffer[b + 9]  = e0;
+		new_inda->buffer[b + 10] = e1;
+		new_inda->buffer[b + 11] = e2;
+	}
+
+	mesh_data_t *raw       = GC_ALLOC_INIT(mesh_data_t, {.name          = string("%s_subdivided", o->base->name),
+	                                                     .vertex_arrays = any_array_create_from_raw(
+                                                       (void *[]){
+                                                           GC_ALLOC_INIT(vertex_array_t, {.values = new_va0, .attrib = "pos", .data = "short4norm"}),
+                                                           GC_ALLOC_INIT(vertex_array_t, {.values = new_va1, .attrib = "nor", .data = "short2norm"}),
+                                                           GC_ALLOC_INIT(vertex_array_t, {.values = new_va2, .attrib = "tex", .data = "short2norm"}),
+                                                       },
+                                                       3),
+	                                                     .index_array = new_inda,
+	                                                     .scale_pos   = o->data->scale_pos,
+	                                                     .scale_tex   = 1.0});
+	mesh_data_t *new_data2 = mesh_data_create(raw);
+	o->data                = new_data2;
+	util_mesh_calc_normals(true);
+#ifdef WITH_PLUGINS
+	plugin_uv_unwrap_button();
+#endif
+}
