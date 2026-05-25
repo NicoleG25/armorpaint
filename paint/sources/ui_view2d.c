@@ -582,7 +582,7 @@ void ui_view2d_update(void *_) {
 		ui_view2d_pan_y += 5;
 	}
 
-	if (!g_context->paint2d && g_config->touch_ui && ui->input_down) {
+	if (!g_context->paint2d && g_config->touch_ui && ui->input_down && ui_view2d_type != VIEW_2D_TYPE_UVMAP) {
 		ui_view2d_pan_x += ui->input_dx;
 		ui_view2d_pan_y += ui->input_dy;
 	}
