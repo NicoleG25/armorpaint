@@ -176,9 +176,9 @@ f32 uniforms_ext_vec2d(f32 x) {
 vec4_t uniforms_ext_vec3_link(object_t *object, material_data_t *mat, char *link) {
 	vec4_t v = vec4_nan();
 	if (string_equals(link, "_brush_direction")) {
-		// Discard first paint for directional brush
-		bool allow_paint = g_context->prev_paint_vec_x != g_context->last_paint_vec_x && g_context->prev_paint_vec_y != g_context->last_paint_vec_y &&
-		                   g_context->prev_paint_vec_x > 0 && g_context->prev_paint_vec_y > 0;
+		// Discard first paint for directional brush (no prev position yet)
+		bool allow_paint = g_context->prev_paint_vec_x > 0 && g_context->prev_paint_vec_y > 0 &&
+		                   (g_context->prev_paint_vec_x != g_context->paint_vec.x || g_context->prev_paint_vec_y != g_context->paint_vec.y);
 		f32 x     = g_context->paint_vec.x;
 		f32 y     = g_context->paint_vec.y;
 		f32 lastx = g_context->prev_paint_vec_x;

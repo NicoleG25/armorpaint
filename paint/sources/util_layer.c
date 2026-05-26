@@ -115,6 +115,8 @@ static void path_paint_curved(f32_array_t *points, f32_array_t *points_world, f3
 		f32  prev_bwx = wx0;
 		f32  prev_bwy = wy0;
 		f32  prev_bwz = wz0;
+		g_context->prev_paint_vec_x = prev_px;
+		g_context->prev_paint_vec_y = prev_py;
 		if (sphere_mode) {
 			// Pre-sample bezier to build arc-length table, then paint at evenly-spaced positions
 			f32 sbx[33];
@@ -222,6 +224,8 @@ static void path_paint_straight(f32_array_t *points, f32_array_t *points_world, 
 			f32 len = sqrtf(dx * dx + dy * dy);
 			i32 n   = dot_spacing > 0.5f ? (i32)ceilf(len / dot_spacing) : 17;
 			n       = n < 1 ? 1 : n > 64 ? 64 : n;
+			g_context->prev_paint_vec_x = ppx;
+			g_context->prev_paint_vec_y = ppy;
 			for (i32 s = 1; s <= n; s++) {
 				f32 t   = s / (f32)n;
 				f32 iwx = pwx + t * (cwx - pwx);
