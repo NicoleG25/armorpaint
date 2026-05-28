@@ -78,6 +78,7 @@ void                      layers_merge_layer(slot_layer_t *l0, slot_layer_t *l1,
 slot_layer_t             *layers_flatten(bool height_to_normal, slot_layer_t_array_t *layers);
 void                      layers_on_resized();
 slot_font_t              *slot_font_create(char *name, draw_font_t *font, char *file);
+scene_t                  *startup_get_scene(void);
 buffer_t                 *util_encode_scene(scene_t *raw);
 buffer_t                 *util_encode_project(project_t *raw);
 void                      operator_register(char *name, void (*call)(void));

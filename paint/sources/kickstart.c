@@ -329,7 +329,12 @@ void _kickstart() {
 		config_init_layout();
 	}
 	iron_set_app_name(manifest_title);
+
+	data_cached_scene_raws = any_map_create();
+	gc_root(data_cached_scene_raws);
+	any_map_set(data_cached_scene_raws, "Scene", startup_get_scene());
 	scene_set_active("Scene");
+
 	uniforms_ext_init();
 	render_path_base_init();
 	render_path_deferred_init(); // Allocate gbuffer

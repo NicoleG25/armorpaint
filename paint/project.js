@@ -28,6 +28,7 @@ if (platform == "wasm") {
 
 let project = new Project(flags.name);
 project.add_project("../base");
+project.add_cfiles("sources/startup.c");
 project.add_cfiles("sources/main.c");
 project.add_shaders("shaders/*.kong");
 project.add_assets("assets/*", {destination : "data/{name}"});
