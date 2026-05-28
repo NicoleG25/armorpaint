@@ -4,8 +4,8 @@
 static slot_layer_t *path_layer_current      = NULL;
 static object_t    **path_point_spheres      = NULL;
 static i32           path_point_sphere_count = 0;
-static i32           path_point_dragging     = -1;
-static i32           path_layer_last_active  = -1;
+i32                  path_point_dragging     = -1;
+i32                  path_layer_last_active  = -1;
 
 bool util_layer_is_path_point_dragging() {
 	return path_point_dragging >= 0;
@@ -111,10 +111,10 @@ static void path_paint_curved(f32_array_t *points, f32_array_t *points_world, f3
 			project_to_screen((vec4_t){wx0, wy0, wz0, 1.0f}, &prev_px, &prev_py);
 		}
 
-		bool have_j   = j < num_camera;
-		f32  prev_bwx = wx0;
-		f32  prev_bwy = wy0;
-		f32  prev_bwz = wz0;
+		bool have_j                 = j < num_camera;
+		f32  prev_bwx               = wx0;
+		f32  prev_bwy               = wy0;
+		f32  prev_bwz               = wz0;
 		g_context->prev_paint_vec_x = prev_px;
 		g_context->prev_paint_vec_y = prev_py;
 		if (sphere_mode) {
@@ -217,13 +217,13 @@ static void path_paint_straight(f32_array_t *points, f32_array_t *points_world, 
 			f32 cwz = points_world->buffer[i * 3 + 2];
 			f32 ppx = cur_px, ppy = cur_py;
 			project_to_screen((vec4_t){pwx, pwy, pwz, 1.0f}, &ppx, &ppy);
-			prev_px = ppx;
-			prev_py = ppy;
-			f32 dx  = (cur_px - ppx) * (f32)sys_w();
-			f32 dy  = (cur_py - ppy) * (f32)sys_h();
-			f32 len = sqrtf(dx * dx + dy * dy);
-			i32 n   = dot_spacing > 0.5f ? (i32)ceilf(len / dot_spacing) : 17;
-			n       = n < 1 ? 1 : n > 64 ? 64 : n;
+			prev_px                     = ppx;
+			prev_py                     = ppy;
+			f32 dx                      = (cur_px - ppx) * (f32)sys_w();
+			f32 dy                      = (cur_py - ppy) * (f32)sys_h();
+			f32 len                     = sqrtf(dx * dx + dy * dy);
+			i32 n                       = dot_spacing > 0.5f ? (i32)ceilf(len / dot_spacing) : 17;
+			n                           = n < 1 ? 1 : n > 64 ? 64 : n;
 			g_context->prev_paint_vec_x = ppx;
 			g_context->prev_paint_vec_y = ppy;
 			for (i32 s = 1; s <= n; s++) {

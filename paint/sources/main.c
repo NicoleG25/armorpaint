@@ -159,6 +159,7 @@
 #include "project.c"
 #include "render_compass.c"
 #include "render_envsphere.c"
+#include "render_pathsphere.c"
 #include "render_gizmo.c"
 #include "render_path_base.c"
 #include "render_path_deferred.c"
