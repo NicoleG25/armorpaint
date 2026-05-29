@@ -91,42 +91,38 @@ string_array_t *text_to_image_node_qwen_args(char *dir, char *prompt) {
 	return argv;
 }
 
-string_array_t *text_to_image_node_wan_args(char *dir, char *prompt) {
+string_array_t *text_to_image_node_flux_klein_args(char *dir, char *prompt) {
 	string_array_t *argv = any_array_create_from_raw(
 	    (void *[]){
 	        string("%s/%s", dir, neural_node_sd_bin()),
-	        "-M",
-	        "vid_gen",
 	        "--diffusion-model",
-	        string("%s/Wan2.2-T2V-A14B-LowNoise-Q4_K_S.gguf", dir),
-	        "--high-noise-diffusion-model",
-	        string("%s/Wan2.2-T2V-A14B-HighNoise-Q4_K_S.gguf", dir),
+	        string("%s/flux-2-klein-4b-Q8_0.gguf", dir),
 	        "--vae",
-	        string("%s/Wan2.1_VAE.safetensors", dir),
-	        "--t5xxl",
-	        string("%s/umt5-xxl-encoder-Q4_K_S.gguf", dir),
+	        // string("%s/full_encoder_small_decoder.safetensors", dir),
+	        string("%s/flux_ae.safetensors", dir),
+	        "--llm",
+	        string("%s/Qwen3-4B-Q8_0.gguf", dir),
+	        "--cfg-scale",
+	        "1.0",
 	        "--sampling-method",
 	        "euler",
+	        "--diffusion-fa",
+	        "--offload-to-cpu",
 	        "--steps",
-	        "20",
-	        "--high-noise-sampling-method",
-	        "euler",
-	        "--high-noise-steps",
-	        "10",
+	        "4",
 	        "-W",
 	        "512",
 	        "-H",
 	        "512",
-	        "--offload-to-cpu",
 	        "-s",
 	        "-1",
 	        "-o",
 	        string("%s/output.png", dir),
 	        "-p",
-	        prompt,
+	        string("'%s'", prompt),
 	        NULL,
 	    },
-	    31);
+	    26);
 	return argv;
 }
 
@@ -150,7 +146,7 @@ void text_to_image_node_run(ui_node_t *node, void (*callback)(ui_node_t *)) {
 		argv = text_to_image_node_qwen_args(dir, prompt);
 	}
 	else {
-		argv = text_to_image_node_wan_args(dir, prompt);
+		argv = text_to_image_node_flux_klein_args(dir, prompt);
 	}
 	if (node->buttons->buffer[1]->default_value->buffer[0] > 0.0) {
 		array_insert(argv, argv->length - 1, "--circular");
@@ -168,7 +164,7 @@ void text_to_image_node_button(i32 node_id) {
             "Stable Diffusion",
             "Z-Image-Turbo",
             "Qwen Image",
-            "Wan",
+            "FLUX 2 klein",
         },
         4);
 	i32   model                      = ui_combo(ui_nest(h, 0), models, tr("Model"), false, UI_ALIGN_LEFT, true);

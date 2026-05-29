@@ -33,6 +33,21 @@ void neural_node_models_init() {
 	                                            .license = "apache-2.0"}),
 
 	        GC_ALLOC_INIT(neural_node_model_t,
+	                      {.name   = "FLUX 2 klein",
+	                       .memory = "4GB",
+	                       .size   = "8.2GB",
+	                       .nodes  = "Text to Image, Edit Image",
+	                       .urls   = any_array_create_from_raw(
+                               (void *[]){
+                                   "https://huggingface.co/leejet/FLUX.2-klein-4B-GGUF/resolve/main/flux-2-klein-4b-Q8_0.gguf",
+                                   "https://huggingface.co/black-forest-labs/FLUX.2-small-decoder/resolve/main/full_encoder_small_decoder.safetensors",
+                                   "https://huggingface.co/unsloth/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q8_0.gguf",
+                               },
+                               3),
+	                       .web     = "https://huggingface.co/leejet/FLUX.2-klein-4B-GGUF",
+	                       .license = "apache-2.0"}),
+
+	        GC_ALLOC_INIT(neural_node_model_t,
 	                      {.name   = "Qwen Image",
 	                       .memory = "13GB",
 	                       .size   = "16.9GB",
@@ -61,22 +76,6 @@ void neural_node_models_init() {
                                },
                                4),
 	                       .web     = "https://huggingface.co/unsloth/Qwen-Image-Edit-2511-GGUF",
-	                       .license = "apache-2.0"}),
-
-	        GC_ALLOC_INIT(neural_node_model_t,
-	                      {.name   = "Wan",
-	                       .memory = "10GB",
-	                       .size   = "21.3GB",
-	                       .nodes  = "Text to Image",
-	                       .urls   = any_array_create_from_raw(
-                               (void *[]){
-                                   "https://huggingface.co/QuantStack/Wan2.2-T2V-A14B-GGUF/resolve/main/LowNoise/Wan2.2-T2V-A14B-LowNoise-Q4_K_S.gguf",
-                                   "https://huggingface.co/QuantStack/Wan2.2-T2V-A14B-GGUF/resolve/main/HighNoise/Wan2.2-T2V-A14B-HighNoise-Q4_K_S.gguf",
-                                   "https://huggingface.co/QuantStack/Wan2.2-T2V-A14B-GGUF/resolve/main/VAE/Wan2.1_VAE.safetensors",
-                                   "https://huggingface.co/city96/umt5-xxl-encoder-gguf/resolve/main/umt5-xxl-encoder-Q4_K_S.gguf",
-                               },
-                               4),
-	                       .web     = "https://huggingface.co/QuantStack/Wan2.2-T2V-A14B-GGUF",
 	                       .license = "apache-2.0"}),
 
 	        GC_ALLOC_INIT(neural_node_model_t,
@@ -119,14 +118,14 @@ void neural_node_models_init() {
 	                                            .web     = "https://huggingface.co/armory3d/hunyuan3d21_portable",
 	                                            .license = "hunyuan3d"}),
 
-			GC_ALLOC_INIT(neural_node_model_t, {.name   = "Qwen",
+	        GC_ALLOC_INIT(neural_node_model_t, {.name   = "Qwen",
 	                                            .memory = "16GB",
 	                                            .size   = "15.7GB",
 	                                            .nodes  = "Text to Text, Console",
 	                                            .urls   = any_array_create_from_raw(
                                                     (void *[]){
-														"https://huggingface.co/unsloth/Qwen3.6-27B-GGUF/resolve/main/Qwen3.6-27B-Q4_K_M.gguf",
-														// "https://huggingface.co/unsloth/Qwen3.6-27B-GGUF/resolve/main/mmproj-F16.gguf",
+                                                        "https://huggingface.co/unsloth/Qwen3.6-27B-GGUF/resolve/main/Qwen3.6-27B-Q4_K_M.gguf",
+                                                        // "https://huggingface.co/unsloth/Qwen3.6-27B-GGUF/resolve/main/mmproj-F16.gguf",
                                                     },
                                                     1),
 	                                            .web     = "https://huggingface.co/unsloth/Qwen3.6-27B-GGUF",

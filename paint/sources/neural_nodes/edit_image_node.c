@@ -1,19 +1,91 @@
 
 #include "../global.h"
 
+static string_array_t *edit_image_node_qwen_args(char *dir, char *prompt) {
+	string_array_t *argv = any_array_create_from_raw(
+	    (void *[]){
+	        string("%s/%s", dir, neural_node_sd_bin()),
+	        "--diffusion-model",
+	        string("%s/qwen-image-edit-2511-Q4_K_S.gguf", dir),
+	        "--vae",
+	        string("%s/Qwen_Image-VAE.safetensors", dir),
+	        "--llm",
+	        string("%s/Qwen2.5-VL-7B-Instruct-Q4_K_S.gguf", dir),
+	        "--llm_vision",
+	        string("%s/mmproj-F16.gguf", dir),
+	        "--offload-to-cpu",
+	        "--diffusion-fa",
+	        "--steps",
+	        "30",
+	        "-s",
+	        "-1",
+	        "--cfg-scale",
+	        "2.5",
+	        "--flow-shift",
+	        "3",
+	        "--qwen-image-zero-cond-t",
+	        "-W",
+	        "512",
+	        "-H",
+	        "512",
+	        "-p",
+	        prompt,
+	        "-r",
+	        string("%s/input.png", dir),
+	        "-o",
+	        string("%s/output.png", dir),
+	        NULL,
+	    },
+	    31);
+	return argv;
+}
+
+static string_array_t *edit_image_node_flux_klein_args(char *dir, char *prompt) {
+	string_array_t *argv = any_array_create_from_raw(
+	    (void *[]){
+	        string("%s/%s", dir, neural_node_sd_bin()),
+	        "--diffusion-model",
+	        string("%s/flux-2-klein-4b-Q8_0.gguf", dir),
+	        "--vae",
+	        // string("%s/full_encoder_small_decoder.safetensors", dir),
+	        string("%s/flux_ae.safetensors", dir),
+	        "--llm",
+	        string("%s/Qwen3-4B-Q8_0.gguf", dir),
+	        "--cfg-scale",
+	        "1.0",
+	        "--sampling-method",
+	        "euler",
+	        "--diffusion-fa",
+	        "--offload-to-cpu",
+	        "--steps",
+	        "4",
+	        "-s",
+	        "-1",
+	        "-W",
+	        "512",
+	        "-H",
+	        "512",
+	        "-r",
+	        string("%s/input.png", dir),
+	        "-p",
+	        prompt,
+	        "-o",
+	        string("%s/output.png", dir),
+	        NULL,
+	    },
+	    28);
+	return argv;
+}
+
 void edit_image_node_button(i32 node_id) {
 	ui_node_canvas_t *canvas    = ui_nodes_get_canvas(true);
 	ui_node_t        *node      = ui_get_node(canvas->nodes, node_id);
 	char             *node_name = parser_material_node_name(node, NULL);
 	ui_handle_t      *h         = ui_handle(node_name);
 
-	string_array_t *models = any_array_create_from_raw(
-	    (void *[]){
-	        "Qwen Image Edit",
-	    },
-	    1);
-	i32   model                      = ui_combo(ui_nest(h, 0), models, tr("Model"), false, UI_ALIGN_LEFT, true);
-	char *prompt                     = ui_text_area(ui_nest(h, 1), UI_ALIGN_LEFT, true, tr("prompt"), true);
+	string_array_t *models           = any_array_create_from_raw((void *[]){"Qwen Image Edit", "FLUX 2 klein"}, 2);
+	i32             model            = ui_combo(ui_nest(h, 0), models, tr("Model"), false, UI_ALIGN_LEFT, true);
+	char           *prompt           = ui_text_area(ui_nest(h, 1), UI_ALIGN_LEFT, true, tr("prompt"), true);
 	node->buttons->buffer[0]->height = string_split(prompt, "\n")->length + 2;
 
 	if (neural_node_button(node, models->buffer[model])) {
@@ -33,41 +105,13 @@ void edit_image_node_button(i32 node_id) {
 				prompt = ".";
 			}
 
-			string_array_t *argv = any_array_create_from_raw(
-			    (void *[]){
-			        string("%s/%s", dir, neural_node_sd_bin()),
-			        "--diffusion-model",
-			        string("%s/qwen-image-edit-2511-Q4_K_S.gguf", dir),
-			        "--vae",
-			        string("%s/Qwen_Image-VAE.safetensors", dir),
-			        "--llm",
-			        string("%s/Qwen2.5-VL-7B-Instruct-Q4_K_S.gguf", dir),
-			        "--llm_vision",
-			        string("%s/mmproj-F16.gguf", dir),
-			        "--offload-to-cpu",
-			        "--diffusion-fa",
-			        "--steps",
-			        "30",
-			        "-s",
-			        "-1",
-			        "--cfg-scale",
-			        "2.5",
-			        "--flow-shift",
-			        "3",
-			        "--qwen-image-zero-cond-t",
-			        "-W",
-			        "512",
-			        "-H",
-			        "512",
-			        "-p",
-			        prompt,
-			        "-r",
-			        string("%s/input.png", dir),
-			        "-o",
-			        string("%s/output.png", dir),
-			        NULL,
-			    },
-			    31);
+			string_array_t *argv;
+			if (model == 0) {
+				argv = edit_image_node_qwen_args(dir, prompt);
+			}
+			else {
+				argv = edit_image_node_flux_klein_args(dir, prompt);
+			}
 
 			iron_exec_async(argv->buffer[0], argv->buffer);
 			sys_notify_on_update(neural_node_check_result, node);
