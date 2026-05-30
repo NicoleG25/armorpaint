@@ -621,6 +621,20 @@ void ui_nodes_update(void *_) {
 		ww += base_view3d_w();
 	}
 
+	if (!base_view3d_show && ui_view2d_show) {
+		ui_nodes_wx = base_view3d_w();
+		ui_nodes_wy = 0;
+		ui_nodes_ww = g_config->layout->buffer[LAYOUT_SIZE_NODES_W];
+		ui_nodes_wh = sys_h();
+		if (g_config->layout->buffer[LAYOUT_SIZE_HEADER] == 1) {
+			ui_nodes_wh += ui_header_h * 2;
+		}
+	}
+
+	if (!base_view3d_show) {
+		ui_nodes_wh -= ui_header_h * 4;
+	}
+
 	i32 mx = mouse_x;
 	i32 my = mouse_y;
 	if (mx < ui_nodes_wx || mx > ui_nodes_wx + ww || my < ui_nodes_wy) {
@@ -667,7 +681,7 @@ void ui_nodes_update(void *_) {
 		ui_nodes_node_search(-1, -1, NULL);
 	}
 	if (ui_nodes_node_search_spawn != NULL) {
-		ui->input_x = mouse_x; // Fix inputDX after popup removal
+		ui->input_x = mouse_x; // Fix input_dx after popup removal
 		ui->input_y = mouse_y;
 		gc_unroot(ui_nodes_node_search_spawn);
 		ui_nodes_node_search_spawn = NULL;
