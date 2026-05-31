@@ -1849,7 +1849,7 @@ any_map_t *data_cached_blobs      = NULL;
 any_map_t *data_cached_images     = NULL;
 any_map_t *data_cached_videos     = NULL;
 any_map_t *data_cached_fonts      = NULL;
-#ifdef arm_audio
+#ifdef IRON_AUDIO
 any_map_t *data_cached_sounds = NULL;
 #endif
 i32 data_assets_loaded = 0;
@@ -1857,9 +1857,9 @@ i32 data_assets_loaded = 0;
 buffer_t      *iron_load_blob(char *file);
 gpu_texture_t *iron_load_texture(char *file);
 void           gpu_delete_texture(gpu_texture_t *texture);
-#ifdef arm_audio
+#ifdef IRON_AUDIO
 void *iron_load_sound(char *file);
-void  iron_a1_sound_destroy(void *sound);
+// void  iron_a1_sound_destroy(void *sound);
 #endif
 
 char *data_path(void) {
@@ -2049,7 +2049,7 @@ draw_font_t *data_get_font(char *file) {
 	return b;
 }
 
-#ifdef arm_audio
+#ifdef IRON_AUDIO
 sound_t *data_get_sound(char *file) {
 	if (data_cached_sounds == NULL) {
 		data_cached_sounds = any_map_create();
@@ -2126,7 +2126,7 @@ void data_delete_font(char *handle) {
 	map_delete(data_cached_fonts, handle);
 }
 
-#ifdef arm_audio
+#ifdef IRON_AUDIO
 void data_delete_sound(char *handle) {
 	if (data_cached_sounds == NULL) {
 		return;

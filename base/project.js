@@ -41,6 +41,7 @@ if (platform == "windows") {
 	project.add_lib("Dwmapi"); // DWMWA_USE_IMMERSIVE_DARK_MODE
 	if (flags.with_audio) {
 		project.add_lib("dsound");
+		project.add_cfiles("sources/backends/windows_audio.*");
 	}
 	if (flags.with_gamepad) {
 		project.add_lib("dinput8");
@@ -67,6 +68,7 @@ else if (platform == "linux") {
 	project.add_lib("vulkan");
 	if (flags.with_audio) {
 		project.add_lib("asound");
+		project.add_cfiles("sources/backends/linux_audio.*");
 	}
 	if (flags.with_gamepad) {
 		project.add_lib("udev");
@@ -204,10 +206,7 @@ if (flags.export_data_list) {
 }
 
 if (flags.with_audio) {
-	project.add_define("IRON_A1");
-	project.add_define("IRON_A2");
-	project.add_define("WITH_AUDIO");
-	project.add_define("arm_audio");
+	project.add_define("IRON_AUDIO");
 	project.add_cfiles("sources/libs/stb_vorbis.c");
 }
 

@@ -1,5 +1,5 @@
 
-#ifdef IRON_A2
+#ifdef IRON_AUDIO
 
 #include <backends/windows_system.h>
 #include <iron_audio.h>

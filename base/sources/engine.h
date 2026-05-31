@@ -550,7 +550,7 @@ extern any_map_t *data_cached_blobs;
 extern any_map_t *data_cached_images;
 extern any_map_t *data_cached_videos;
 extern any_map_t *data_cached_fonts;
-#ifdef arm_audio
+#ifdef IRON_AUDIO
 extern any_map_t *data_cached_sounds;
 #endif
 extern i32 data_assets_loaded;
@@ -565,7 +565,7 @@ gpu_texture_t   *data_get_image(char *file);
 buffer_t        *data_get_blob(char *file);
 video_t         *data_get_video(char *file);
 draw_font_t     *data_get_font(char *file);
-#ifdef arm_audio
+#ifdef IRON_AUDIO
 sound_t *data_get_sound(char *file);
 #endif
 void data_delete_mesh(char *handle);
@@ -573,7 +573,7 @@ void data_delete_blob(char *handle);
 void data_delete_image(char *handle);
 void data_delete_video(char *handle);
 void data_delete_font(char *handle);
-#ifdef arm_audio
+#ifdef IRON_AUDIO
 void data_delete_sound(char *handle);
 #endif
 bool  data_is_abs(char *file);

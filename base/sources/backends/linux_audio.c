@@ -1,8 +1,9 @@
 
-#ifdef IRON_A2
+#ifdef IRON_AUDIO
 
 #include <alsa/asoundlib.h>
 #include <errno.h>
+#define IRON_IMPLEMENTATION
 #include <iron_audio.h>
 #include <poll.h>
 #include <pthread.h>

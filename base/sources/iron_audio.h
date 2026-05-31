@@ -1,6 +1,6 @@
 #pragma once
 
-#ifdef IRON_A1
+#ifdef IRON_AUDIO
 
 #include "iron_global.h"
 #include <stdbool.h>
@@ -9,6 +9,40 @@
     \brief Audio1 is a high-level audio-API that lets you directly play audio-files. Depending on the target-system it either sits directly on a high-level
    system audio-API or is implemented based on Audio2.
 */
+
+typedef struct iron_a1_sound {
+	uint8_t  channel_count;
+	uint8_t  bits_per_sample;
+	uint32_t samples_per_second;
+	int16_t *left;
+	int16_t *right;
+	int      size;
+	float    sample_rate_pos;
+	float    volume;
+	bool     in_use;
+} iron_a1_sound_t;
+
+typedef struct iron_a1_sound_stream {
+	struct stb_vorbis *vorbis;
+	int                chans;
+	int                rate;
+	bool               myLooping;
+	float              myVolume;
+	bool               rateDecodedHack;
+	bool               end;
+	float              samples[2];
+	uint8_t           *buffer;
+} iron_a1_sound_stream_t;
+
+#define IRON_A2_MAX_CHANNELS 8
+
+typedef struct iron_a2_buffer {
+	uint8_t  channel_count;
+	float   *channels[IRON_A2_MAX_CHANNELS];
+	uint32_t data_size;
+	uint32_t read_location;
+	uint32_t write_location;
+} iron_a2_buffer_t;
 
 struct iron_internal_video_sound_stream;
 
@@ -34,36 +68,12 @@ void               iron_a1_mix(iron_a2_buffer_t *buffer, uint32_t samples);
 void iron_internal_play_video_sound_stream(struct iron_internal_video_sound_stream *stream);
 void iron_internal_stop_video_sound_stream(struct iron_internal_video_sound_stream *stream);
 
-typedef struct iron_a1_sound {
-	uint8_t  channel_count;
-	uint8_t  bits_per_sample;
-	uint32_t samples_per_second;
-	int16_t *left;
-	int16_t *right;
-	int      size;
-	float    sample_rate_pos;
-	float    volume;
-	bool     in_use;
-} iron_a1_sound_t;
-
 iron_a1_sound_t *iron_a1_sound_create(const char *filename);
 void             iron_a1_sound_destroy(iron_a1_sound_t *sound);
 float            iron_a1_sound_volume(iron_a1_sound_t *sound);
 void             iron_a1_sound_set_volume(iron_a1_sound_t *sound, float value);
 
 struct stb_vorbis;
-
-typedef struct iron_a1_sound_stream {
-	struct stb_vorbis *vorbis;
-	int                chans;
-	int                rate;
-	bool               myLooping;
-	float              myVolume;
-	bool               rateDecodedHack;
-	bool               end;
-	float              samples[2];
-	uint8_t           *buffer;
-} iron_a1_sound_stream_t;
 
 iron_a1_sound_stream_t *iron_a1_sound_stream_create(const char *filename, bool looping);
 float                  *iron_a1_sound_stream_next_frame(iron_a1_sound_stream_t *stream);
@@ -80,7 +90,7 @@ void                    iron_a1_sound_stream_set_volume(iron_a1_sound_stream_t *
 
 #endif
 
-#ifdef IRON_A2
+#ifdef IRON_AUDIO
 
 #include "iron_global.h"
 
@@ -89,16 +99,6 @@ void                    iron_a1_sound_stream_set_volume(iron_a1_sound_stream_t *
 /*! \file audio.h
     \brief Audio2 is a low-level audio-API that allows you to directly provide a stream of audio-samples.
 */
-
-#define IRON_A2_MAX_CHANNELS 8
-
-typedef struct iron_a2_buffer {
-	uint8_t  channel_count;
-	float   *channels[IRON_A2_MAX_CHANNELS];
-	uint32_t data_size;
-	uint32_t read_location;
-	uint32_t write_location;
-} iron_a2_buffer_t;
 
 void     iron_a2_init(void);
 void     iron_a2_set_callback(void (*iron_a2_audio_callback)(iron_a2_buffer_t *buffer, uint32_t samples, void *userdata), void *userdata);

@@ -14,16 +14,17 @@ flags.with_plugins        = true;
 flags.with_kong           = true;
 flags.with_raytrace       = true;
 flags.with_bc7            = true;
+// flags.with_audio          = true;
 flags.idle_sleep          = true;
 flags.export_version_info = true;
 flags.export_data_list    = platform == "android"; // .apk contents
 
 if (platform == "wasm") {
-    flags.with_nfd = false;
-    flags.with_compress = false;
-    flags.with_plugins = false;
-    flags.with_raytrace = false;
-    flags.export_data_list = true;
+	flags.with_nfd         = false;
+	flags.with_compress    = false;
+	flags.with_plugins     = false;
+	flags.with_raytrace    = false;
+	flags.export_data_list = true;
 }
 
 let project = new Project(flags.name);

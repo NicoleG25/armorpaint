@@ -1,5 +1,5 @@
 
-#ifdef IRON_A2
+#ifdef IRON_AUDIO
 
 #include <CoreAudio/AudioHardware.h>
 #include <CoreServices/CoreServices.h>

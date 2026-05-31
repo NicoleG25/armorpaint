@@ -1,5 +1,5 @@
 
-#ifdef IRON_A2
+#ifdef IRON_AUDIO
 
 #import <AudioToolbox/AudioToolbox.h>
 #import <Foundation/Foundation.h>

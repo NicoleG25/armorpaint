@@ -1,16 +1,19 @@
 #include "iron_audio.h"
 
-#ifdef IRON_A1
+#ifdef IRON_AUDIO
 
 #include "iron_audio.h"
+#include "iron_file.h"
 #include "iron_math.h"
 #include "iron_thread.h"
 #include "iron_video.h"
 
 #include <assert.h>
+#include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 
 struct iron_a1_channel {
 	iron_a1_sound_t *sound;
@@ -88,18 +91,18 @@ void iron_a1_mix(iron_a2_buffer_t *buffer, uint32_t samples) {
 			}
 		}
 
-		for (int i = 0; i < CHANNEL_COUNT; ++i) {
-			if (videos[i].stream != NULL) {
-				float *samples = iron_internal_video_sound_stream_next_frame(videos[i].stream);
-				left_value += samples[0];
-				left_value = fmaxf(fminf(left_value, 1.0f), -1.0f);
-				right_value += samples[1];
-				right_value = fmaxf(fminf(right_value, 1.0f), -1.0f);
-				if (iron_internal_video_sound_stream_ended(videos[i].stream)) {
-					videos[i].stream = NULL;
-				}
-			}
-		}
+		// for (int i = 0; i < CHANNEL_COUNT; ++i) {
+		// 	if (videos[i].stream != NULL) {
+		// 		float *samples = iron_internal_video_sound_stream_next_frame(videos[i].stream);
+		// 		left_value += samples[0];
+		// 		left_value = fmaxf(fminf(left_value, 1.0f), -1.0f);
+		// 		right_value += samples[1];
+		// 		right_value = fmaxf(fminf(right_value, 1.0f), -1.0f);
+		// 		if (iron_internal_video_sound_stream_ended(videos[i].stream)) {
+		// 			videos[i].stream = NULL;
+		// 		}
+		// 	}
+		// }
 
 		iron_mutex_unlock(&mutex);
 

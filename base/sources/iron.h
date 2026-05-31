@@ -30,7 +30,7 @@
 #else
 #include <sys/stat.h>
 #endif
-#ifdef WITH_AUDIO
+#ifdef IRON_AUDIO
 #include "iron_audio.h"
 #endif
 #ifdef WITH_EMBED
@@ -150,7 +150,7 @@ int kickstart(int argc, char **argv) {
 	gc_start(&argc);
 	_kickstart();
 
-#ifdef WITH_AUDIO
+#ifdef IRON_AUDIO
 	iron_a2_shutdown();
 #endif
 	gc_stop();
@@ -184,7 +184,7 @@ char *iron_get_arg(i32 index) {
 #include "kong/dir.h"
 #include <lz4x.h>
 #include <stdio.h>
-#ifdef WITH_AUDIO
+#ifdef IRON_AUDIO
 #include "iron_audio.h"
 #endif
 #define STB_IMAGE_IMPLEMENTATION
@@ -245,7 +245,7 @@ void _update() {
 	}
 #endif
 
-#ifdef WITH_AUDIO
+#ifdef IRON_AUDIO
 	iron_a2_update();
 #endif
 
@@ -586,7 +586,7 @@ void _iron_init(iron_window_options_t *ops) {
 	iron_set_copy_callback(_copy, NULL);
 	iron_set_paste_callback(_paste, NULL);
 	iron_keyboard_set_key_press_callback(_key_press, NULL);
-#ifdef WITH_AUDIO
+#ifdef IRON_AUDIO
 	iron_a1_init();
 	iron_a2_init();
 #endif
@@ -892,7 +892,7 @@ gpu_texture_t *iron_load_texture(char *file) {
 	return gpu_create_texture_from_encoded_bytes(&buf, file);
 }
 
-#ifdef WITH_AUDIO
+#ifdef IRON_AUDIO
 void *iron_load_sound(char *file) {
 	iron_a1_sound_t *sound = iron_a1_sound_create(file);
 	return sound;
