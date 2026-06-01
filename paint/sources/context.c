@@ -241,6 +241,8 @@ void context_set_brush(slot_brush_t *b) {
 	}
 	g_context->brush = b;
 	make_material_parse_brush();
+	brush_output_node_parse_inputs();
+	make_material_parse_paint_material(false);
 	ui_base_hwnds->buffer[TAB_AREA_SIDEBAR1]->redraws = 2;
 	ui_nodes_hwnd->redraws                            = 2;
 }
