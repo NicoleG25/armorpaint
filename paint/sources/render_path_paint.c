@@ -673,6 +673,14 @@ void render_path_paint_draw_cursor_decal(f32 mx, f32 my, f32 radius, f32 opacity
 	mesh_object_t *plane = scene_get_child(".Plane")->ext;
 	mesh_data_t   *geom  = plane->data;
 
+	// Prevent cursor jumping constantly if randomness is used in brush nodes
+	f32 brush_nodes_opacity = g_context->brush_nodes_opacity;
+	f32 brush_nodes_angle = g_context->brush_nodes_angle;
+	if (g_context->brush_nodes_uses_random) {
+		brush_nodes_opacity = 1.0;
+		brush_nodes_angle = 0.0;
+	}
+
 	render_path_set_target("", NULL, NULL, GPU_CLEAR_NONE, 0, 0.0);
 	gpu_set_pipeline(pipes_cursor_decal);
 	render_target_t *rt   = any_map_get(render_path_render_targets, "main");
@@ -689,9 +697,9 @@ void render_path_paint_draw_cursor_decal(f32 mx, f32 my, f32 radius, f32 opacity
 	vec4_t up = vec4_norm(camera_object_up_world(scene_camera));
 	gpu_set_float3(pipes_cursor_decal_camera_up, up.x, up.y, up.z);
 	gpu_set_float(pipes_cursor_decal_camera_align, context_is_decal_camera_align() ? 1.0f : 0.0f);
-	f32 opacity = g_context->brush_opacity * g_context->brush_nodes_opacity * opacity_scale;
+	f32 opacity = g_context->brush_opacity * brush_nodes_opacity * opacity_scale;
 	gpu_set_float(pipes_cursor_decal_opacity, opacity);
-	f32 angle = (g_context->brush_angle + g_context->brush_nodes_angle) * (math_pi() / 180.0);
+	f32 angle = (g_context->brush_angle + brush_nodes_angle) * (math_pi() / 180.0);
 	gpu_set_float2(pipes_cursor_decal_angle, math_cos(angle), math_sin(angle));
 	gpu_set_float(pipes_cursor_decal_scale_x, g_context->brush_scale_x);
 	gpu_set_mat4(pipes_cursor_decal_vp, scene_camera->vp);
@@ -719,7 +727,12 @@ void render_path_paint_commands_cursor() {
 
 	f32 mx                 = g_context->paint_vec.x;
 	f32 my                 = 1.0 - g_context->paint_vec.y;
-	f32 brush_nodes_radius = 1.0; // g_context->brush_nodes_radius; // Prevent cursor jumping constantly if randomness is used in brush nodes
+
+	// Prevent cursor jumping constantly if randomness is used in brush nodes
+	f32 brush_nodes_radius = g_context->brush_nodes_radius;
+	if (g_context->brush_nodes_uses_random) {
+		brush_nodes_radius = 1.0;
+	}
 
 	if (context_is_decal() && !g_context->paint2d) {
 		f32            scale2d = (900 / (f32)base_h()) * g_config->window_scale;

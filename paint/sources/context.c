@@ -127,6 +127,7 @@ context_t *context_create() {
 	c->rotate_z                          = false;
 	c->brush_nodes_radius                = 1.0;
 	c->brush_nodes_opacity               = 1.0;
+	c->brush_nodes_uses_random           = false;
 	c->brush_mask_image_is_alpha         = false;
 	c->brush_stencil_image_is_alpha      = false;
 	c->brush_stencil_x                   = 0.02;

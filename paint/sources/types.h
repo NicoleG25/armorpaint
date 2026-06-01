@@ -325,6 +325,7 @@ typedef struct context {
 	bool                        rotate_z;
 	f32                         brush_nodes_radius;
 	f32                         brush_nodes_opacity;
+	bool                        brush_nodes_uses_random;
 	struct gpu_texture         *brush_mask_image;
 	bool                        brush_mask_image_is_alpha;
 	struct gpu_texture         *brush_stencil_image;
