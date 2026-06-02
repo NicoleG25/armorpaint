@@ -120,6 +120,7 @@ quat_t quat_from_euler(float x, float y, float z);
 float  quat_dot(quat_t a, quat_t b);
 quat_t quat_from_to(vec4_t v0, vec4_t v1);
 quat_t quat_inv(quat_t q);
+quat_t quat_slerp(quat_t a, quat_t b, float t);
 
 mat3_t mat3_identity();
 mat3_t mat3_translation(float x, float y);

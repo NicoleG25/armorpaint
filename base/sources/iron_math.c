@@ -447,6 +447,28 @@ quat_t quat_inv(quat_t q) {
 	return q;
 }
 
+quat_t quat_slerp(quat_t a, quat_t b, float t) {
+	float dot = quat_dot(a, b);
+	if (dot < 0.0f) {
+		b.x = -b.x;
+		b.y = -b.y;
+		b.z = -b.z;
+		b.w = -b.w;
+		dot = -dot;
+	}
+	if (dot > 0.9995f) {
+		quat_t r = {a.x + t * (b.x - a.x), a.y + t * (b.y - a.y), a.z + t * (b.z - a.z), a.w + t * (b.w - a.w)};
+		return quat_norm(r);
+	}
+	float theta_0 = acosf(dot);
+	float theta   = theta_0 * t;
+	float sin_t   = sinf(theta);
+	float sin_t0  = sinf(theta_0);
+	float s0      = cosf(theta) - dot * sin_t / sin_t0;
+	float s1      = sin_t / sin_t0;
+	return (quat_t){s0 * a.x + s1 * b.x, s0 * a.y + s1 * b.y, s0 * a.z + s1 * b.z, s0 * a.w + s1 * b.w};
+}
+
 // ███╗   ███╗ █████╗ ████████╗██████╗
 // ████╗ ████║██╔══██╗╚══██╔══╝╚════██╗
 // ██╔████╔██║███████║   ██║    █████╔╝
