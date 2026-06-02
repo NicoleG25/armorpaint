@@ -526,33 +526,37 @@ typedef struct node_group {
 } node_group_t;
 
 typedef struct project_format {
-	char                          *version;
-	struct string_array           *assets;  // texture_assets
-	bool                           is_bgra; // Swapped red and blue channels for layer textures
-	struct packed_asset_t_array   *packed_assets;
-	char                          *envmap; // Asset name
-	f32                            envmap_strength;
-	f32                            envmap_angle;
-	bool                           envmap_blur;
-	struct f32_array              *camera_world;
-	struct f32_array              *camera_origin;
-	f32                            camera_fov;
-	struct swatch_color_t_array   *swatches;
-	struct ui_node_canvas_t_array *brush_nodes;
-	struct buffer_t_array         *brush_icons;
-	struct ui_node_canvas_t_array *material_nodes;
-	struct ui_node_canvas_t_array *material_groups;
-	struct buffer_t_array         *material_icons;
-	struct material_data2_t_array *material_datas;
-	struct string_array           *font_assets;
-	struct layer_data_t_array     *layer_datas;
-	struct mesh_data_t_array      *mesh_datas;
-	struct string_array           *mesh_assets;
-	struct buffer_t_array         *mesh_icons;
-	struct f32_array_t_array      *mesh_transforms;
-	struct i32_array              *atlas_objects;
-	struct string_array           *atlas_names;
-	struct string_array           *script_datas;
+	char                                        *version;
+	struct string_array                         *assets;  // texture_assets
+	bool                                         is_bgra; // Swapped red and blue channels for layer textures
+	struct packed_asset_t_array                 *packed_assets;
+	char                                        *envmap; // Asset name
+	f32                                          envmap_strength;
+	f32                                          envmap_angle;
+	bool                                         envmap_blur;
+	struct f32_array                            *camera_world;
+	struct f32_array                            *camera_origin;
+	f32                                          camera_fov;
+	struct swatch_color_t_array                 *swatches;
+	struct ui_node_canvas_t_array               *brush_nodes;
+	struct buffer_t_array                       *brush_icons;
+	struct ui_node_canvas_t_array               *material_nodes;
+	struct ui_node_canvas_t_array               *material_groups;
+	struct buffer_t_array                       *material_icons;
+	struct material_data2_t_array               *material_datas;
+	struct string_array                         *font_assets;
+	struct layer_data_t_array                   *layer_datas;
+	struct mesh_data_t_array                    *mesh_datas;
+	struct string_array                         *mesh_assets;
+	struct buffer_t_array                       *mesh_icons;
+	struct f32_array_t_array                    *mesh_transforms;
+	struct i32_array                            *atlas_objects;
+	struct string_array                         *atlas_names;
+	struct string_array                         *script_datas;
+	i32                                          timeline_frame_rate;
+	i32                                          timeline_max_frames;
+	struct timeline_layer_keyframe_data_t_array *timeline_layers;
+	struct timeline_mesh_keyframe_data_t_array  *timeline_meshes;
 } project_t;
 
 typedef struct asset {
@@ -615,6 +619,21 @@ typedef struct layer_data {
 	bool              path_curved;
 	i32               path_material;
 } layer_data_t;
+
+typedef struct timeline_layer_keyframe_data {
+	i32            frame;
+	i32            layer_index;
+	struct buffer *texpaint;
+	struct buffer *texpaint_nor;
+	struct buffer *texpaint_pack;
+} timeline_layer_keyframe_data_t;
+
+typedef struct timeline_mesh_keyframe_data {
+	i32               frame;
+	i32               mesh_index;
+	struct f32_array *transform;
+	bool              tween;
+} timeline_mesh_keyframe_data_t;
 
 typedef struct shader_out {
 	char *out_basecol;
@@ -937,6 +956,18 @@ typedef struct layer_data_t_array {
 	int            length;
 	int            capacity;
 } layer_data_t_array_t;
+
+typedef struct timeline_layer_keyframe_data_t_array {
+	timeline_layer_keyframe_data_t **buffer;
+	int                              length;
+	int                              capacity;
+} timeline_layer_keyframe_data_t_array_t;
+
+typedef struct timeline_mesh_keyframe_data_t_array {
+	timeline_mesh_keyframe_data_t **buffer;
+	int                             length;
+	int                             capacity;
+} timeline_mesh_keyframe_data_t_array_t;
 
 typedef struct material_data2 {
 	bool paint_base;

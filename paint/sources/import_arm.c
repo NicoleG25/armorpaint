@@ -564,16 +564,16 @@ void import_arm_run_project(char *path) {
 		import_arm_init_nodes(n->nodes);
 		g_context->material = slot_material_create(m0, n);
 
-		material_data2_t *md = project->material_datas->buffer[i];
-		g_context->material->paint_base = md->paint_base;
-		g_context->material->paint_opac = md->paint_opac;
-		g_context->material->paint_occ = md->paint_occ;
-		g_context->material->paint_rough = md->paint_rough;
-		g_context->material->paint_met = md->paint_met;
-		g_context->material->paint_nor = md->paint_nor;
-		g_context->material->paint_height = md->paint_height;
-		g_context->material->paint_emis = md->paint_emis;
-		g_context->material->paint_subs = md->paint_subs;
+		material_data2_t *md                 = project->material_datas->buffer[i];
+		g_context->material->paint_base      = md->paint_base;
+		g_context->material->paint_opac      = md->paint_opac;
+		g_context->material->paint_occ       = md->paint_occ;
+		g_context->material->paint_rough     = md->paint_rough;
+		g_context->material->paint_met       = md->paint_met;
+		g_context->material->paint_nor       = md->paint_nor;
+		g_context->material->paint_height    = md->paint_height;
+		g_context->material->paint_emis      = md->paint_emis;
+		g_context->material->paint_subs      = md->paint_subs;
 		g_context->material->paint_opac_mode = md->opac_mode;
 
 		any_array_push(project_materials, g_context->material);
@@ -624,6 +624,8 @@ void import_arm_run_project(char *path) {
 			l->path_material = ld->path_material > -1 ? project_materials->buffer[ld->path_material] : NULL;
 		}
 	}
+
+	tab_timeline_import(project);
 
 	sys_notify_on_next_frame(&import_arm_run_project_on_next_frame, NULL);
 

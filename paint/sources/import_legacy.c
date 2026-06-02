@@ -227,13 +227,52 @@ project_t *import_arm_from_map_to_arm(any_map_t *old) {
 		}
 	}
 
-	project->mesh_assets     = any_map_get(old, "mesh_assets");
-	project->mesh_icons      = any_map_get(old, "mesh_icons");
-	project->mesh_transforms = any_map_get(old, "mesh_transforms");
-	project->atlas_objects   = any_map_get(old, "atlas_objects");
-	project->atlas_names     = any_map_get(old, "atlas_names");
+	project->mesh_assets         = any_map_get(old, "mesh_assets");
+	project->mesh_icons          = any_map_get(old, "mesh_icons");
+	project->mesh_transforms     = any_map_get(old, "mesh_transforms");
+	project->atlas_objects       = any_map_get(old, "atlas_objects");
+	project->atlas_names         = any_map_get(old, "atlas_names");
+	project->timeline_frame_rate = armpack_map_get_i32(old, "timeline_frame_rate");
+	project->timeline_max_frames = armpack_map_get_i32(old, "timeline_max_frames");
+
+	any_array_t *tls = any_map_get(old, "timeline_layers");
+	if (tls != NULL) {
+		project->timeline_layers = any_array_create_from_raw((void *[]){}, 0);
+		for (i32 i = 0; i < tls->length; ++i) {
+			any_map_t                      *old = tls->buffer[i];
+			timeline_layer_keyframe_data_t *d   = GC_ALLOC_INIT(timeline_layer_keyframe_data_t, {0});
+			d->frame                            = armpack_map_get_i32(old, "frame");
+			d->layer_index                      = armpack_map_get_i32(old, "layer_index");
+			d->texpaint                         = any_map_get(old, "texpaint");
+			d->texpaint_nor                     = any_map_get(old, "texpaint_nor");
+			d->texpaint_pack                    = any_map_get(old, "texpaint_pack");
+			any_array_push(project->timeline_layers, d);
+		}
+	}
+
+	any_array_t *tms = any_map_get(old, "timeline_meshes");
+	if (tms != NULL) {
+		project->timeline_meshes = any_array_create_from_raw((void *[]){}, 0);
+		for (i32 i = 0; i < tms->length; ++i) {
+			any_map_t                     *old = tms->buffer[i];
+			timeline_mesh_keyframe_data_t *d   = GC_ALLOC_INIT(timeline_mesh_keyframe_data_t, {0});
+			d->frame                           = armpack_map_get_i32(old, "frame");
+			d->mesh_index                      = armpack_map_get_i32(old, "mesh_index");
+			d->transform                       = any_map_get(old, "transform");
+			d->tween                           = armpack_map_get_i32(old, "tween") > 0;
+			any_array_push(project->timeline_meshes, d);
+		}
+	}
 
 	return project;
+}
+
+project_t *import_arm_from_version_7(any_map_t *old) {
+	armpack_map_set_i32(old, "timeline_frame_rate", 24);
+	armpack_map_set_i32(old, "timeline_max_frames", 200);
+	any_map_set(old, "timeline_layers", NULL);
+	any_map_set(old, "timeline_meshes", NULL);
+	return import_arm_from_map_to_arm(old);
 }
 
 project_t *import_arm_from_version_6(any_map_t *old) {
@@ -270,7 +309,7 @@ project_t *import_arm_from_version_6(any_map_t *old) {
 	}
 	any_map_set(old, "material_datas", mds);
 
-	return import_arm_from_map_to_arm(old);
+	return import_arm_from_version_7(old);
 }
 
 project_t *import_arm_from_version_5(any_map_t *old) {
@@ -313,6 +352,9 @@ project_t *import_arm_from_version_2(any_map_t *old) {
 
 project_t *import_arm_from_old(buffer_t *b) {
 	any_map_t *old = armpack_decode_to_map(b);
+	if (import_arm_is_version(b, '7')) {
+		return import_arm_from_version_7(old);
+	}
 	if (import_arm_is_version(b, '6')) {
 		return import_arm_from_version_6(old);
 	}

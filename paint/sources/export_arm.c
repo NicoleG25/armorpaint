@@ -112,6 +112,8 @@ buffer_t *export_arm_rgba64_to_rgba32(buffer_t *buffer) {
 
 void export_arm_run_project() {
 
+	tab_timeline_prepare_save();
+
 	workflow_t _workflow = g_config->workflow;
 	g_config->workflow   = WORKFLOW_PBR;
 	base_update_workflow();
@@ -279,6 +281,8 @@ void export_arm_run_project() {
 	g_project->atlas_objects  = project_atlas_objects;
 	g_project->atlas_names    = project_atlas_names;
 
+	tab_timeline_export(g_project);
+
 #ifdef IRON_BGRA
 	g_project->is_bgra = true;
 #else
@@ -324,6 +328,8 @@ void export_arm_run_project() {
 	string_array_remove(recent, recent_path);
 	array_insert(recent, 0, recent_path);
 	config_save();
+
+	tab_timeline_finish_save();
 
 	console_info(tr("Project saved"));
 }
@@ -502,7 +508,6 @@ void export_arm_run_brush(char *path) {
 		iron_write_png(string("%s_icon.png", substring(path, 0, string_length(path) - 4)), buf, b->image->width, b->image->height, 0);
 		iron_write_jpg(string("%s_icon.jpg", substring(path, 0, string_length(path) - 4)), buf, b->image->width, b->image->height, 0, 50);
 	}
-
 
 	if (g_context->pack_assets_on_export) { // Pack textures
 		export_arm_pack_assets(raw, assets);

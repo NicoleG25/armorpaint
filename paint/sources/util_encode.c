@@ -141,14 +141,51 @@ i32 util_encode_layer_data_size(layer_data_t_array_t *datas) {
 	return size;
 }
 
+i32 util_encode_timeline_layers_size(timeline_layer_keyframe_data_t_array_t *datas) {
+	if (datas == NULL) {
+		return 0;
+	}
+	i32 size = 0;
+	for (i32 i = 0; i < datas->length; ++i) {
+		buffer_t *tp = datas->buffer[i]->texpaint;
+		if (tp != NULL) {
+			size += tp->length;
+		}
+		buffer_t *tp_nor = datas->buffer[i]->texpaint_nor;
+		if (tp_nor != NULL) {
+			size += tp_nor->length;
+		}
+		buffer_t *tp_pack = datas->buffer[i]->texpaint_pack;
+		if (tp_pack != NULL) {
+			size += tp_pack->length;
+		}
+	}
+	return size;
+}
+
+i32 util_encode_timeline_meshes_size(timeline_mesh_keyframe_data_t_array_t *datas) {
+	if (datas == NULL) {
+		return 0;
+	}
+	i32 size = 0;
+	for (i32 i = 0; i < datas->length; ++i) {
+		f32_array_t *transform = datas->buffer[i]->transform;
+		if (transform != NULL) {
+			size += transform->length * 4;
+		}
+	}
+	return size;
+}
+
 buffer_t *util_encode_project(project_t *raw) {
 	i32 size = 32 * 1024 * 1024 + util_encode_layer_data_size(raw->layer_datas) + util_encode_mesh_data_size(raw->mesh_datas) +
 	           util_encode_packed_assets_size(raw->packed_assets) + util_encode_buffers_size(raw->brush_icons) + util_encode_buffers_size(raw->material_icons) +
-	           util_encode_buffers_size(raw->mesh_icons) + util_encode_f32_arrays_size(raw->mesh_transforms);
+	           util_encode_buffers_size(raw->mesh_icons) + util_encode_f32_arrays_size(raw->mesh_transforms) +
+	           util_encode_timeline_layers_size(raw->timeline_layers) + util_encode_timeline_meshes_size(raw->timeline_meshes);
 	buffer_t *encoded = buffer_create(size);
 
 	armpack_encode_start(encoded->buffer);
-	armpack_encode_map(27);
+	armpack_encode_map(31);
 
 	armpack_encode_string("version");
 	armpack_encode_string(raw->version);
@@ -416,6 +453,51 @@ buffer_t *util_encode_project(project_t *raw) {
 	armpack_encode_array_string(raw->atlas_names);
 	armpack_encode_string("script_datas");
 	armpack_encode_array_string(raw->script_datas);
+
+	armpack_encode_string("timeline_frame_rate");
+	armpack_encode_i32(raw->timeline_frame_rate);
+	armpack_encode_string("timeline_max_frames");
+	armpack_encode_i32(raw->timeline_max_frames);
+
+	armpack_encode_string("timeline_layers");
+	if (raw->timeline_layers != NULL) {
+		armpack_encode_array(raw->timeline_layers->length);
+		for (i32 i = 0; i < raw->timeline_layers->length; ++i) {
+			armpack_encode_map(5);
+			armpack_encode_string("frame");
+			armpack_encode_i32(raw->timeline_layers->buffer[i]->frame);
+			armpack_encode_string("layer_index");
+			armpack_encode_i32(raw->timeline_layers->buffer[i]->layer_index);
+			armpack_encode_string("texpaint");
+			armpack_encode_array_u8(raw->timeline_layers->buffer[i]->texpaint);
+			armpack_encode_string("texpaint_nor");
+			armpack_encode_array_u8(raw->timeline_layers->buffer[i]->texpaint_nor);
+			armpack_encode_string("texpaint_pack");
+			armpack_encode_array_u8(raw->timeline_layers->buffer[i]->texpaint_pack);
+		}
+	}
+	else {
+		armpack_encode_null();
+	}
+
+	armpack_encode_string("timeline_meshes");
+	if (raw->timeline_meshes != NULL) {
+		armpack_encode_array(raw->timeline_meshes->length);
+		for (i32 i = 0; i < raw->timeline_meshes->length; ++i) {
+			armpack_encode_map(4);
+			armpack_encode_string("frame");
+			armpack_encode_i32(raw->timeline_meshes->buffer[i]->frame);
+			armpack_encode_string("mesh_index");
+			armpack_encode_i32(raw->timeline_meshes->buffer[i]->mesh_index);
+			armpack_encode_string("transform");
+			armpack_encode_array_f32(raw->timeline_meshes->buffer[i]->transform);
+			armpack_encode_string("tween");
+			armpack_encode_bool(raw->timeline_meshes->buffer[i]->tween);
+		}
+	}
+	else {
+		armpack_encode_null();
+	}
 
 	i32 ei          = armpack_encode_end();
 	encoded->length = ei;
