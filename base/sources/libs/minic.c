@@ -961,6 +961,8 @@ static minic_val_t minic_struct_field_get_base(minic_env_t *e, void *base, minic
 			return minic_val_typed_ptr(p, def->field_deref_types[idx]);
 		case MINIC_T_FLOAT:
 			return minic_val_float(*(float *)p);
+		case MINIC_T_BOOL:
+			return minic_val_int(*(bool *)p);
 		default:
 			return minic_val_int(*(int32_t *)p);
 		}
@@ -987,6 +989,9 @@ static void minic_struct_field_set_base(minic_env_t *e, void *base, minic_struct
 			break; // embedded structs are mutated through their own field accessors
 		case MINIC_T_FLOAT:
 			*(float *)p = (float)minic_val_to_d(val);
+			break;
+		case MINIC_T_BOOL:
+			*(bool *)p = (minic_val_to_d(val) != 0.0);
 			break;
 		default:
 			*(int32_t *)p = (int32_t)minic_val_to_d(val);

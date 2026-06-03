@@ -641,6 +641,7 @@ minic_val_t minic_dispatch(minic_ext_func_t *ef, minic_val_t *args, int argc) {
 		typedef void *(*fn_pppi)(void *, void *, void *, int);
 		typedef void *(*fn_i)(int);
 		typedef void *(*fn_ii)(int, int);
+		typedef void *(*fn_iii)(int, int, int);
 		typedef void *(*fn_ppi)(void *, void *, int);
 		typedef void *(*fn_pppp)(void *, void *, void *, void *);
 		typedef void *(*fn_ppppp)(void *, void *, void *, void *, void *);
@@ -664,6 +665,8 @@ minic_val_t minic_dispatch(minic_ext_func_t *ef, minic_val_t *args, int argc) {
 			r = ((fn_i)ef->fn)(A0i);
 		else if (strcmp(adesc, "ii") == 0)
 			r = ((fn_ii)ef->fn)(A0i, A1i);
+		else if (strcmp(adesc, "iii") == 0)
+			r = ((fn_iii)ef->fn)(A0i, A1i, A2i);
 		else if (strcmp(adesc, "ppi") == 0)
 			r = ((fn_ppi)ef->fn)(A0p, A1p, A2i);
 		else if (strcmp(adesc, "pppp") == 0)
