@@ -631,6 +631,7 @@ typedef struct timeline_layer_keyframe_data {
 	struct f32_array *path_points_world;
 	struct f32_array *path_points_camera;
 	struct i32_array *path_points_parent;
+	bool              tween;
 } timeline_layer_keyframe_data_t;
 
 typedef struct timeline_mesh_keyframe_data {

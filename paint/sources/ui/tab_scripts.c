@@ -13,6 +13,10 @@ void tab_scripts_prepare() {
 		string_array_push(g_project->script_datas, "void main() {\n    \n}\n");
 		string_array_push(g_project->script_names, "main.c");
 	}
+	// A script may have been removed
+	if (tab_scripts_selected >= g_project->script_datas->length) {
+		tab_scripts_selected = g_project->script_datas->length - 1;
+	}
 }
 
 char *tab_scripts_get() {

@@ -252,6 +252,7 @@ project_t *import_arm_from_map_to_arm(any_map_t *old) {
 			d->path_points_world                = any_map_get(old, "path_points_world");
 			d->path_points_camera               = any_map_get(old, "path_points_camera");
 			d->path_points_parent               = any_map_get(old, "path_points_parent");
+			d->tween                            = armpack_map_get_i32(old, "tween") > 0;
 			any_array_push(project->timeline_layers, d);
 		}
 	}

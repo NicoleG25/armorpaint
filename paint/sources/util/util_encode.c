@@ -481,7 +481,7 @@ buffer_t *util_encode_project(project_t *raw) {
 	if (raw->timeline_layers != NULL) {
 		armpack_encode_array(raw->timeline_layers->length);
 		for (i32 i = 0; i < raw->timeline_layers->length; ++i) {
-			armpack_encode_map(9);
+			armpack_encode_map(10);
 			armpack_encode_string("frame");
 			armpack_encode_i32(raw->timeline_layers->buffer[i]->frame);
 			armpack_encode_string("layer_index");
@@ -500,6 +500,8 @@ buffer_t *util_encode_project(project_t *raw) {
 			armpack_encode_array_f32(raw->timeline_layers->buffer[i]->path_points_camera);
 			armpack_encode_string("path_points_parent");
 			armpack_encode_array_i32(raw->timeline_layers->buffer[i]->path_points_parent);
+			armpack_encode_string("tween");
+			armpack_encode_bool(raw->timeline_layers->buffer[i]->tween);
 		}
 	}
 	else {

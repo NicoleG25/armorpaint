@@ -11,6 +11,7 @@ typedef struct {
 	f32_array_t   *path_points_world;
 	f32_array_t   *path_points_camera;
 	i32_array_t   *path_points_parent;
+	bool           tween;
 } tab_timeline_keyframe_t;
 
 typedef struct {
@@ -42,13 +43,13 @@ static i32          tab_timeline_last_frame = 0;
 static any_array_t *tab_timeline_mesh_keyframes = NULL;
 static any_array_t *tab_timeline_mesh_origins   = NULL;
 
-static i32 tab_timeline_pending_from     = -1;
-static i32 tab_timeline_pending_to       = -1;
-static i32 tab_timeline_pending_kf_frame = -1;
-static i32 tab_timeline_pending_kf_layer = -1;
-static i32 tab_timeline_pending_rm_frame = -1;
-static i32 tab_timeline_pending_rm_layer = -1;
-
+static i32 tab_timeline_pending_from           = -1;
+static i32 tab_timeline_pending_to             = -1;
+static i32 tab_timeline_pending_kf_frame       = -1;
+static i32 tab_timeline_pending_kf_layer       = -1;
+static i32 tab_timeline_pending_rm_frame       = -1;
+static i32 tab_timeline_pending_rm_layer       = -1;
+static f32 tab_timeline_pending_tween_f        = -1.0f;
 static i32 tab_timeline_pending_mesh_add_frame = -1;
 static i32 tab_timeline_pending_mesh_add_index = -1;
 static i32 tab_timeline_pending_mesh_rm_frame  = -1;
@@ -57,6 +58,11 @@ static i32 tab_timeline_pending_mesh_rm_index  = -1;
 static f64 tab_timeline_last_click_time  = 0.0;
 static i32 tab_timeline_last_click_frame = -1;
 static i32 tab_timeline_last_click_row   = -1;
+
+static gpu_pipeline_t *tab_timeline_tween_pipe   = NULL;
+static i32             tab_timeline_tween_tex0   = 0;
+static i32             tab_timeline_tween_tex1   = 0;
+static i32             tab_timeline_tween_factor = 0;
 
 static void tab_timeline_copy_tex(gpu_texture_t *dst, gpu_texture_t *src) {
 	draw_begin(dst, true, 0x00000000);
@@ -116,6 +122,50 @@ static i32 tab_timeline_find_origin(i32 layer_index) {
 		}
 	}
 	return -1;
+}
+
+static i32 tab_timeline_find_next_keyframe(i32 frame, i32 layer_index) {
+	i32 best       = -1;
+	i32 best_frame = tab_timeline_max_frames + 1;
+	for (i32 i = 0; i < tab_timeline_keyframes->length; i++) {
+		tab_timeline_keyframe_t *kf = tab_timeline_keyframes->buffer[i];
+		if (kf->layer_index == layer_index && kf->frame > frame && kf->frame < best_frame) {
+			best_frame = kf->frame;
+			best       = i;
+		}
+	}
+	return best;
+}
+
+static void tab_timeline_init_tween_pipe() {
+	if (tab_timeline_tween_pipe != NULL) {
+		return;
+	}
+	tab_timeline_tween_pipe = gpu_create_pipeline();
+	gc_root(tab_timeline_tween_pipe);
+	tab_timeline_tween_pipe->vertex_shader   = sys_get_shader("layer_tween.vert");
+	tab_timeline_tween_pipe->fragment_shader = sys_get_shader("layer_tween.frag");
+	gpu_vertex_structure_t *vs               = GC_ALLOC_INIT(gpu_vertex_structure_t, {0});
+	gpu_vertex_structure_add(vs, "pos", GPU_VERTEX_DATA_F32_2X);
+	tab_timeline_tween_pipe->input_layout = vs;
+	gpu_pipeline_compile(tab_timeline_tween_pipe);
+	tab_timeline_tween_tex0   = 0;
+	tab_timeline_tween_tex1   = 1;
+	pipes_offset              = 0;
+	tab_timeline_tween_factor = pipes_get_constant_location("float");
+}
+
+static void tab_timeline_tween_tex(gpu_texture_t *dst, gpu_texture_t *from, gpu_texture_t *to, f32 t) {
+	tab_timeline_init_tween_pipe();
+	_gpu_begin(dst, NULL, NULL, GPU_CLEAR_NONE, 0, 0.0);
+	gpu_set_pipeline(tab_timeline_tween_pipe);
+	gpu_set_texture(tab_timeline_tween_tex0, from);
+	gpu_set_texture(tab_timeline_tween_tex1, to);
+	gpu_set_float(tab_timeline_tween_factor, t);
+	gpu_set_vertex_buffer(const_data_screen_aligned_vb);
+	gpu_set_index_buffer(const_data_screen_aligned_ib);
+	gpu_draw();
+	gpu_end();
 }
 
 static void tab_timeline_save_origins() {
@@ -215,6 +265,68 @@ static void tab_timeline_load_from_keyframes(i32 frame) {
 		g_context->ddirty               = 2;
 		g_context->layers_preview_dirty = true;
 	}
+}
+
+static void tab_timeline_tween_from_keyframes(f32 frame_f) {
+	bool any     = false;
+	i32  frame_i = (i32)frame_f;
+	for (i32 li = 0; li < project_layers->length; li++) {
+		slot_layer_t *l = project_layers->buffer[li];
+		if (!slot_layer_is_layer(l)) {
+			continue;
+		}
+		i32 nxt_kfi = tab_timeline_find_next_keyframe(frame_i, li);
+		if (nxt_kfi < 0) {
+			continue;
+		}
+		tab_timeline_keyframe_t *nxt = tab_timeline_keyframes->buffer[nxt_kfi];
+		if (!nxt->tween) {
+			continue;
+		}
+
+		gpu_texture_t *from_texpaint      = NULL;
+		gpu_texture_t *from_texpaint_nor  = NULL;
+		gpu_texture_t *from_texpaint_pack = NULL;
+		i32            from_frame         = 0;
+		i32            act_kfi            = tab_timeline_find_active_keyframe(frame_i, li);
+		if (act_kfi >= 0) {
+			tab_timeline_keyframe_t *act = tab_timeline_keyframes->buffer[act_kfi];
+			from_texpaint                = act->texpaint;
+			from_texpaint_nor            = act->texpaint_nor;
+			from_texpaint_pack           = act->texpaint_pack;
+			from_frame                   = act->frame;
+		}
+		else {
+			i32 oi = tab_timeline_find_origin(li);
+			if (oi < 0) {
+				continue;
+			}
+			tab_timeline_origin_t *o = tab_timeline_origins->buffer[oi];
+			from_texpaint            = o->texpaint;
+			from_texpaint_nor        = o->texpaint_nor;
+			from_texpaint_pack       = o->texpaint_pack;
+			from_frame               = 0;
+		}
+
+		f32 t = (frame_f - (f32)from_frame) / (f32)(nxt->frame - from_frame);
+		tab_timeline_tween_tex(l->texpaint, from_texpaint, nxt->texpaint, t);
+		tab_timeline_tween_tex(l->texpaint_nor, from_texpaint_nor, nxt->texpaint_nor, t);
+		tab_timeline_tween_tex(l->texpaint_pack, from_texpaint_pack, nxt->texpaint_pack, t);
+		any = true;
+	}
+	if (any) {
+		g_context->ddirty               = 2;
+		g_context->layers_preview_dirty = true;
+	}
+}
+
+static void tab_timeline_tween_on_next_frame(void *_) {
+	f32 frame_f                  = tab_timeline_pending_tween_f;
+	tab_timeline_pending_tween_f = -1.0f;
+	if (frame_f < 0.0f) {
+		return;
+	}
+	tab_timeline_tween_from_keyframes(frame_f);
 }
 
 static i32 tab_timeline_find_mesh_keyframe(i32 frame, i32 mesh_index) {
@@ -365,8 +477,11 @@ static void tab_timeline_frame_change_on_next_frame(void *_) {
 	tab_timeline_pending_from = -1;
 	tab_timeline_pending_to   = -1;
 
-	from == 0 ? tab_timeline_save_origins() : tab_timeline_save_to_keyframes(from);
+	if (!tab_timeline_playing) {
+		from == 0 ? tab_timeline_save_origins() : tab_timeline_save_to_keyframes(from);
+	}
 	to == 0 ? tab_timeline_load_origins() : tab_timeline_load_from_keyframes(to);
+	tab_timeline_tween_from_keyframes((f32)to);
 	if (!tab_timeline_playing) {
 		from == 0 ? tab_timeline_save_mesh_origins() : tab_timeline_save_mesh_to_keyframes(from);
 		to == 0 ? tab_timeline_load_mesh_origins() : tab_timeline_load_mesh_from_keyframes((float)to);
@@ -563,6 +678,7 @@ void tab_timeline_export(project_t *raw) {
 		                                                      .path_points_world  = kf->path_points_world,
 		                                                      .path_points_camera = kf->path_points_camera,
 		                                                      .path_points_parent = kf->path_points_parent,
+		                                                      .tween              = kf->tween,
 		                                                  });
 		any_array_push(layers, d);
 	}
@@ -619,6 +735,7 @@ void tab_timeline_import(project_t *raw) {
 			kf->path_points_world              = d->path_points_world;
 			kf->path_points_camera             = d->path_points_camera;
 			kf->path_points_parent             = d->path_points_parent;
+			kf->tween                          = d->tween;
 			any_array_push(tab_timeline_keyframes, kf);
 		}
 	}
@@ -753,16 +870,23 @@ void tab_timeline_player_update() {
 		tab_timeline_load_from_keyframes(frame_i);
 		tab_timeline_run_frame_scripts(frame_i);
 	}
+
+	if (tab_timeline_keyframes != NULL) {
+		tab_timeline_tween_from_keyframes(frame_f);
+	}
 }
 
 void tab_timeline_draw_frame_context_menu() {
 	i32  layer_count = project_layers->length;
 	bool is_mesh     = tab_timeline_selected_row >= layer_count;
 	bool has_kf;
-	i32  mesh_kfi = -1;
+	i32  mesh_kfi  = -1;
+	i32  layer_kfi = -1;
 	if (!is_mesh) {
-		has_kf = tab_timeline_keyframes != NULL && tab_timeline_selected_frame > 0 &&
-		         tab_timeline_find_keyframe(tab_timeline_selected_frame, tab_timeline_selected_row) >= 0;
+		layer_kfi = tab_timeline_keyframes != NULL && tab_timeline_selected_frame > 0
+		                ? tab_timeline_find_keyframe(tab_timeline_selected_frame, tab_timeline_selected_row)
+		                : -1;
+		has_kf    = layer_kfi >= 0;
 	}
 	else {
 		i32 mi = tab_timeline_selected_row - layer_count;
@@ -775,17 +899,21 @@ void tab_timeline_draw_frame_context_menu() {
 		tab_timeline_edit_script(tab_timeline_selected_row, tab_timeline_selected_frame);
 	}
 
-	ui->enabled                      = has_kf && is_mesh;
-	ui_handle_t *h_tween             = ui_handle(__ID__);
-	h_tween->b                       = false;
-	tab_timeline_mesh_keyframe_t *kf = NULL;
+	ui->enabled          = has_kf;
+	ui_handle_t *h_tween = ui_handle(__ID__);
+	h_tween->b           = false;
 	if (ui->enabled) {
-		kf         = tab_timeline_mesh_keyframes->buffer[mesh_kfi];
-		h_tween->b = kf->tween;
+		h_tween->b = is_mesh ? ((tab_timeline_mesh_keyframe_t *)tab_timeline_mesh_keyframes->buffer[mesh_kfi])->tween
+		                     : ((tab_timeline_keyframe_t *)tab_timeline_keyframes->buffer[layer_kfi])->tween;
 	}
 	ui_check(h_tween, tr("Tween"), "");
 	if (ui->enabled && h_tween->changed) {
-		kf->tween         = h_tween->b;
+		if (is_mesh) {
+			((tab_timeline_mesh_keyframe_t *)tab_timeline_mesh_keyframes->buffer[mesh_kfi])->tween = h_tween->b;
+		}
+		else {
+			((tab_timeline_keyframe_t *)tab_timeline_keyframes->buffer[layer_kfi])->tween = h_tween->b;
+		}
 		ui_menu_keep_open = true;
 	}
 
@@ -908,6 +1036,10 @@ void tab_timeline_draw(ui_handle_t *htab) {
 			ui_base_hwnds->buffer[TAB_AREA_STATUS]->redraws = 2;
 			if (tab_timeline_mesh_keyframes != NULL) {
 				tab_timeline_load_mesh_from_keyframes(frame_f);
+			}
+			if (tab_timeline_keyframes != NULL && tab_timeline_pending_tween_f < 0.0f) {
+				tab_timeline_pending_tween_f = frame_f;
+				sys_notify_on_next_frame(&tab_timeline_tween_on_next_frame, NULL);
 			}
 		}
 
