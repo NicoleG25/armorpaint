@@ -723,40 +723,46 @@ void tab_layers_draw_layer_context_menu_draw() {
 
 	if (!slot_layer_is_group(l)) {
 		ui_menu_align();
-#if defined(IRON_ANDROID) || defined(IRON_IOS)
 		string_array_t *ar = any_array_create_from_raw(
 		    (void *[]){
-		        "128",
-		        "256",
-		        "512",
-		        "1024",
-		        "2048",
-		        "4096",
-		    },
-		    6);
-#else
-		string_array_t *ar = any_array_create_from_raw(
-		    (void *[]){
-		        "128",
-		        "256",
-		        "512",
-		        "1024",
 		        "2048",
 		        "4096",
 		        "8192",
 		        "16384",
+		        tr("Custom"),
 		    },
-		    8);
-#endif
+		    5);
 		ui_handle_t *h            = ui_handle(__ID__);
 		bool         changed_last = h->changed;
 		h->i                      = base_res_handle->i;
 		base_res_handle->i        = ui_combo(h, ar, tr("Resolution"), true, UI_ALIGN_LEFT, true);
 		if (h->changed) {
 			ui_menu_keep_open = true;
+			config_set_texture_res(base_res_handle->i);
 		}
 		if (changed_last && !h->changed) {
 			layers_on_resized();
+		}
+
+		if (base_res_handle->i == TEXTURE_RES_CUSTOM) {
+			static bool res_was_changed = false;
+
+			ui_menu_align();
+			ui_slider(base_res_x_handle, tr("Width"), 1, 16384, false, 1, true, UI_ALIGN_RIGHT, true);
+			ui_menu_align();
+			ui_slider(base_res_y_handle, tr("Height"), 1, 16384, false, 1, true, UI_ALIGN_RIGHT, true);
+
+			if (base_res_x_handle->changed || base_res_y_handle->changed) {
+				ui_menu_keep_open = true;
+			}
+			if (res_was_changed && !ui->input_down) {
+				res_was_changed = false;
+				layers_on_resized();
+			}
+
+			if (base_res_x_handle->changed || base_res_y_handle->changed) {
+				res_was_changed = true;
+			}
 		}
 
 		ui_menu_align();

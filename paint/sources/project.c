@@ -106,24 +106,12 @@ void project_fetch_default_meshes() {
 
 void project_new_box_draw() {
 	project_fetch_default_meshes();
-	ui_row2();
+
 	ui_handle_t *h_project_type = ui_handle(__ID__);
 	if (h_project_type->init) {
 		h_project_type->i = g_context->project_type;
 	}
-	g_context->project_type             = ui_combo(h_project_type, project_mesh_list, tr("Template"), true, UI_ALIGN_LEFT, true);
-	ui_handle_t *h_project_aspect_ratio = ui_handle(__ID__);
-	if (h_project_aspect_ratio->init) {
-		h_project_aspect_ratio->i = g_context->project_aspect_ratio;
-	}
-	string_array_t *project_aspect_ratio_combo = any_array_create_from_raw(
-	    (void *[]){
-	        "1:1",
-	        "2:1",
-	        "1:2",
-	    },
-	    3);
-	g_context->project_aspect_ratio = ui_combo(h_project_aspect_ratio, project_aspect_ratio_combo, tr("Aspect Ratio"), true, UI_ALIGN_LEFT, true);
+	g_context->project_type = ui_combo(h_project_type, project_mesh_list, tr("Template"), true, UI_ALIGN_LEFT, true);
 	ui_end_element();
 	ui_row2();
 	if (ui_icon_button(tr("Cancel"), ICON_CLOSE, UI_ALIGN_CENTER)) {
@@ -311,15 +299,15 @@ void project_new(bool reset_layers) {
 	ui_base_hwnds->buffer[TAB_AREA_SIDEBAR1]->redraws = 2;
 
 	if (reset_layers) {
-		bool aspect_ratio_changed = project_layers->buffer[0]->texpaint->width != config_get_texture_res_x() ||
-		                            project_layers->buffer[0]->texpaint->height != config_get_texture_res_y();
+		bool res_changed = project_layers->buffer[0]->texpaint->width != config_get_texture_res_x() ||
+		                   project_layers->buffer[0]->texpaint->height != config_get_texture_res_y();
 		while (project_layers->length > 0) {
 			slot_layer_unload(array_pop(project_layers));
 		}
 		slot_layer_t *layer = slot_layer_create("", LAYER_SLOT_TYPE_LAYER, NULL);
 		any_array_push(project_layers, layer);
 		context_set_layer(layer);
-		if (aspect_ratio_changed) {
+		if (res_changed) {
 			sys_notify_on_next_frame(&project_new_resize_layers, NULL);
 		}
 		sys_notify_on_next_frame(&project_new_reset_layers, NULL);

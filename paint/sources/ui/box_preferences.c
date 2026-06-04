@@ -403,31 +403,15 @@ void box_preferences_usage_tab() {
 
 	ui_handle_t *h_layer_res = ui_handle(__ID__);
 	h_layer_res->i           = g_config->layer_res;
-#if defined(IRON_ANDROID) || defined(IRON_IOS)
+
 	string_array_t *res_combo = any_array_create_from_raw(
 	    (void *[]){
-	        "128",
-	        "256",
-	        "512",
-	        "1024",
-	        "2048",
-	        "4096",
-	    },
-	    6);
-#else
-	string_array_t *res_combo = any_array_create_from_raw(
-	    (void *[]){
-	        "128",
-	        "256",
-	        "512",
-	        "1024",
 	        "2048",
 	        "4096",
 	        "8192",
 	        "16384",
 	    },
-	    8);
-#endif
+	    4);
 	g_config->layer_res = ui_combo(h_layer_res, res_combo, tr("Default Layer Resolution"), true, UI_ALIGN_LEFT, true);
 
 	ui_handle_t *h_scene_atlas_res = ui_handle(__ID__);

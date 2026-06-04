@@ -236,7 +236,6 @@ typedef struct context {
 	f32                         clone_delta_y;
 	bool                        show_compass;
 	i32                         project_type;
-	i32                         project_aspect_ratio;
 	f32                         last_paint_vec_x;
 	f32                         last_paint_vec_y;
 	f32                         prev_paint_vec_x;

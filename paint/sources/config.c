@@ -283,6 +283,7 @@ void config_init() {
 	}
 #endif
 	base_res_handle->i = g_config->layer_res;
+	config_set_texture_res(g_config->layer_res);
 	keymap_load();
 }
 
@@ -421,20 +422,7 @@ f32 config_get_super_sample_size(i32 i) {
 }
 
 i32 config_texture_res_size(i32 pos) {
-	return pos == TEXTURE_RES_RES128     ? 128
-	       : pos == TEXTURE_RES_RES256   ? 256
-	       : pos == TEXTURE_RES_RES512   ? 512
-	       : pos == TEXTURE_RES_RES1024  ? 1024
-	       : pos == TEXTURE_RES_RES2048  ? 2048
-	       : pos == TEXTURE_RES_RES4096  ? 4096
-	       : pos == TEXTURE_RES_RES8192  ? 8192
-	       : pos == TEXTURE_RES_RES16384 ? 16384
-	                                     : 0;
-}
-
-i32 config_get_texture_res() {
-	i32 res = base_res_handle->i;
-	return config_texture_res_size(res);
+	return pos == TEXTURE_RES_RES2048 ? 2048 : pos == TEXTURE_RES_RES4096 ? 4096 : pos == TEXTURE_RES_RES8192 ? 8192 : pos == TEXTURE_RES_RES16384 ? 16384 : 0;
 }
 
 i32 config_get_layer_res() {
@@ -447,24 +435,28 @@ i32 config_get_scene_atlas_res() {
 	return config_texture_res_size(res);
 }
 
+void config_set_texture_res(i32 pos) {
+	if (pos != TEXTURE_RES_CUSTOM) {
+		f32 res              = (f32)config_texture_res_size(pos);
+		base_res_x_handle->f = res;
+		base_res_y_handle->f = res;
+	}
+}
+
 i32 config_get_texture_res_x() {
-	return g_context->project_aspect_ratio == 2 ? math_floor(config_get_texture_res() / 2.0) : config_get_texture_res();
+	return (i32)base_res_x_handle->f;
 }
 
 i32 config_get_texture_res_y() {
-	return g_context->project_aspect_ratio == 1 ? math_floor(config_get_texture_res() / 2.0) : config_get_texture_res();
+	return (i32)base_res_y_handle->f;
 }
 
 i32 config_get_texture_res_pos(i32 i) {
-	return i == 128     ? TEXTURE_RES_RES128
-	       : i == 256   ? TEXTURE_RES_RES256
-	       : i == 512   ? TEXTURE_RES_RES512
-	       : i == 1024  ? TEXTURE_RES_RES1024
-	       : i == 2048  ? TEXTURE_RES_RES2048
+	return i == 2048    ? TEXTURE_RES_RES2048
 	       : i == 4096  ? TEXTURE_RES_RES4096
 	       : i == 8192  ? TEXTURE_RES_RES8192
 	       : i == 16384 ? TEXTURE_RES_RES16384
-	                    : 0;
+	                    : TEXTURE_RES_CUSTOM;
 }
 
 void config_load_theme(char *theme, bool tag_redraw) {

@@ -41,34 +41,19 @@ void box_export_tab_export_textures(char *title, bool bake_material) {
 
 		ui_row2();
 
-#if defined(IRON_ANDROID) || defined(IRON_IOS)
 		string_array_t *base_res_combo = any_array_create_from_raw(
 		    (void *[]){
-		        "128",
-		        "256",
-		        "512",
-		        "1024",
-		        "2048",
-		        "4096",
-		    },
-		    6);
-#else
-		string_array_t *base_res_combo = any_array_create_from_raw(
-		    (void *[]){
-		        "128",
-		        "256",
-		        "512",
-		        "1024",
 		        "2048",
 		        "4096",
 		        "8192",
 		        "16384",
+		        tr("Custom"),
 		    },
-		    8);
-#endif
+		    5);
 
 		ui_combo(base_res_handle, base_res_combo, tr("Resolution"), true, UI_ALIGN_LEFT, true);
 		if (base_res_handle->changed) {
+			config_set_texture_res(base_res_handle->i);
 			layers_on_resized();
 		}
 

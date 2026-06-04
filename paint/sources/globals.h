@@ -122,6 +122,8 @@ i32                       base_default_element_w = 100;
 i32                       base_default_element_h = 28;
 i32                       base_default_font_size = 13;
 ui_handle_t              *base_res_handle;
+ui_handle_t              *base_res_x_handle;
+ui_handle_t              *base_res_y_handle;
 ui_handle_t              *base_bits_handle;
 string_array_t           *base_drop_paths;
 slot_material_t          *base_drag_material = NULL;

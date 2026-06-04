@@ -105,6 +105,7 @@ i32                       config_get_super_sample_quality(f32 f);
 f32                       config_get_super_sample_size(i32 i);
 i32                       config_get_layer_res();
 i32                       config_get_scene_atlas_res();
+void                      config_set_texture_res(i32 pos);
 i32                       config_get_texture_res_x();
 i32                       config_get_texture_res_y();
 i32                       config_get_texture_res_pos(i32 i);

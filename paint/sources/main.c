@@ -275,6 +275,12 @@ void _kickstart() {
 	base_res_handle = ui_handle_create();
 	gc_root(base_res_handle);
 
+	base_res_x_handle = ui_handle_create();
+	gc_root(base_res_x_handle);
+
+	base_res_y_handle = ui_handle_create();
+	gc_root(base_res_y_handle);
+
 	base_bits_handle = ui_handle_create();
 	gc_root(base_bits_handle);
 
