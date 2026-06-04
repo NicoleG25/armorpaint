@@ -7,14 +7,11 @@ typedef struct {
 	gpu_texture_t *texpaint;
 	gpu_texture_t *texpaint_nor;
 	gpu_texture_t *texpaint_pack;
+	f32_array_t   *path_points;
+	f32_array_t   *path_points_world;
+	f32_array_t   *path_points_camera;
+	i32_array_t   *path_points_parent;
 } tab_timeline_keyframe_t;
-
-typedef struct {
-	i32            layer_index;
-	gpu_texture_t *texpaint;
-	gpu_texture_t *texpaint_nor;
-	gpu_texture_t *texpaint_pack;
-} tab_timeline_origin_t;
 
 typedef struct {
 	i32    frame;
@@ -23,10 +20,8 @@ typedef struct {
 	bool   tween;
 } tab_timeline_mesh_keyframe_t;
 
-typedef struct {
-	i32    mesh_index;
-	mat4_t transform;
-} tab_timeline_mesh_origin_t;
+typedef tab_timeline_keyframe_t      tab_timeline_origin_t;
+typedef tab_timeline_mesh_keyframe_t tab_timeline_mesh_origin_t;
 
 i32  tab_timeline_selected_frame = 0;
 i32  tab_timeline_selected_row   = 0;
@@ -69,6 +64,20 @@ static void tab_timeline_copy_tex(gpu_texture_t *dst, gpu_texture_t *src) {
 	draw_scaled_image(src, 0, 0, dst->width, dst->height);
 	draw_set_pipeline(NULL);
 	draw_end();
+}
+
+static void tab_timeline_copy_path_points_from_layer(slot_layer_t *l, f32_array_t **pp, f32_array_t **ppw, f32_array_t **ppc, i32_array_t **ppp) {
+	*pp  = l->path_points != NULL ? f32_array_create_from_array(l->path_points) : NULL;
+	*ppw = l->path_points_world != NULL ? f32_array_create_from_array(l->path_points_world) : NULL;
+	*ppc = l->path_points_camera != NULL ? f32_array_create_from_array(l->path_points_camera) : NULL;
+	*ppp = l->path_points_parent != NULL ? i32_array_create_from_array(l->path_points_parent) : NULL;
+}
+
+static void tab_timeline_copy_path_points_to_layer(slot_layer_t *l, f32_array_t *pp, f32_array_t *ppw, f32_array_t *ppc, i32_array_t *ppp) {
+	l->path_points        = pp != NULL ? f32_array_create_from_array(pp) : NULL;
+	l->path_points_world  = ppw != NULL ? f32_array_create_from_array(ppw) : NULL;
+	l->path_points_camera = ppc != NULL ? f32_array_create_from_array(ppc) : NULL;
+	l->path_points_parent = ppp != NULL ? i32_array_create_from_array(ppp) : NULL;
 }
 
 static gpu_texture_format_t tab_timeline_tex_format() {
@@ -134,6 +143,7 @@ static void tab_timeline_save_origins() {
 		tab_timeline_copy_tex(o->texpaint, l->texpaint);
 		tab_timeline_copy_tex(o->texpaint_nor, l->texpaint_nor);
 		tab_timeline_copy_tex(o->texpaint_pack, l->texpaint_pack);
+		tab_timeline_copy_path_points_from_layer(l, &o->path_points, &o->path_points_world, &o->path_points_camera, &o->path_points_parent);
 	}
 }
 
@@ -149,6 +159,7 @@ static void tab_timeline_load_origins() {
 			tab_timeline_copy_tex(l->texpaint, o->texpaint);
 			tab_timeline_copy_tex(l->texpaint_nor, o->texpaint_nor);
 			tab_timeline_copy_tex(l->texpaint_pack, o->texpaint_pack);
+			tab_timeline_copy_path_points_to_layer(l, o->path_points, o->path_points_world, o->path_points_camera, o->path_points_parent);
 		}
 	}
 	g_context->ddirty               = 2;
@@ -167,6 +178,7 @@ static void tab_timeline_save_to_keyframes(i32 frame) {
 			tab_timeline_copy_tex(kf->texpaint, l->texpaint);
 			tab_timeline_copy_tex(kf->texpaint_nor, l->texpaint_nor);
 			tab_timeline_copy_tex(kf->texpaint_pack, l->texpaint_pack);
+			tab_timeline_copy_path_points_from_layer(l, &kf->path_points, &kf->path_points_world, &kf->path_points_camera, &kf->path_points_parent);
 		}
 	}
 }
@@ -184,6 +196,7 @@ static void tab_timeline_load_from_keyframes(i32 frame) {
 			tab_timeline_copy_tex(l->texpaint, kf->texpaint);
 			tab_timeline_copy_tex(l->texpaint_nor, kf->texpaint_nor);
 			tab_timeline_copy_tex(l->texpaint_pack, kf->texpaint_pack);
+			tab_timeline_copy_path_points_to_layer(l, kf->path_points, kf->path_points_world, kf->path_points_camera, kf->path_points_parent);
 			any = true;
 		}
 		else {
@@ -193,6 +206,7 @@ static void tab_timeline_load_from_keyframes(i32 frame) {
 				tab_timeline_copy_tex(l->texpaint, o->texpaint);
 				tab_timeline_copy_tex(l->texpaint_nor, o->texpaint_nor);
 				tab_timeline_copy_tex(l->texpaint_pack, o->texpaint_pack);
+				tab_timeline_copy_path_points_to_layer(l, o->path_points, o->path_points_world, o->path_points_camera, o->path_points_parent);
 				any = true;
 			}
 		}
@@ -396,6 +410,7 @@ static void tab_timeline_add_keyframe_on_next_frame(void *_) {
 	tab_timeline_copy_tex(kf->texpaint, l->texpaint);
 	tab_timeline_copy_tex(kf->texpaint_nor, l->texpaint_nor);
 	tab_timeline_copy_tex(kf->texpaint_pack, l->texpaint_pack);
+	tab_timeline_copy_path_points_from_layer(l, &kf->path_points, &kf->path_points_world, &kf->path_points_camera, &kf->path_points_parent);
 }
 
 static void tab_timeline_remove_keyframe_on_next_frame(void *_) {
@@ -516,11 +531,15 @@ void tab_timeline_export(project_t *raw) {
 		tab_timeline_keyframe_t        *kf = tab_timeline_keyframes->buffer[i];
 		timeline_layer_keyframe_data_t *d =
 		    GC_ALLOC_INIT(timeline_layer_keyframe_data_t, {
-		                                                      .frame         = kf->frame,
-		                                                      .layer_index   = kf->layer_index,
-		                                                      .texpaint      = lz4_encode(gpu_get_texture_pixels(kf->texpaint)),
-		                                                      .texpaint_nor  = lz4_encode(gpu_get_texture_pixels(kf->texpaint_nor)),
-		                                                      .texpaint_pack = lz4_encode(gpu_get_texture_pixels(kf->texpaint_pack)),
+		                                                      .frame              = kf->frame,
+		                                                      .layer_index        = kf->layer_index,
+		                                                      .texpaint           = lz4_encode(gpu_get_texture_pixels(kf->texpaint)),
+		                                                      .texpaint_nor       = lz4_encode(gpu_get_texture_pixels(kf->texpaint_nor)),
+		                                                      .texpaint_pack      = lz4_encode(gpu_get_texture_pixels(kf->texpaint_pack)),
+		                                                      .path_points        = kf->path_points,
+		                                                      .path_points_world  = kf->path_points_world,
+		                                                      .path_points_camera = kf->path_points_camera,
+		                                                      .path_points_parent = kf->path_points_parent,
 		                                                  });
 		any_array_push(layers, d);
 	}
@@ -592,6 +611,10 @@ void tab_timeline_import(project_t *raw) {
 			kf->texpaint                       = tab_timeline_tex_from_buffer(d->texpaint, raw->is_bgra);
 			kf->texpaint_nor                   = tab_timeline_tex_from_buffer(d->texpaint_nor, raw->is_bgra);
 			kf->texpaint_pack                  = tab_timeline_tex_from_buffer(d->texpaint_pack, raw->is_bgra);
+			kf->path_points                    = d->path_points;
+			kf->path_points_world              = d->path_points_world;
+			kf->path_points_camera             = d->path_points_camera;
+			kf->path_points_parent             = d->path_points_parent;
 			any_array_push(tab_timeline_keyframes, kf);
 		}
 	}

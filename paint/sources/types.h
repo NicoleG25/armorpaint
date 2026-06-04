@@ -622,11 +622,15 @@ typedef struct layer_data {
 } layer_data_t;
 
 typedef struct timeline_layer_keyframe_data {
-	i32            frame;
-	i32            layer_index;
-	struct buffer *texpaint;
-	struct buffer *texpaint_nor;
-	struct buffer *texpaint_pack;
+	i32               frame;
+	i32               layer_index;
+	struct buffer    *texpaint;
+	struct buffer    *texpaint_nor;
+	struct buffer    *texpaint_pack;
+	struct f32_array *path_points;
+	struct f32_array *path_points_world;
+	struct f32_array *path_points_camera;
+	struct i32_array *path_points_parent;
 } timeline_layer_keyframe_data_t;
 
 typedef struct timeline_mesh_keyframe_data {

@@ -248,6 +248,10 @@ project_t *import_arm_from_map_to_arm(any_map_t *old) {
 			d->texpaint                         = any_map_get(old, "texpaint");
 			d->texpaint_nor                     = any_map_get(old, "texpaint_nor");
 			d->texpaint_pack                    = any_map_get(old, "texpaint_pack");
+			d->path_points                      = any_map_get(old, "path_points");
+			d->path_points_world                = any_map_get(old, "path_points_world");
+			d->path_points_camera               = any_map_get(old, "path_points_camera");
+			d->path_points_parent               = any_map_get(old, "path_points_parent");
 			any_array_push(project->timeline_layers, d);
 		}
 	}
