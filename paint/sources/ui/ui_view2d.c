@@ -39,7 +39,29 @@ void ui_view2d_capture_output(void *_) {
 	util_texture_capture_output(ui_view2d_tex, "tex_capture");
 }
 
-void ui_view2d_context_menu_draw() {
+void ui_view2d_draw_edit() {
+	if (ui_view2d_type == VIEW_2D_TYPE_LAYER) {
+		ui_handle_t *h_uvmap_show = ui_handle(__ID__);
+		h_uvmap_show->b           = ui_view2d_uvmap_show;
+		ui_check(h_uvmap_show, tr("UV Map"), "");
+		if (h_uvmap_show->changed) {
+			ui_view2d_uvmap_show    = h_uvmap_show->b;
+			ui_view2d_hwnd->redraws = 2;
+			ui_menu_keep_open       = true;
+		}
+	}
+
+	ui_handle_t *h_tiled_show = ui_handle(__ID__);
+	h_tiled_show->b           = ui_view2d_tiled_show;
+	ui_check(h_tiled_show, tr("Tiled"), "");
+	if (h_tiled_show->changed) {
+		ui_view2d_tiled_show    = h_tiled_show->b;
+		ui_view2d_hwnd->redraws = 2;
+		ui_menu_keep_open       = true;
+	}
+
+	ui_menu_separator();
+
 	if (ui_menu_button(tr("Zoom to Fit"), "", ICON_NONE)) {
 		ui_view2d_pan_x         = 0.0;
 		ui_view2d_pan_y         = 0.0;
@@ -53,9 +75,25 @@ void ui_view2d_context_menu_draw() {
 		}
 		ui_view2d_hwnd->redraws = 2;
 	}
-	ui_menu_separator();
+
+	ui->enabled = ui_view2d_tex != NULL;
 	if (ui_menu_button(tr("Capture Output"), "", ICON_PHOTO)) {
 		sys_notify_on_next_frame(&ui_view2d_capture_output, NULL);
+	}
+	ui->enabled = true;
+
+	if (ui_view2d_tex != NULL) {
+		ui_menu_separator();
+		ui->enabled = false;
+		ui_text(string("%dx%d", ui_view2d_tex->width, ui_view2d_tex->height), UI_ALIGN_LEFT, 0x00000000);
+		if (ui_view2d_type == VIEW_2D_TYPE_ASSET) {
+			asset_t *asset     = g_context->texture;
+			bool     is_packed = g_project->packed_assets != NULL && project_packed_asset_exists(g_project->packed_assets, asset->file);
+			if (is_packed) {
+				ui_text(tr("packed"), UI_ALIGN_LEFT, 0x00000000);
+			}
+		}
+		ui->enabled = true;
 	}
 }
 
@@ -318,14 +356,6 @@ void ui_view2d_render(void *_) {
 			draw_set_color(0xffffffff);
 		}
 
-		// Context menu
-		if (tex != NULL && ui->input_released_r && math_abs(ui->input_x - ui->input_started_x) < 2 && math_abs(ui->input_y - ui->input_started_y) < 2) {
-			gc_unroot(ui_view2d_tex);
-			ui_view2d_tex = tex;
-			gc_root(ui_view2d_tex);
-			ui_menu_draw(&ui_view2d_context_menu_draw, -1, -1);
-		}
-
 		// Menu
 		i32 top_y = ui_menu_top_y();
 		i32 ew    = math_floor(UI_ELEMENT_W());
@@ -418,75 +448,38 @@ void ui_view2d_render(void *_) {
 				ui->_x += ew + 3;
 				ui->_y = 2 + start_y;
 			}
+		}
 
-			ui->_w                    = math_floor(ew * 0.7 + 3);
-			ui_handle_t *h_uvmap_show = ui_handle(__ID__);
-			if (h_uvmap_show->init) {
-				h_uvmap_show->b = ui_view2d_uvmap_show;
+		// Zoom slider
+		if (tex != NULL) {
+			ui_handle_t *h_zoom        = ui_handle(__ID__);
+			i32          scale_percent = math_round((tw / (float)tex->width) * 100);
+			h_zoom->f                  = scale_percent;
+			ui->_w                     = math_floor(ew + 3);
+			f32 new_percent            = ui_slider(h_zoom, string("%d%%", scale_percent), 1, 100, true, 1, false, UI_ALIGN_LEFT, true);
+			if (h_zoom->changed) {
+				ui_view2d_pan_scale     = new_percent / 100.0 * tex->width / (wm * 0.9);
+				ui_view2d_hwnd->redraws = 2;
 			}
-			ui_view2d_uvmap_show = ui_check(h_uvmap_show, tr("UV Map"), "");
-			ui->_x += ew * 0.7 + 3;
+			ui->_x += ew + 3;
 			ui->_y = 2 + start_y;
 		}
 
-		ui->_w                    = math_floor(ew * 0.7 + 3);
-		ui_handle_t *h_tiled_show = ui_handle(__ID__);
-		if (h_tiled_show->init) {
-			h_tiled_show->b = ui_view2d_tiled_show;
+		char *view_type = ui_view2d_type == VIEW_2D_TYPE_ASSET   ? tr("Asset")
+		                  : ui_view2d_type == VIEW_2D_TYPE_NODE  ? tr("Node")
+		                  : ui_view2d_type == VIEW_2D_TYPE_FONT  ? tr("Font")
+		                  : ui_view2d_type == VIEW_2D_TYPE_UVMAP ? tr("UVMap")
+		                                                         : tr("Layer");
+
+		ui->_w = math_floor(ew * 0.7 + 3);
+		if (ui_icon_button(view_type, ICON_EDIT, UI_ALIGN_CENTER)) {
+			gc_unroot(ui_view2d_tex);
+			ui_view2d_tex = tex;
+			gc_root(ui_view2d_tex);
+			ui_menu_draw(&ui_view2d_draw_edit, -1, -1);
 		}
-		ui_view2d_tiled_show = ui_check(h_tiled_show, tr("Tiled"), "");
-		ui->_x += ew * 0.6 + 3;
+		ui->_x += ew * 0.7 + 3;
 		ui->_y = 2 + start_y;
-
-		bool full = true;
-
-#ifdef IRON_IOS
-		if (config_is_iphone()) {
-			full = false;
-		}
-#endif
-
-		if (full) {
-			if (tex != NULL) {
-				ui->_w            = math_floor(ew * 0.5 + 3);
-				i32 scale_percent = math_round((tw / (float)tex->width) * 100);
-				ui_text(string("%d%%", scale_percent), UI_ALIGN_LEFT, 0x00000000);
-				ui->_x += ew * 0.5 + 3;
-				ui->_y = 2 + start_y;
-			}
-
-			ui->enabled = false;
-
-			if ((ui_view2d_type == VIEW_2D_TYPE_ASSET || ui_view2d_type == VIEW_2D_TYPE_NODE) && tex != NULL) { // Texture resolution
-				ui->_w = math_floor(ew * 0.7 + 3);
-				ui_text(string("%dx%d", tex->width, tex->height), UI_ALIGN_LEFT, 0x00000000);
-				ui->_x += ew * 0.7 + 3;
-				ui->_y = 2 + start_y;
-			}
-
-			char *view_type = ui_view2d_type == VIEW_2D_TYPE_ASSET   ? tr("Asset")
-			                  : ui_view2d_type == VIEW_2D_TYPE_NODE  ? tr("Node")
-			                  : ui_view2d_type == VIEW_2D_TYPE_FONT  ? tr("Font")
-			                  : ui_view2d_type == VIEW_2D_TYPE_UVMAP ? tr("UVMap")
-			                                                         : tr("Layer");
-
-			ui->_w = math_floor(ew * 0.5 + 3);
-			ui_text(view_type, UI_ALIGN_LEFT, 0x00000000);
-			ui->_x += ew * 0.5 + 3;
-			ui->_y = 2 + start_y;
-
-			if (ui_view2d_type == VIEW_2D_TYPE_ASSET) {
-				asset_t *asset     = g_context->texture;
-				bool     is_packed = g_project->packed_assets != NULL && project_packed_asset_exists(g_project->packed_assets, asset->file);
-				if (is_packed) {
-					ui_text(tr("(packed)"), UI_ALIGN_LEFT, 0x00000000);
-					ui->_x += ew * 0.5 + 3;
-					ui->_y = 2 + start_y;
-				}
-			}
-
-			ui->enabled = true;
-		}
 
 		// Picked position
 		if (g_context->tool == TOOL_TYPE_PICKER && (ui_view2d_type == VIEW_2D_TYPE_LAYER || ui_view2d_type == VIEW_2D_TYPE_ASSET)) {
