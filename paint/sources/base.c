@@ -62,7 +62,7 @@ void base_on_drop_files(char *drop_path) {
 
 void base_init_on_start_arm(void *_) {
 	if (base_start_arm_found) {
-		import_arm_run_project(project_filepath);
+		import_arm_run_project(g_project->_->filepath);
 	}
 	g_context->tool = TOOL_TYPE_CURSOR;
 	// Auto-run main script
@@ -103,7 +103,7 @@ void base_material_dropped() {
 		layers_create_fill_layer(uv_type, decal_mat, g_context->drag_dest);
 	}
 	else if (context_in_nodes()) {
-		ui_nodes_accept_material_drop(array_index_of(project_materials, base_drag_material));
+		ui_nodes_accept_material_drop(array_index_of(g_project->_->materials, base_drag_material));
 	}
 	else if (context_in_materials()) {
 		tab_materials_accept_material_drop(base_drag_material);
@@ -114,7 +114,7 @@ void base_material_dropped() {
 
 void base_update_import_asset_done() {
 	// Asset was material
-	if (project_materials->length > _base_material_count) {
+	if (g_project->_->materials->length > _base_material_count) {
 		gc_unroot(base_drag_material);
 		base_drag_material = g_context->material;
 		gc_root(base_drag_material);
@@ -191,7 +191,7 @@ void base_update(void *_) {
 
 			// Create image texture
 			if (context_in_nodes()) {
-				ui_nodes_accept_asset_drop(array_index_of(project_assets, base_drag_asset));
+				ui_nodes_accept_asset_drop(array_index_of(g_project->_->assets, base_drag_asset));
 			}
 			else if (context_in_3d_view()) {
 				if (ends_with(to_lower_case(base_drag_asset->file), ".hdr")) {
@@ -239,7 +239,7 @@ void base_update(void *_) {
 				base_drop_x = mouse_x;
 				base_drop_y = mouse_y;
 
-				_base_material_count = project_materials->length;
+				_base_material_count = g_project->_->materials->length;
 				import_asset_run(base_drag_file, base_drop_x, base_drop_y, true, true, &base_update_import_asset_done);
 			}
 
@@ -253,7 +253,7 @@ void base_update(void *_) {
 		}
 		else if (base_drag_layer != NULL) {
 			if (context_in_nodes()) {
-				ui_nodes_accept_layer_drop(array_index_of(project_layers, base_drag_layer));
+				ui_nodes_accept_layer_drop(array_index_of(g_project->_->layers, base_drag_layer));
 			}
 			else if (context_in_layers() && base_is_dragging) {
 				slot_layer_move(base_drag_layer, g_context->drag_dest);
@@ -652,7 +652,7 @@ void ui_base_init() {
 
 	project_new(false);
 
-	if (string_equals(project_filepath, "")) {
+	if (string_equals(g_project->_->filepath, "")) {
 		sys_notify_on_next_frame(&ui_base_init_on_next_frame, NULL);
 	}
 
@@ -1005,8 +1005,8 @@ void ui_base_update_ui() {
 		g_context->layer_preview_dirty  = false;
 		g_context->mask_preview_last    = NULL;
 		// Update all layer previews
-		for (i32 i = 0; i < project_layers->length; ++i) {
-			slot_layer_t *l = project_layers->buffer[i];
+		for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+			slot_layer_t *l = g_project->_->layers->buffer[i];
 			if (slot_layer_is_group(l)) {
 				continue;
 			}
@@ -1846,9 +1846,7 @@ void base_init() {
 	// Startup project
 	char *start_arm = string("%s/start.arm", iron_internal_files_location());
 	if (iron_file_exists(start_arm)) {
-		gc_unroot(project_filepath);
-		project_filepath = start_arm;
-		gc_root(project_filepath);
+		g_project->_->filepath = start_arm;
 		base_start_arm_found = true;
 		args_player          = true;
 	}
@@ -2009,10 +2007,10 @@ void base_resize() {
 
 string_array_t *base_combo_enum_texts(char *node_type) {
 	if (string_equals(node_type, "TEX_IMAGE")) {
-		if (project_assets->length > 0) {
+		if (g_project->_->assets->length > 0) {
 			string_array_t *asset_names = any_array_create_from_raw((void *[]){}, 0);
-			for (i32 i = 0; i < project_assets->length; ++i) {
-				any_array_push(asset_names, project_assets->buffer[i]->name);
+			for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+				any_array_push(asset_names, g_project->_->assets->buffer[i]->name);
 			}
 			return asset_names;
 		}
@@ -2028,8 +2026,8 @@ string_array_t *base_combo_enum_texts(char *node_type) {
 
 	if (string_equals(node_type, "LAYER") || string_equals(node_type, "LAYER_MASK")) {
 		string_array_t *layer_names = any_array_create_from_raw((void *[]){}, 0);
-		for (i32 i = 0; i < project_layers->length; ++i) {
-			slot_layer_t *l = project_layers->buffer[i];
+		for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+			slot_layer_t *l = g_project->_->layers->buffer[i];
 			any_array_push(layer_names, l->name);
 		}
 		return layer_names;
@@ -2037,18 +2035,18 @@ string_array_t *base_combo_enum_texts(char *node_type) {
 
 	if (string_equals(node_type, "MATERIAL")) {
 		string_array_t *material_names = any_array_create_from_raw((void *[]){}, 0);
-		for (i32 i = 0; i < project_materials->length; ++i) {
-			slot_material_t *m = project_materials->buffer[i];
+		for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+			slot_material_t *m = g_project->_->materials->buffer[i];
 			any_array_push(material_names, m->canvas->name);
 		}
 		return material_names;
 	}
 
 	if (string_equals(node_type, "image_texture_node")) {
-		if (project_assets->length > 0) {
+		if (g_project->_->assets->length > 0) {
 			string_array_t *asset_names = any_array_create_from_raw((void *[]){}, 0);
-			for (i32 i = 0; i < project_assets->length; ++i) {
-				any_array_push(asset_names, project_assets->buffer[i]->name);
+			for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+				any_array_push(asset_names, g_project->_->assets->buffer[i]->name);
 			}
 			return asset_names;
 		}
@@ -2068,8 +2066,8 @@ string_array_t *base_combo_enum_texts(char *node_type) {
 any_array_t *base_combo_enum_images(char *node_type) {
 	if (string_equals(node_type, "TEX_IMAGE")) {
 		any_array_t *ar = any_array_create(0);
-		for (i32 i = 0; i < project_assets->length; ++i) {
-			asset_t       *asset = project_assets->buffer[i];
+		for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+			asset_t       *asset = g_project->_->assets->buffer[i];
 			gpu_texture_t *img   = project_get_image(asset);
 			any_array_push(ar, img);
 		}
@@ -2078,8 +2076,8 @@ any_array_t *base_combo_enum_images(char *node_type) {
 
 	if (string_equals(node_type, "LAYER") || string_equals(node_type, "LAYER_MASK")) {
 		any_array_t *ar = any_array_create(0);
-		for (i32 i = 0; i < project_layers->length; ++i) {
-			slot_layer_t *l = project_layers->buffer[i];
+		for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+			slot_layer_t *l = g_project->_->layers->buffer[i];
 			any_array_push(ar, l->texpaint_preview);
 		}
 		return ar;
@@ -2087,8 +2085,8 @@ any_array_t *base_combo_enum_images(char *node_type) {
 
 	if (string_equals(node_type, "MATERIAL")) {
 		any_array_t *ar = any_array_create(0);
-		for (i32 i = 0; i < project_materials->length; ++i) {
-			slot_material_t *m = project_materials->buffer[i];
+		for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+			slot_material_t *m = g_project->_->materials->buffer[i];
 			any_array_push(ar, m->image_icon);
 		}
 		return ar;
@@ -2096,8 +2094,8 @@ any_array_t *base_combo_enum_images(char *node_type) {
 
 	if (string_equals(node_type, "image_texture_node")) {
 		any_array_t *ar = any_array_create(0);
-		for (i32 i = 0; i < project_assets->length; ++i) {
-			asset_t       *asset = project_assets->buffer[i];
+		for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+			asset_t       *asset = g_project->_->assets->buffer[i];
 			gpu_texture_t *img   = project_get_image(asset);
 			any_array_push(ar, img);
 		}
@@ -2108,8 +2106,8 @@ any_array_t *base_combo_enum_images(char *node_type) {
 }
 
 i32 base_get_asset_index(char *file_name) {
-	for (i32 i = 0; i < project_assets->length; ++i) {
-		if (string_equals(project_assets->buffer[i]->name, file_name)) {
+	for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+		if (string_equals(g_project->_->assets->buffer[i]->name, file_name)) {
 			return i;
 		}
 	}
@@ -2442,8 +2440,8 @@ void base_update_workflow_create_sculpt_layer(void *_) {
 
 void base_update_workflow() {
 	// Update Material Output nodes
-	for (i32 i = 0; i < project_materials->length; ++i) {
-		ui_node_array_t *nodes = project_materials->buffer[i]->canvas->nodes;
+	for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+		ui_node_array_t *nodes = g_project->_->materials->buffer[i]->canvas->nodes;
 		for (i32 j = 0; j < nodes->length; ++j) {
 			if (string_equals(nodes->buffer[j]->type, "OUTPUT_MATERIAL_PBR")) {
 				nodes->buffer[j]->inputs->length          = g_config->workflow == WORKFLOW_PBR ? 9 : 2;
@@ -2454,9 +2452,9 @@ void base_update_workflow() {
 
 	if (g_config->workflow == WORKFLOW_SCULPT) {
 		slot_layer_t *first_sculpt = NULL;
-		for (i32 i = project_layers->length - 1; i >= 0; --i) {
-			if (project_layers->buffer[i]->texpaint_sculpt != NULL) {
-				first_sculpt = project_layers->buffer[i];
+		for (i32 i = g_project->_->layers->length - 1; i >= 0; --i) {
+			if (g_project->_->layers->buffer[i]->texpaint_sculpt != NULL) {
+				first_sculpt = g_project->_->layers->buffer[i];
 				break;
 			}
 		}
@@ -2469,8 +2467,8 @@ void base_update_workflow() {
 		}
 	}
 	else {
-		for (i32 i = project_layers->length - 1; i >= 0; --i) {
-			slot_layer_t *l = project_layers->buffer[i];
+		for (i32 i = g_project->_->layers->length - 1; i >= 0; --i) {
+			slot_layer_t *l = g_project->_->layers->buffer[i];
 			if (l->texpaint_sculpt == NULL && slot_layer_is_layer(l)) {
 				context_set_layer(l);
 				break;
@@ -2480,13 +2478,13 @@ void base_update_workflow() {
 }
 
 void base_run_in_player() {
-	if (string_equals(project_filepath, "")) {
+	if (string_equals(g_project->_->filepath, "")) {
 		console_error(tr("Save project first"));
 		return;
 	}
 	export_arm_run_project();
 	char *bin = iron_get_arg(0);
-	iron_sys_command(string("%s %s --player", bin, project_filepath));
+	iron_sys_command(string("%s %s --player", bin, g_project->_->filepath));
 	// iron_exec_async()
 }
 

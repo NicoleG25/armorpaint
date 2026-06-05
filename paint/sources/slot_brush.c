@@ -9,8 +9,8 @@ slot_brush_t *slot_brush_create(ui_node_canvas_t *c) {
 	raw->preview_ready = false;
 	raw->id            = 0;
 
-	for (i32 i = 0; i < project_brushes->length; ++i) {
-		slot_brush_t *brush = project_brushes->buffer[i];
+	for (i32 i = 0; i < g_project->_->brushes->length; ++i) {
+		slot_brush_t *brush = g_project->_->brushes->buffer[i];
 		if (brush->id >= raw->id) {
 			raw->id = brush->id + 1;
 		}

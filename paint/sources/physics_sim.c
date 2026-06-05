@@ -50,12 +50,12 @@ void sim_play() {
 	sim_running = true;
 
 	if (sim_record) {
-		if (string_equals(project_filepath, "")) {
+		if (string_equals(g_project->_->filepath, "")) {
 			console_error(tr("Save project first"));
 			sim_record = false;
 			return;
 		}
-		char            *path = string("%s/output.mp4", path_base_dir(project_filepath));
+		char            *path = string("%s/output.mp4", path_base_dir(g_project->_->filepath));
 		render_target_t *rt   = any_map_get(render_path_render_targets, "last");
 		// iron_mp4_begin(path, rt._image.width, rt._image.height);
 	}
@@ -64,7 +64,7 @@ void sim_play() {
 	gc_unroot(sim_transforms);
 	sim_transforms = any_array_create_from_raw((void *[]){}, 0);
 	gc_root(sim_transforms);
-	mesh_object_t_array_t *pos = project_paint_objects;
+	mesh_object_t_array_t *pos = g_project->_->paint_objects;
 	for (i32 i = 0; i < pos->length; ++i) {
 		mat4_t *m = gc_alloc(sizeof(mat4_t));
 		memcpy(m->m, pos->buffer[i]->base->transform->local.m, sizeof(m->m));
@@ -80,7 +80,7 @@ void sim_stop() {
 	}
 
 	// Restore transforms
-	mesh_object_t_array_t *pos = project_paint_objects;
+	mesh_object_t_array_t *pos = g_project->_->paint_objects;
 	for (i32 i = 0; i < pos->length; ++i) {
 		transform_set_matrix(pos->buffer[i]->base->transform, *(mat4_t *)sim_transforms->buffer[i]);
 		physics_body_t *pb = any_imap_get(physics_body_object_map, pos->buffer[i]->base->uid);
@@ -110,7 +110,7 @@ void sim_duplicate() {
 	mesh_object_t *so  = g_context->selected_object->ext;
 	mesh_object_t *dup = scene_add_mesh_object(so->data, so->material, so->base->parent);
 	transform_set_matrix(dup->base->transform, so->base->transform->local);
-	any_array_push(project_paint_objects, dup);
+	any_array_push(g_project->_->paint_objects, dup);
 	dup->base->name = so->base->name;
 
 	// Physics
@@ -125,7 +125,7 @@ void sim_duplicate() {
 
 void sim_delete() {
 	mesh_object_t *so = g_context->selected_object->ext;
-	array_remove(project_paint_objects, so);
+	array_remove(g_project->_->paint_objects, so);
 	mesh_object_remove(so);
 	physics_body_t *pb = any_imap_get(physics_body_object_map, so->base->uid);
 	sim_remove_body(pb);

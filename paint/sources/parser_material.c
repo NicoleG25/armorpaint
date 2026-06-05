@@ -311,8 +311,8 @@ void parser_material_finalize(node_shader_context_t *con) {
 }
 
 ui_node_canvas_t *parser_material_get_group(char *name) {
-	for (i32 i = 0; i < project_material_groups->length; ++i) {
-		node_group_t *g = project_material_groups->buffer[i];
+	for (i32 i = 0; i < g_project->_->material_groups->length; ++i) {
+		node_group_t *g = g_project->_->material_groups->buffer[i];
 		if (string_equals(g->canvas->name, name)) {
 			return g->canvas;
 		}
@@ -581,8 +581,8 @@ char *parser_material_node_name(ui_node_t *node, ui_node_t_array_t *_parents) {
 }
 
 char *parser_material_enum_data(char *s) {
-	for (i32 i = 0; i < project_assets->length; ++i) {
-		asset_t *a = project_assets->buffer[i];
+	for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+		asset_t *a = g_project->_->assets->buffer[i];
 		if (string_equals(a->name, s)) {
 			return a->file;
 		}

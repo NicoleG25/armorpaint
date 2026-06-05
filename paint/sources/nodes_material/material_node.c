@@ -4,10 +4,10 @@
 char *material_node_vector(ui_node_t *node, ui_node_socket_t *socket) {
 	char *result = "float3(0.0, 0.0, 0.0)";
 	i32   mi     = node->buttons->buffer[0]->default_value->buffer[0];
-	if (mi >= project_materials->length) {
+	if (mi >= g_project->_->materials->length) {
 		return result;
 	}
-	slot_material_t        *m      = project_materials->buffer[mi];
+	slot_material_t        *m      = g_project->_->materials->buffer[mi];
 	ui_node_t_array_t      *_nodes = parser_material_nodes;
 	ui_node_link_t_array_t *_links = parser_material_links;
 	gc_unroot(parser_material_nodes);
@@ -37,9 +37,9 @@ char *material_node_vector(ui_node_t *node, ui_node_socket_t *socket) {
 char *material_node_value(ui_node_t *node, ui_node_socket_t *socket) {
 	char *result = "0.0";
 	i32   mi     = node->buttons->buffer[0]->default_value->buffer[0];
-	if (mi >= project_materials->length)
+	if (mi >= g_project->_->materials->length)
 		return result;
-	slot_material_t        *m      = project_materials->buffer[mi];
+	slot_material_t        *m      = g_project->_->materials->buffer[mi];
 	ui_node_t_array_t      *_nodes = parser_material_nodes;
 	ui_node_link_t_array_t *_links = parser_material_links;
 	gc_unroot(parser_material_nodes);

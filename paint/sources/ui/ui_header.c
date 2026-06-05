@@ -125,7 +125,7 @@ void ui_header_draw_tool_properties_to_mask(slot_layer_t *m) {
 	gpu_set_pipeline(pipes_colorid_to_mask);
 	render_target_t *rt = any_map_get(render_path_render_targets, "texpaint_colorid");
 	gpu_set_texture(pipes_texpaint_colorid, rt->_image);
-	gpu_set_texture(pipes_tex_colorid, project_get_image(project_assets->buffer[g_context->colorid]));
+	gpu_set_texture(pipes_tex_colorid, project_get_image(g_project->_->assets->buffer[g_context->colorid]));
 	gpu_set_vertex_buffer(const_data_screen_aligned_vb);
 	gpu_set_index_buffer(const_data_screen_aligned_ib);
 	gpu_draw();
@@ -139,12 +139,12 @@ void ui_header_draw_tool_properties_to_mask(slot_layer_t *m) {
 
 void ui_header_draw_tool_properties_import(char *path) {
 	import_asset_run(path, -1.0, -1.0, true, false, NULL);
-	g_context->colorid = project_assets->length - 1;
-	for (i32 i = 0; i < project_assets->length; ++i) {
-		asset_t *a = project_assets->buffer[i];
+	g_context->colorid = g_project->_->assets->length - 1;
+	for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+		asset_t *a = g_project->_->assets->buffer[i];
 		// Already imported
 		if (string_equals(a->file, path)) {
-			g_context->colorid = array_index_of(project_assets, a);
+			g_context->colorid = array_index_of(g_project->_->assets, a);
 		}
 	}
 	g_context->ddirty                 = 2;
@@ -167,7 +167,7 @@ void ui_header_draw_tool_properties() {
 		}
 		ui->enabled = true;
 		ui_text(tr("Color ID Map"), UI_ALIGN_LEFT, 0x00000000);
-		if (project_assets->length > 0) {
+		if (g_project->_->assets->length > 0) {
 			ui_handle_t *colorid_handle = ui_handle(__ID__);
 			colorid_handle->i           = g_context->colorid;
 			g_context->colorid          = ui_combo(colorid_handle, base_combo_enum_texts("TEX_IMAGE"), tr("Color ID"), false, UI_ALIGN_LEFT, true);
@@ -179,9 +179,9 @@ void ui_header_draw_tool_properties() {
 				g_context->colorid_picked  = false;
 				ui_toolbar_handle->redraws = 1;
 			}
-			ui_image(project_get_image(project_assets->buffer[g_context->colorid]), 0xffffffff, -1.0);
+			ui_image(project_get_image(g_project->_->assets->buffer[g_context->colorid]), 0xffffffff, -1.0);
 			if (ui->is_hovered) {
-				ui_tooltip_image(project_get_image(project_assets->buffer[g_context->colorid]), 256);
+				ui_tooltip_image(project_get_image(g_project->_->assets->buffer[g_context->colorid]), 256);
 			}
 		}
 		if (ui_icon_button(tr("Import"), ICON_FOLDER_OPEN, UI_ALIGN_CENTER)) {

@@ -277,9 +277,9 @@ void export_obj_run_fast(char *path, mesh_object_t_array_t *paint_objects) {
 
 void export_obj_run_sculpt(char *path, mesh_object_t_array_t *paint_objects) {
 	slot_layer_t *l = NULL;
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		if (project_layers->buffer[i]->texpaint_sculpt != NULL) {
-			l = project_layers->buffer[i];
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		if (g_project->_->layers->buffer[i]->texpaint_sculpt != NULL) {
+			l = g_project->_->layers->buffer[i];
 			break;
 		}
 	}

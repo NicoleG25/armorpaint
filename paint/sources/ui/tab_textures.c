@@ -73,9 +73,9 @@ void tab_textures_delete_texture_on_next_frame(void *_) {
 }
 
 void tab_textures_delete_texture(asset_t *asset) {
-	i32 index = array_index_of(project_assets, asset);
-	if (project_assets->length > 1) {
-		g_context->texture = project_assets->buffer[index == project_assets->length - 1 ? index - 1 : index + 1];
+	i32 index = array_index_of(g_project->_->assets, asset);
+	if (g_project->_->assets->length > 1) {
+		g_context->texture = g_project->_->assets->buffer[index == g_project->_->assets->length - 1 ? index - 1 : index + 1];
 	}
 	ui_base_hwnds->buffer[TAB_AREA_STATUS]->redraws = 2;
 
@@ -101,16 +101,16 @@ void tab_textures_delete_texture(asset_t *asset) {
 	}
 
 	data_delete_image(asset->file);
-	array_splice(project_assets, index, 1);
+	array_splice(g_project->_->assets, index, 1);
 	sys_notify_on_next_frame(&tab_textures_delete_texture_on_next_frame, NULL);
 
-	for (i32 i = 0; i < project_materials->length; ++i) {
-		slot_material_t *m = project_materials->buffer[i];
+	for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+		slot_material_t *m = g_project->_->materials->buffer[i];
 		tab_textures_update_texture_pointers(m->canvas->nodes, index);
 	}
 
-	for (i32 i = 0; i < project_brushes->length; ++i) {
-		slot_brush_t *b = project_brushes->buffer[i];
+	for (i32 i = 0; i < g_project->_->brushes->length; ++i) {
+		slot_brush_t *b = g_project->_->brushes->buffer[i];
 		tab_textures_update_texture_pointers(b->canvas->nodes, index);
 	}
 }
@@ -182,7 +182,7 @@ void tab_textures_draw(ui_handle_t *htab) {
 
 		ui_end_sticky();
 
-		if (project_assets->length > 0) {
+		if (g_project->_->assets->length > 0) {
 
 			i32 slotw = math_floor(52 * UI_SCALE());
 			i32 num   = math_floor(ui->_window_w / (float)slotw);
@@ -195,7 +195,7 @@ void tab_textures_draw(ui_handle_t *htab) {
 			f32  uiy          = 0.0;
 			i32  imgw_val     = math_floor(50 * UI_SCALE());
 
-			for (i32 row = 0; row < math_floor(math_ceil(project_assets->length / (float)num)); ++row) {
+			for (i32 row = 0; row < math_floor(math_ceil(g_project->_->assets->length / (float)num)); ++row) {
 				i32          mult = g_config->show_asset_names ? 2 : 1;
 				f32_array_t *ar   = f32_array_create_from_raw((f32[]){}, 0);
 				for (i32 i = 0; i < num * mult; ++i) {
@@ -212,7 +212,7 @@ void tab_textures_draw(ui_handle_t *htab) {
 				for (i32 j = 0; j < num; ++j) {
 					i32 imgw = math_floor(50 * UI_SCALE());
 					i32 i    = j + row * num;
-					if (i >= project_assets->length) {
+					if (i >= g_project->_->assets->length) {
 						ui_end_element_of_size(imgw);
 						if (g_config->show_asset_names) {
 							ui_end_element_of_size(0);
@@ -220,7 +220,7 @@ void tab_textures_draw(ui_handle_t *htab) {
 						continue;
 					}
 
-					asset_t       *asset = project_assets->buffer[i];
+					asset_t       *asset = g_project->_->assets->buffer[i];
 					gpu_texture_t *img   = project_get_image(asset);
 					if (img == NULL) {
 						render_target_t *empty_rt = any_map_get(render_path_render_targets, "empty_black");
@@ -303,19 +303,19 @@ void tab_textures_draw(ui_handle_t *htab) {
 					if (g_config->show_asset_names) {
 						ui->_x = uix;
 						ui->_y += slotw * 0.9;
-						ui_text(project_assets->buffer[i]->name, UI_ALIGN_CENTER, 0x00000000);
+						ui_text(g_project->_->assets->buffer[i]->name, UI_ALIGN_CENTER, 0x00000000);
 						if (ui->is_hovered) {
-							ui_tooltip(project_assets->buffer[i]->name);
+							ui_tooltip(g_project->_->assets->buffer[i]->name);
 						}
 						ui->_y -= slotw * 0.9;
-						if (i == project_assets->length - 1) {
+						if (i == g_project->_->assets->length - 1) {
 							ui->_y += j == num - 1 ? imgw : imgw + UI_ELEMENT_H() + UI_ELEMENT_OFFSET();
 						}
 					}
 				}
 			}
 
-			if (base_drag_asset != NULL && tab_textures_drag_pos == project_assets->length) {
+			if (base_drag_asset != NULL && tab_textures_drag_pos == g_project->_->assets->length) {
 				ui->_x = uix;
 				ui->_y = uiy;
 				ui_fill(imgw_val + 1, -2, 2, imgw_val + 4, ui->ops->theme->HIGHLIGHT_COL);
@@ -336,20 +336,20 @@ void tab_textures_draw(ui_handle_t *htab) {
 
 		bool in_focus = ui->input_x > ui->_window_x && ui->input_x < ui->_window_x + ui->_window_w && ui->input_y > ui->_window_y &&
 		                ui->input_y < ui->_window_y + ui->_window_h;
-		if (in_focus && ui->is_delete_down && project_assets->length > 0 && array_index_of(project_assets, g_context->texture) >= 0) {
+		if (in_focus && ui->is_delete_down && g_project->_->assets->length > 0 && array_index_of(g_project->_->assets, g_context->texture) >= 0) {
 			ui->is_delete_down = false;
 			tab_textures_delete_texture(g_context->texture);
 		}
-		if (in_focus && project_assets->length > 0) {
-			i32 i = array_index_of(project_assets, g_context->texture);
+		if (in_focus && g_project->_->assets->length > 0) {
+			i32 i = array_index_of(g_project->_->assets, g_context->texture);
 			if (ui->is_key_pressed && ui->key_code == KEY_CODE_UP) {
 				if (i > 0) {
-					g_context->texture = project_assets->buffer[i - 1];
+					g_context->texture = g_project->_->assets->buffer[i - 1];
 				}
 			}
 			if (ui->is_key_pressed && ui->key_code == KEY_CODE_DOWN) {
-				if (i < project_assets->length - 1) {
-					g_context->texture = project_assets->buffer[i + 1];
+				if (i < g_project->_->assets->length - 1) {
+					g_context->texture = g_project->_->assets->buffer[i + 1];
 				}
 			}
 		}
@@ -379,17 +379,17 @@ void tab_textures_accept_asset_drop(asset_t *asset) {
 		return;
 	}
 
-	i32 asset_pos = array_index_of(project_assets, asset);
+	i32 asset_pos = array_index_of(g_project->_->assets, asset);
 	if (asset_pos != -1 && math_abs(asset_pos - tab_textures_drag_pos) > 0) {
-		array_remove(project_assets, asset);
+		array_remove(g_project->_->assets, asset);
 		i32 new_pos = tab_textures_drag_pos - asset_pos > 0 ? tab_textures_drag_pos - 1 : tab_textures_drag_pos;
-		array_insert(project_assets, new_pos, asset);
+		array_insert(g_project->_->assets, new_pos, asset);
 
-		for (i32 i = 0; i < project_materials->length; ++i) {
-			tab_textures_remap_node_indices(project_materials->buffer[i]->canvas->nodes, asset_pos, new_pos);
+		for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+			tab_textures_remap_node_indices(g_project->_->materials->buffer[i]->canvas->nodes, asset_pos, new_pos);
 		}
-		for (i32 i = 0; i < project_brushes->length; ++i) {
-			tab_textures_remap_node_indices(project_brushes->buffer[i]->canvas->nodes, asset_pos, new_pos);
+		for (i32 i = 0; i < g_project->_->brushes->length; ++i) {
+			tab_textures_remap_node_indices(g_project->_->brushes->buffer[i]->canvas->nodes, asset_pos, new_pos);
 		}
 		if (g_context->colorid == asset_pos) {
 			g_context->colorid = new_pos;

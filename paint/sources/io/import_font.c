@@ -5,14 +5,14 @@ void import_font_run_on_next_frame(slot_font_t_array_t *font_slots) {
 	for (i32 i = 0; i < font_slots->length; ++i) {
 		slot_font_t *f  = font_slots->buffer[i];
 		g_context->font = f;
-		any_array_push(project_fonts, f);
+		any_array_push(g_project->_->fonts, f);
 		util_render_make_font_preview();
 	}
 }
 
 void import_font_run(char *path) {
-	for (i32 i = 0; i < project_fonts->length; ++i) {
-		slot_font_t *f = project_fonts->buffer[i];
+	for (i32 i = 0; i < g_project->_->fonts->length; ++i) {
+		slot_font_t *f = g_project->_->fonts->buffer[i];
 		if (string_equals(f->file, path)) {
 			console_info(strings_asset_already_imported());
 			return;

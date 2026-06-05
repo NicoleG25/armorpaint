@@ -87,7 +87,7 @@ void ui_files_file_browser_on_cache_cloud_done_on_next_frame(draw_cloud_icon_dat
 	gpu_texture_t *icon = gpu_create_render_target(data->image->width, data->image->height, GPU_TEXTURE_FORMAT_RGBA32);
 	if (ends_with(data->f, ".arm")) { // Used for material sphere alpha cutout
 		draw_begin(icon, false, 0);
-		draw_image(project_materials->buffer[0]->image, 0, 0);
+		draw_image(g_project->_->materials->buffer[0]->image, 0, 0);
 	}
 	else {
 		draw_begin(icon, true, 0xffffffff);
@@ -178,8 +178,8 @@ void ui_files_make_icon(ui_files_make_icon_t *args) {
 	ui_base_hwnds->buffer[TAB_AREA_STATUS]->redraws = 3;
 
 	bool found = false;
-	for (i32 i = 0; i < project_assets->length; ++i) {
-		asset_t *a = project_assets->buffer[i];
+	for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+		asset_t *a = g_project->_->assets->buffer[i];
 		if (string_equals(a->file, args->shandle)) {
 			found = true;
 			break;

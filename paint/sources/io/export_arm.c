@@ -27,7 +27,7 @@ void export_arm_export_node(ui_node_t *n, asset_t_array_t *assets) {
 			n->buttons->buffer[0]->data = u8_array_create_from_string(base_combo_enum_texts(n->type)->buffer[index]);
 		}
 		if (assets != NULL) {
-			asset_t *asset = project_assets->buffer[index];
+			asset_t *asset = g_project->_->assets->buffer[index];
 			if (array_index_of(assets, asset) == -1) {
 				any_array_push(assets, asset);
 			}
@@ -104,8 +104,8 @@ void export_arm_run_project() {
 	base_update_workflow();
 
 	ui_node_canvas_t_array_t *mnodes = any_array_create_from_raw((void *[]){}, 0);
-	for (i32 i = 0; i < project_materials->length; ++i) {
-		slot_material_t  *m = project_materials->buffer[i];
+	for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+		slot_material_t  *m = g_project->_->materials->buffer[i];
 		ui_node_canvas_t *c = util_clone_canvas(m->canvas);
 		for (i32 i = 0; i < c->nodes->length; ++i) {
 			ui_node_t *n = c->nodes->buffer[i];
@@ -118,8 +118,8 @@ void export_arm_run_project() {
 	base_update_workflow();
 
 	ui_node_canvas_t_array_t *bnodes = any_array_create_from_raw((void *[]){}, 0);
-	for (i32 i = 0; i < project_brushes->length; ++i) {
-		slot_brush_t     *b = project_brushes->buffer[i];
+	for (i32 i = 0; i < g_project->_->brushes->length; ++i) {
+		slot_brush_t     *b = g_project->_->brushes->buffer[i];
 		ui_node_canvas_t *c = util_clone_canvas(b->canvas);
 		for (i32 i = 0; i < c->nodes->length; ++i) {
 			ui_node_t *n = c->nodes->buffer[i];
@@ -129,10 +129,10 @@ void export_arm_run_project() {
 	}
 
 	ui_node_canvas_t_array_t *mgroups = NULL;
-	if (project_material_groups->length > 0) {
+	if (g_project->_->material_groups->length > 0) {
 		mgroups = any_array_create_from_raw((void *[]){}, 0);
-		for (i32 i = 0; i < project_material_groups->length; ++i) {
-			node_group_t     *g = project_material_groups->buffer[i];
+		for (i32 i = 0; i < g_project->_->material_groups->length; ++i) {
+			node_group_t     *g = g_project->_->material_groups->buffer[i];
 			ui_node_canvas_t *c = util_clone_canvas(g->canvas);
 			for (i32 i = 0; i < c->nodes->length; ++i) {
 				ui_node_t *n = c->nodes->buffer[i];
@@ -143,10 +143,10 @@ void export_arm_run_project() {
 	}
 
 	material_data2_t_array_t *mdata2 = NULL;
-	if (project_materials->length > 0) {
+	if (g_project->_->materials->length > 0) {
 		mdata2 = any_array_create_from_raw((void *[]){}, 0);
-		for (i32 i = 0; i < project_materials->length; ++i) {
-			slot_material_t  *m = project_materials->buffer[i];
+		for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+			slot_material_t  *m = g_project->_->materials->buffer[i];
 			material_data2_t *d = GC_ALLOC_INIT(material_data2_t, {
 			                                                          .paint_base   = m->paint_base,
 			                                                          .paint_opac   = m->paint_opac,
@@ -164,24 +164,24 @@ void export_arm_run_project() {
 	}
 
 	mesh_data_t_array_t *md = any_array_create_from_raw((void *[]){}, 0);
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		mesh_object_t *p = project_paint_objects->buffer[i];
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		mesh_object_t *p = g_project->_->paint_objects->buffer[i];
 		any_array_push(md, p->data);
 	}
 
-	string_array_t *texture_files = export_arm_assets_to_files(project_filepath, project_assets);
+	string_array_t *texture_files = export_arm_assets_to_files(g_project->_->filepath, g_project->_->assets);
 
-	string_array_t *font_files = export_arm_fonts_to_files(project_filepath, project_fonts);
-	string_array_t *mesh_files = export_arm_meshes_to_files(project_filepath);
+	string_array_t *font_files = export_arm_fonts_to_files(g_project->_->filepath, g_project->_->fonts);
+	string_array_t *mesh_files = export_arm_meshes_to_files(g_project->_->filepath);
 
 	i32 bits_pos = base_bits_handle->i;
 	i32 bpp      = bits_pos == TEXTURE_BITS_BITS8 ? 8 : bits_pos == TEXTURE_BITS_BITS16 ? 16 : 32;
 
 	layer_data_t_array_t *ld = any_array_create_from_raw((void *[]){}, 0);
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		slot_layer_t *l = project_layers->buffer[i];
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		slot_layer_t *l = g_project->_->layers->buffer[i];
 		layer_data_t *d = GC_ALLOC_INIT(layer_data_t, {.name          = l->name,
-		                                               .res           = l->texpaint != NULL ? l->texpaint->width : project_layers->buffer[0]->texpaint->width,
+		                                               .res           = l->texpaint != NULL ? l->texpaint->width : g_project->_->layers->buffer[0]->texpaint->width,
 		                                               .bpp           = bpp,
 		                                               .texpaint      = l->texpaint != NULL ? lz4_encode(gpu_get_texture_pixels(l->texpaint)) : NULL,
 		                                               .uv_scale      = l->scale,
@@ -190,10 +190,10 @@ void export_arm_run_project() {
 		                                               .uv_map        = l->uv_map,
 		                                               .decal_mat     = l->uv_type == UV_TYPE_PROJECT ? mat4_to_f32_array(l->decal_mat) : NULL,
 		                                               .opacity_mask  = l->mask_opacity,
-		                                               .fill_material = l->fill_material != NULL ? array_index_of(project_materials, l->fill_material) : -1,
+		                                               .fill_material = l->fill_material != NULL ? array_index_of(g_project->_->materials, l->fill_material) : -1,
 		                                               .object_mask   = l->object_mask,
 		                                               .blending      = l->blending,
-		                                               .parent        = l->parent != NULL ? array_index_of(project_layers, l->parent) : -1,
+		                                               .parent        = l->parent != NULL ? array_index_of(g_project->_->layers, l->parent) : -1,
 		                                               .visible       = l->visible,
 		                                               .texpaint_nor  = l->texpaint_nor != NULL ? lz4_encode(gpu_get_texture_pixels(l->texpaint_nor)) : NULL,
 		                                               .texpaint_pack = l->texpaint_pack != NULL ? lz4_encode(gpu_get_texture_pixels(l->texpaint_pack)) : NULL,
@@ -214,7 +214,7 @@ void export_arm_run_project() {
 		                                               .path_points_parent = l->path_points_parent,
 		                                               .path_tool          = l->path_tool,
 		                                               .path_curved        = l->path_curved,
-		                                               .path_material = l->path_material != NULL ? array_index_of(project_materials, l->path_material) : -1});
+		                                               .path_material = l->path_material != NULL ? array_index_of(g_project->_->materials, l->path_material) : -1});
 		any_array_push(ld, d);
 	}
 
@@ -222,7 +222,7 @@ void export_arm_run_project() {
 #ifdef IRON_IOS
 	bool same_drive = false;
 #else
-	bool same_drive = g_project->envmap != NULL ? char_at(project_filepath, 0) == char_at(g_project->envmap, 0) : true;
+	bool same_drive = g_project->envmap != NULL ? char_at(g_project->_->filepath, 0) == char_at(g_project->envmap, 0) : true;
 #endif
 
 	g_project->version         = string_copy(manifest_version_project);
@@ -231,7 +231,7 @@ void export_arm_run_project() {
 	g_project->assets          = texture_files;
 	g_project->packed_assets   = packed_assets;
 	g_project->swatches        = g_project->swatches;
-	g_project->envmap          = g_project->envmap != NULL ? (same_drive ? path_to_relative(project_filepath, g_project->envmap) : g_project->envmap) : NULL;
+	g_project->envmap          = g_project->envmap != NULL ? (same_drive ? path_to_relative(g_project->_->filepath, g_project->envmap) : g_project->envmap) : NULL;
 	g_project->envmap_strength = scene_world->strength;
 	g_project->envmap_angle    = g_context->envmap_angle;
 	g_project->envmap_blur     = g_context->show_envmap_blur;
@@ -251,8 +251,8 @@ void export_arm_run_project() {
 	}
 
 	f32_array_t_array_t *mesh_transforms = any_array_create_from_raw((void *[]){}, 0);
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		mesh_object_t *p  = project_paint_objects->buffer[i];
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		mesh_object_t *p  = g_project->_->paint_objects->buffer[i];
 		f32_array_t   *ar = f32_array_create_from_raw(p->base->transform->local.m, 16);
 		any_array_push(mesh_transforms, ar);
 	}
@@ -286,22 +286,22 @@ void export_arm_run_project() {
 	for (i32 i = 0; i < 256 * 256 * 4; ++i) {
 		u8a->buffer[i] = math_floor(math_pow(u8a->buffer[i] / 255.0, 1.0 / 2.2) * 255);
 	}
-	iron_write_png(string("%s_icon.png", substring(project_filepath, 0, string_length(project_filepath) - 4)), mesh_icon_pixels, 256, 256, 0);
+	iron_write_png(string("%s_icon.png", substring(g_project->_->filepath, 0, string_length(g_project->_->filepath) - 4)), mesh_icon_pixels, 256, 256, 0);
 	gpu_delete_texture(mesh_icon);
 #endif
 
 	if (g_context->pack_assets_on_save) { // Pack textures
-		export_arm_pack_assets(g_project, project_assets);
+		export_arm_pack_assets(g_project, g_project->_->assets);
 	}
 
 	buffer_t *buffer = util_encode_project(g_project);
-	iron_file_save_bytes(project_filepath, buffer, buffer->length + 1);
+	iron_file_save_bytes(g_project->_->filepath, buffer, buffer->length + 1);
 
 	// Save to recent
 #ifdef IRON_IOS
-	char *recent_path = substring(project_filepath, string_last_index_of(project_filepath, "/") + 1, string_length(project_filepath));
+	char *recent_path = substring(g_project->_->filepath, string_last_index_of(g_project->_->filepath, "/") + 1, string_length(g_project->_->filepath));
 #else
-	char *recent_path = project_filepath;
+	char *recent_path = g_project->_->filepath;
 #endif
 
 #ifdef IRON_WINDOWS

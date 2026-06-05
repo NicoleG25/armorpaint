@@ -20,7 +20,7 @@ void util_render_make_material_preview() {
 	mesh_object_t *painto   = g_context->paint_object;
 	g_context->paint_object = sphere;
 
-	sphere->material                   = project_materials->buffer[0]->data;
+	sphere->material                   = g_project->_->materials->buffer[0]->data;
 	g_context->material->preview_ready = true;
 
 	g_context->saved_camera = scene_camera->base->transform->local;
@@ -276,8 +276,8 @@ void util_render_make_brush_preview() {
 	// Set plane mesh
 	mesh_object_t *painto   = g_context->paint_object;
 	u8_array_t    *visibles = u8_array_create_from_raw((u8[]){}, 0);
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		mesh_object_t *p = project_paint_objects->buffer[i];
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		mesh_object_t *p = g_project->_->paint_objects->buffer[i];
 		u8_array_push(visibles, p->base->visible);
 		p->base->visible = false;
 	}
@@ -384,8 +384,8 @@ void util_render_make_brush_preview() {
 	// Restore paint mesh
 	g_context->material_preview = false;
 	planeo->base->visible       = false;
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		project_paint_objects->buffer[i]->base->visible = visibles->buffer[i];
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		g_project->_->paint_objects->buffer[i]->base->visible = visibles->buffer[i];
 	}
 	if (g_context->merged_object != NULL) {
 		g_context->merged_object->base->visible = merged_object_visible;

@@ -157,12 +157,12 @@ void viewport_capture_video_update(void *_) {
 }
 
 void viewport_capture_video_begin() {
-	if (string_equals(project_filepath, "")) {
+	if (string_equals(g_project->_->filepath, "")) {
 		console_error(tr("Save project first"));
 		return;
 	}
 	viewport_recording    = true;
-	char            *path = string("%s/output.mp4", path_base_dir(project_filepath));
+	char            *path = string("%s/output.mp4", path_base_dir(g_project->_->filepath));
 	render_target_t *rt   = any_map_get(render_path_render_targets, "last");
 	iron_mp4_begin(path, rt->_image->width, rt->_image->height);
 	sys_notify_on_update(viewport_capture_video_update, NULL);

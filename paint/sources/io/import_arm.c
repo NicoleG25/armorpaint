@@ -18,9 +18,7 @@ void import_arm_run_mesh_on_next_frame(void *_) {
 }
 
 void import_arm_run_mesh(project_t *raw) {
-	gc_unroot(project_paint_objects);
-	project_paint_objects = any_array_create_from_raw((void *[]){}, 0);
-	gc_root(project_paint_objects);
+	g_project->_->paint_objects = any_array_create_from_raw((void *[]){}, 0);
 	for (i32 i = 0; i < raw->mesh_datas->length; ++i) {
 		mesh_data_t   *md     = mesh_data_create(raw->mesh_datas->buffer[i]);
 		mesh_object_t *object = NULL;
@@ -38,7 +36,7 @@ void import_arm_run_mesh(project_t *raw) {
 		object->base->transform->scale = (vec4_t){1, 1, 1, 1.0};
 		transform_build_matrix(object->base->transform);
 		object->base->name = md->name;
-		any_array_push(project_paint_objects, object);
+		any_array_push(g_project->_->paint_objects, object);
 		util_mesh_merge(NULL);
 		viewport_scale_to_bounds(2.0);
 	}
@@ -56,8 +54,8 @@ void import_arm_run_material_from_project_on_next_frame(slot_material_t_array_t 
 }
 
 bool import_arm_group_exists(ui_node_canvas_t *c) {
-	for (i32 i = 0; i < project_material_groups->length; ++i) {
-		node_group_t *g     = project_material_groups->buffer[i];
+	for (i32 i = 0; i < g_project->_->material_groups->length; ++i) {
+		node_group_t *g     = g_project->_->material_groups->buffer[i];
 		char         *cname = g->canvas->name;
 		if (string_equals(cname, c->name)) {
 			return true;
@@ -173,7 +171,7 @@ void import_arm_run_material_from_project(project_t *project, char *path) {
 		ui_node_canvas_t *c = util_clone_canvas(project->material_nodes->buffer[i]); // project will get GCed
 		import_arm_init_nodes(c->nodes);
 		g_context->material = slot_material_create(m0, c);
-		any_array_push(project_materials, g_context->material);
+		any_array_push(g_project->_->materials, g_context->material);
 		any_array_push(imported, g_context->material);
 		history_new_material();
 	}
@@ -189,7 +187,7 @@ void import_arm_run_material_from_project(project_t *project, char *path) {
 			}
 			import_arm_init_nodes(c->nodes);
 			node_group_t *ng = GC_ALLOC_INIT(node_group_t, {.canvas = c, .nodes = ui_nodes_create()});
-			any_array_push(project_material_groups, ng);
+			any_array_push(g_project->_->material_groups, ng);
 		}
 	}
 
@@ -263,9 +261,7 @@ void import_arm_run_project(char *path) {
 	g_context->layer_filter         = 0;
 
 	project_new(import_as_mesh);
-	gc_unroot(project_filepath);
-	project_filepath = string_copy(path);
-	gc_root(project_filepath);
+	g_project->_->filepath = string_copy(path);
 	gc_unroot(ui_files_filename);
 	ui_files_filename = string_copy(substring(path, string_last_index_of(path, PATH_SEP) + 1, string_last_index_of(path, ".")));
 	gc_root(ui_files_filename);
@@ -295,6 +291,7 @@ void import_arm_run_project(char *path) {
 	array_insert(recent, 0, recent_path);
 	config_save();
 
+	project->_ = g_project->_; // Carry over runtime arrays set up by project_new
 	gc_unroot(g_project);
 	g_project = project;
 	gc_root(g_project);
@@ -368,13 +365,11 @@ void import_arm_run_project(char *path) {
 	g_context->paint_object->base->transform->scale = (vec4_t){1, 1, 1, 1.0};
 	transform_build_matrix(g_context->paint_object->base->transform);
 	g_context->paint_object->base->name = md->name;
-	gc_unroot(project_paint_objects);
-	project_paint_objects = any_array_create_from_raw(
+	g_project->_->paint_objects = any_array_create_from_raw(
 	    (void *[]){
 	        g_context->paint_object,
 	    },
 	    1);
-	gc_root(project_paint_objects);
 
 	for (i32 i = 1; i < project->mesh_datas->length; ++i) {
 		mesh_data_t   *raw    = project->mesh_datas->buffer[i];
@@ -382,12 +377,12 @@ void import_arm_run_project(char *path) {
 		mesh_object_t *object = scene_add_mesh_object(md, g_context->paint_object->material, g_context->paint_object->base);
 		object->base->name    = md->name;
 		object->skip_context  = "paint";
-		any_array_push(project_paint_objects, object);
+		any_array_push(g_project->_->paint_objects, object);
 	}
 
 	transform_set_matrix(g_context->paint_object->base->transform, mat4_from_f32_array(project->mesh_transforms->buffer[0], 0));
 	for (i32 i = 1; i < project->mesh_datas->length; ++i) {
-		mesh_object_t *o = project_paint_objects->buffer[i];
+		mesh_object_t *o = g_project->_->paint_objects->buffer[i];
 		transform_set_matrix(o->base->transform, mat4_from_f32_array(project->mesh_transforms->buffer[i], 0));
 	}
 
@@ -410,7 +405,7 @@ void import_arm_run_project(char *path) {
 	g_context->paint_object->skip_context   = "paint";
 	g_context->merged_object->base->visible = true;
 
-	gpu_texture_t *tex = project_layers->buffer[0]->texpaint;
+	gpu_texture_t *tex = g_project->_->layers->buffer[0]->texpaint;
 	if (tex->width != config_get_texture_res_x() || tex->height != config_get_texture_res_y()) {
 		if (history_undo_layers != NULL) {
 			for (i32 i = 0; i < history_undo_layers->length; ++i) {
@@ -436,13 +431,11 @@ void import_arm_run_project(char *path) {
 		g_context->brush_blend_dirty = true;
 	}
 
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		slot_layer_t *l = project_layers->buffer[i];
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		slot_layer_t *l = g_project->_->layers->buffer[i];
 		slot_layer_unload(l);
 	}
-	gc_unroot(project_layers);
-	project_layers = any_array_create_from_raw((void *[]){}, 0);
-	gc_root(project_layers);
+	g_project->_->layers = any_array_create_from_raw((void *[]){}, 0);
 	for (i32 i = 0; i < project->layer_datas->length; ++i) {
 		layer_data_t *ld       = project->layer_datas->buffer[i];
 		bool          is_group = ld->texpaint == NULL;
@@ -452,7 +445,7 @@ void import_arm_run_project(char *path) {
 			l->name = string_copy(ld->name);
 		}
 		l->visible = ld->visible;
-		any_array_push(project_layers, l);
+		any_array_push(g_project->_->layers, l);
 		if (!is_group) {
 			gpu_texture_t *_texpaint      = NULL;
 			gpu_texture_t *_texpaint_nor  = NULL;
@@ -536,17 +529,15 @@ void import_arm_run_project(char *path) {
 	for (i32 i = 0; i < project->layer_datas->length; ++i) {
 		layer_data_t *ld = project->layer_datas->buffer[i];
 		if (ld->parent >= 0) {
-			project_layers->buffer[i]->parent = project_layers->buffer[ld->parent];
+			g_project->_->layers->buffer[i]->parent = g_project->_->layers->buffer[ld->parent];
 		}
 	}
 
-	context_set_layer(project_layers->buffer[0]);
+	context_set_layer(g_project->_->layers->buffer[0]);
 
 	// Materials
 	material_data_t *m0 = data_get_material("Scene", "Material");
-	gc_unroot(project_materials);
-	project_materials = any_array_create_from_raw((void *[]){}, 0);
-	gc_root(project_materials);
+	g_project->_->materials = any_array_create_from_raw((void *[]){}, 0);
 	for (i32 i = 0; i < project->material_nodes->length; ++i) {
 		ui_node_canvas_t *n = project->material_nodes->buffer[i];
 		import_arm_init_nodes(n->nodes);
@@ -564,39 +555,35 @@ void import_arm_run_project(char *path) {
 		g_context->material->paint_subs      = md->paint_subs;
 		g_context->material->paint_opac_mode = md->opac_mode;
 
-		any_array_push(project_materials, g_context->material);
+		any_array_push(g_project->_->materials, g_context->material);
 	}
 
 	ui_nodes_hwnd->redraws = 2;
 	gc_unroot(ui_nodes_group_stack);
 	ui_nodes_group_stack = any_array_create_from_raw((void *[]){}, 0);
 	gc_root(ui_nodes_group_stack);
-	gc_unroot(project_material_groups);
-	project_material_groups = any_array_create_from_raw((void *[]){}, 0);
-	gc_root(project_material_groups);
+	g_project->_->material_groups = any_array_create_from_raw((void *[]){}, 0);
 	if (project->material_groups != NULL) {
 		for (i32 i = 0; i < project->material_groups->length; ++i) {
 			ui_node_canvas_t *g  = project->material_groups->buffer[i];
 			node_group_t     *ng = GC_ALLOC_INIT(node_group_t, {.canvas = g, .nodes = ui_nodes_create()});
-			any_array_push(project_material_groups, ng);
+			any_array_push(g_project->_->material_groups, ng);
 		}
 	}
 
-	for (i32 i = 0; i < project_materials->length; ++i) {
-		slot_material_t *m  = project_materials->buffer[i];
+	for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+		slot_material_t *m  = g_project->_->materials->buffer[i];
 		g_context->material = m;
 		make_material_parse_paint_material(true);
 		util_render_make_material_preview();
 	}
 
-	gc_unroot(project_brushes);
-	project_brushes = any_array_create_from_raw((void *[]){}, 0);
-	gc_root(project_brushes);
+	g_project->_->brushes = any_array_create_from_raw((void *[]){}, 0);
 	for (i32 i = 0; i < project->brush_nodes->length; ++i) {
 		ui_node_canvas_t *n = project->brush_nodes->buffer[i];
 		import_arm_init_nodes(n->nodes);
 		g_context->brush = slot_brush_create(n);
-		any_array_push(project_brushes, g_context->brush);
+		any_array_push(g_project->_->brushes, g_context->brush);
 		make_material_parse_brush();
 		brush_output_node_parse_inputs();
 		util_render_make_brush_preview();
@@ -605,11 +592,11 @@ void import_arm_run_project(char *path) {
 	// Fill layers and path layers materials
 	for (i32 i = 0; i < project->layer_datas->length; ++i) {
 		layer_data_t *ld       = project->layer_datas->buffer[i];
-		slot_layer_t *l        = project_layers->buffer[i];
+		slot_layer_t *l        = g_project->_->layers->buffer[i];
 		bool          is_group = ld->texpaint == NULL;
 		if (!is_group) {
-			l->fill_material = ld->fill_material > -1 ? project_materials->buffer[ld->fill_material] : NULL;
-			l->path_material = ld->path_material > -1 ? project_materials->buffer[ld->path_material] : NULL;
+			l->fill_material = ld->fill_material > -1 ? g_project->_->materials->buffer[ld->fill_material] : NULL;
+			l->path_material = ld->path_material > -1 ? g_project->_->materials->buffer[ld->path_material] : NULL;
 		}
 	}
 
@@ -678,7 +665,7 @@ void import_arm_run_brush_from_project(project_t *project, char *path) {
 		ui_node_canvas_t *c = util_clone_canvas(project->brush_nodes->buffer[i]);
 		import_arm_init_nodes(c->nodes);
 		g_context->brush = slot_brush_create(c);
-		any_array_push(project_brushes, g_context->brush);
+		any_array_push(g_project->_->brushes, g_context->brush);
 		any_array_push(imported, g_context->brush);
 		make_material_parse_brush();
 		brush_output_node_parse_inputs();

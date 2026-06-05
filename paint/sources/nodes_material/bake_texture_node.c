@@ -235,8 +235,8 @@ static void bake_texture_node_button(i32 node_id) {
 
 	if (bake_type == BAKE_TYPE_NORMAL || bake_type == BAKE_TYPE_HEIGHT || bake_type == BAKE_TYPE_DERIVATIVE) {
 		string_array_t *ar = any_array_create_from_raw((void *[]){}, 0);
-		for (i32 i = 0; i < project_paint_objects->length; ++i) {
-			mesh_object_t *p = project_paint_objects->buffer[i];
+		for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+			mesh_object_t *p = g_project->_->paint_objects->buffer[i];
 			any_array_push(ar, p->base->name);
 		}
 		ui_handle_t *poly_handle  = ui_nest(h, 11);

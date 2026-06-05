@@ -15,19 +15,19 @@ void util_mesh_remove_merged() {
 mesh_object_t_array_t *util_mesh_get_unique() {
 	mesh_object_t_array_t *ar = any_array_create_from_raw((void *[]){}, 0);
 
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		if (!project_paint_objects->buffer[i]->base->visible) {
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		if (!g_project->_->paint_objects->buffer[i]->base->visible) {
 			continue;
 		}
 		bool found = false;
 		for (i32 j = 0; j < i; ++j) {
-			if (project_paint_objects->buffer[i]->data == project_paint_objects->buffer[j]->data) {
+			if (g_project->_->paint_objects->buffer[i]->data == g_project->_->paint_objects->buffer[j]->data) {
 				found = true;
 				break;
 			}
 		}
 		if (!found) {
-			any_array_push(ar, project_paint_objects->buffer[i]);
+			any_array_push(ar, g_project->_->paint_objects->buffer[i]);
 		}
 	}
 
@@ -40,13 +40,13 @@ void util_mesh_merge(mesh_object_t_array_t *paint_objects) {
 		// 	paint_objects = util_mesh_get_unique();
 		// }
 		// else {
-		paint_objects = project_paint_objects;
+		paint_objects = g_project->_->paint_objects;
 		// }
 	}
 	if (paint_objects->length == 0) {
 		return;
 	}
-	g_context->merged_object_is_atlas = paint_objects->length < project_paint_objects->length;
+	g_context->merged_object_is_atlas = paint_objects->length < g_project->_->paint_objects->length;
 	i32 vlen                          = 0;
 	i32 ilen                          = 0;
 	f32 max_scale                     = 0.0;
@@ -150,7 +150,7 @@ void util_mesh_merge(mesh_object_t_array_t *paint_objects) {
 }
 
 void util_mesh_swap_axis(i32 a, i32 b) {
-	mesh_object_t_array_t *objects = project_paint_objects;
+	mesh_object_t_array_t *objects = g_project->_->paint_objects;
 	for (i32 i = 0; i < objects->length; ++i) {
 		mesh_object_t *o = objects->buffer[i];
 		// Remapping vertices, buckle up
@@ -179,7 +179,7 @@ void util_mesh_swap_axis(i32 a, i32 b) {
 }
 
 void util_mesh_flip_normals() {
-	mesh_object_t_array_t *objects = project_paint_objects;
+	mesh_object_t_array_t *objects = g_project->_->paint_objects;
 	for (i32 i = 0; i < objects->length; ++i) {
 		mesh_object_t          *o   = objects->buffer[i];
 		vertex_array_t_array_t *vas = o->data->vertex_arrays;
@@ -214,7 +214,7 @@ void util_mesh_calc_normals(bool smooth) {
 	vec4_t                 vc      = (vec4_t){0.0, 0.0, 0.0, 1.0};
 	vec4_t                 cb      = (vec4_t){0.0, 0.0, 0.0, 1.0};
 	vec4_t                 ab      = (vec4_t){0.0, 0.0, 0.0, 1.0};
-	mesh_object_t_array_t *objects = project_paint_objects;
+	mesh_object_t_array_t *objects = g_project->_->paint_objects;
 	for (i32 i = 0; i < objects->length; ++i) {
 		mesh_object_t *o           = objects->buffer[i];
 		mesh_data_t   *g           = o->data;
@@ -327,8 +327,8 @@ void util_mesh_to_origin() {
 	f32 dx = 0.0;
 	f32 dy = 0.0;
 	f32 dz = 0.0;
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		mesh_object_t *o    = project_paint_objects->buffer[i];
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		mesh_object_t *o    = g_project->_->paint_objects->buffer[i];
 		i32            l    = 4;
 		f32            sc   = o->data->scale_pos / 32767.0;
 		i16_array_t   *va   = o->data->vertex_arrays->buffer[0]->values;
@@ -362,12 +362,12 @@ void util_mesh_to_origin() {
 		dy += (miny + maxy) / 2.0 * sc;
 		dz += (minz + maxz) / 2.0 * sc;
 	}
-	dx /= project_paint_objects->length;
-	dy /= project_paint_objects->length;
-	dz /= project_paint_objects->length;
+	dx /= g_project->_->paint_objects->length;
+	dy /= g_project->_->paint_objects->length;
+	dz /= g_project->_->paint_objects->length;
 
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		mesh_object_t *o         = project_paint_objects->buffer[i];
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		mesh_object_t *o         = g_project->_->paint_objects->buffer[i];
 		mesh_data_t   *g         = o->data;
 		f32            sc        = o->data->scale_pos / 32767.0;
 		i16_array_t   *va        = o->data->vertex_arrays->buffer[0]->values;
@@ -401,7 +401,7 @@ void util_mesh_to_origin() {
 void util_mesh_apply_displacement(gpu_texture_t *texpaint_pack, f32 strength, f32 uv_scale) {
 	buffer_t      *height    = gpu_get_texture_pixels(texpaint_pack);
 	i32            res       = texpaint_pack->width;
-	mesh_object_t *o         = project_paint_objects->buffer[0];
+	mesh_object_t *o         = g_project->_->paint_objects->buffer[0];
 	mesh_data_t   *g         = o->data;
 	i16_array_t   *va0       = g->vertex_arrays->buffer[0]->values;
 	i16_array_t   *va1       = g->vertex_arrays->buffer[1]->values;
@@ -435,7 +435,7 @@ i32 util_mesh_decimate_sort(i32 *pa, i32 *pb) {
 }
 
 void util_mesh_decimate(f32 strength) {
-	mesh_object_t_array_t *objects   = project_paint_objects;
+	mesh_object_t_array_t *objects   = g_project->_->paint_objects;
 	mesh_object_t         *o         = objects->buffer[0];
 	mesh_data_t           *g         = o->data;
 	i16_array_t           *va0       = g->vertex_arrays->buffer[0]->values;
@@ -599,7 +599,7 @@ static i32 _util_mesh_subdivide_sort(i32 *pa, i32 *pb) {
 }
 
 void util_mesh_smooth() {
-	mesh_object_t *o        = project_paint_objects->buffer[0];
+	mesh_object_t *o        = g_project->_->paint_objects->buffer[0];
 	mesh_data_t   *g        = o->data;
 	i16_array_t   *va0      = g->vertex_arrays->buffer[0]->values;
 	u32_array_t   *oinda    = g->index_array;
@@ -766,7 +766,7 @@ void util_mesh_smooth() {
 }
 
 void util_mesh_bevel(f32 amount) {
-	mesh_object_t *o         = project_paint_objects->buffer[0];
+	mesh_object_t *o         = g_project->_->paint_objects->buffer[0];
 	mesh_data_t   *g         = o->data;
 	i16_array_t   *va0       = g->vertex_arrays->buffer[0]->values;
 	i16_array_t   *va2       = g->vertex_arrays->buffer[2]->values;
@@ -990,7 +990,7 @@ void util_mesh_bevel(f32 amount) {
 }
 
 void util_mesh_subdivide() {
-	mesh_object_t *o         = project_paint_objects->buffer[0];
+	mesh_object_t *o         = g_project->_->paint_objects->buffer[0];
 	mesh_data_t   *g         = o->data;
 	i16_array_t   *va0       = g->vertex_arrays->buffer[0]->values;
 	i16_array_t   *va2       = g->vertex_arrays->buffer[2]->values;

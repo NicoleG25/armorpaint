@@ -74,20 +74,20 @@ void import_mesh_finish_import(void *_) {
 	context_select_paint_object(context_main_object());
 
 	// No mask by default
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		mesh_object_t *p = project_paint_objects->buffer[i];
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		mesh_object_t *p = g_project->_->paint_objects->buffer[i];
 		p->base->visible = true;
 	}
 
-	if (project_paint_objects->length > 1) {
+	if (g_project->_->paint_objects->length > 1) {
 		// Sort by name
-		array_sort(project_paint_objects, &import_mesh_finish_import_sort);
+		array_sort(g_project->_->paint_objects, &import_mesh_finish_import_sort);
 
 		// Reparent
-		mesh_object_t *new_parent = project_paint_objects->buffer[0];
+		mesh_object_t *new_parent = g_project->_->paint_objects->buffer[0];
 		object_set_parent(new_parent->base, NULL);
-		for (i32 i = 1; i < project_paint_objects->length; ++i) {
-			mesh_object_t *p = project_paint_objects->buffer[i];
+		for (i32 i = 1; i < g_project->_->paint_objects->length; ++i) {
+			mesh_object_t *p = g_project->_->paint_objects->buffer[i];
 			object_set_parent(p->base, new_parent->base);
 		}
 		context_select_paint_object(context_main_object());
@@ -127,8 +127,8 @@ void _import_mesh_make_mesh_clear_layers(void *_) {
 }
 
 bool _import_mesh_is_unique_name(char *s) {
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		mesh_object_t *p = project_paint_objects->buffer[i];
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		mesh_object_t *p = g_project->_->paint_objects->buffer[i];
 		if (string_equals(p->base->name, s)) {
 			return false;
 		}
@@ -168,8 +168,8 @@ void import_mesh_make_mesh(raw_mesh_t *mesh) {
 		viewport_reset();
 	}
 
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		mesh_object_t *p = project_paint_objects->buffer[i];
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		mesh_object_t *p = g_project->_->paint_objects->buffer[i];
 		if (p == g_context->paint_object) {
 			continue;
 		}
@@ -184,13 +184,11 @@ void import_mesh_make_mesh(raw_mesh_t *mesh) {
 
 	mesh_object_set_data(g_context->paint_object, md);
 	g_context->paint_object->base->name = mesh->name;
-	gc_unroot(project_paint_objects);
-	project_paint_objects = any_array_create_from_raw(
+	g_project->_->paint_objects = any_array_create_from_raw(
 	    (void *[]){
 	        g_context->paint_object,
 	    },
 	    1);
-	gc_root(project_paint_objects);
 
 	md->_->handle = string_copy(raw->name);
 	any_map_set(data_cached_meshes, md->_->handle, md);
@@ -206,8 +204,8 @@ void import_mesh_make_mesh(raw_mesh_t *mesh) {
 	util_uv_dilatemap_cached                          = false;
 
 	if (import_mesh_clear_layers) {
-		while (project_layers->length > 0) {
-			slot_layer_t *l = array_pop(project_layers);
+		while (g_project->_->layers->length > 0) {
+			slot_layer_t *l = array_pop(g_project->_->layers);
 			slot_layer_unload(l);
 		}
 		layers_new_layer(false, -1, NULL);
@@ -243,7 +241,7 @@ void import_mesh_add_mesh(raw_mesh_t *mesh) {
 	object->base->name = string("%s%s", object->base->name, ext);
 	raw->name          = string("%s%s", raw->name, ext);
 
-	any_array_push(project_paint_objects, object);
+	any_array_push(g_project->_->paint_objects, object);
 	md->_->handle = string_copy(raw->name);
 	any_map_set(data_cached_meshes, md->_->handle, md);
 

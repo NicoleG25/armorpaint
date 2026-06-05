@@ -42,8 +42,8 @@ slot_layer_t *slot_layer_create(char *ext, layer_slot_type_t type, slot_layer_t 
 
 	if (string_equals(ext, "")) {
 		raw->id = 0;
-		for (i32 i = 0; i < project_layers->length; ++i) {
-			slot_layer_t *l = project_layers->buffer[i];
+		for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+			slot_layer_t *l = g_project->_->layers->buffer[i];
 			if (l->id >= raw->id) {
 				raw->id = l->id + 1;
 			}
@@ -145,11 +145,11 @@ void slot_layer_delete(slot_layer_t *raw) {
 		}
 	}
 
-	i32 lpos = array_index_of(project_layers, raw);
-	array_remove(project_layers, raw);
+	i32 lpos = array_index_of(g_project->_->layers, raw);
+	array_remove(g_project->_->layers, raw);
 	// Undo can remove base layer and then restore it from undo layers
-	if (project_layers->length > 0) {
-		context_set_layer(project_layers->buffer[lpos > 0 ? lpos - 1 : 0]);
+	if (g_project->_->layers->length > 0) {
+		context_set_layer(g_project->_->layers->buffer[lpos > 0 ? lpos - 1 : 0]);
 	}
 
 	// Do not remove empty groups if the last layer is deleted as this prevents redo from working properly
@@ -297,7 +297,7 @@ void slot_layer_apply_mask(slot_layer_t *raw) {
 }
 
 slot_layer_t *slot_layer_duplicate(slot_layer_t *raw) {
-	slot_layer_t_array_t *layers = project_layers;
+	slot_layer_t_array_t *layers = g_project->_->layers;
 	i32                   i      = array_index_of(layers, raw) + 1;
 	slot_layer_t         *l      = slot_layer_create("",
                                         slot_layer_is_layer(raw)  ? LAYER_SLOT_TYPE_LAYER
@@ -489,8 +489,8 @@ bool slot_layer_is_visible(slot_layer_t *raw) {
 
 slot_layer_t_array_t *slot_layer_get_children(slot_layer_t *raw) {
 	slot_layer_t_array_t *children = NULL; // Child layers of a group
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		slot_layer_t *l = project_layers->buffer[i];
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		slot_layer_t *l = g_project->_->layers->buffer[i];
 		if (l->parent == raw && slot_layer_is_layer(l)) {
 			if (children == NULL) {
 				children = any_array_create_from_raw((void *[]){}, 0);
@@ -503,8 +503,8 @@ slot_layer_t_array_t *slot_layer_get_children(slot_layer_t *raw) {
 
 slot_layer_t_array_t *slot_layer_get_recursive_children(slot_layer_t *raw) {
 	slot_layer_t_array_t *children = NULL;
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		slot_layer_t *l = project_layers->buffer[i];
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		slot_layer_t *l = g_project->_->layers->buffer[i];
 		if (l->parent == raw) { // Child layers and group masks
 			if (children == NULL) {
 				children = any_array_create_from_raw((void *[]){}, 0);
@@ -528,8 +528,8 @@ slot_layer_t_array_t *slot_layer_get_masks(slot_layer_t *raw, bool include_group
 
 	slot_layer_t_array_t *children = NULL;
 	// Child masks of a layer
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		slot_layer_t *l = project_layers->buffer[i];
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		slot_layer_t *l = g_project->_->layers->buffer[i];
 		if (l->parent == raw && slot_layer_is_mask(l)) {
 			if (children == NULL) {
 				children = any_array_create_from_raw((void *[]){}, 0);
@@ -540,8 +540,8 @@ slot_layer_t_array_t *slot_layer_get_masks(slot_layer_t *raw, bool include_group
 	// Child masks of a parent group
 	if (include_group_masks) {
 		if (raw->parent != NULL && slot_layer_is_group(raw->parent)) {
-			for (i32 i = 0; i < project_layers->length; ++i) {
-				slot_layer_t *l = project_layers->buffer[i];
+			for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+				slot_layer_t *l = g_project->_->layers->buffer[i];
 				if (l->parent == raw->parent && slot_layer_is_mask(l)) {
 					if (children == NULL) {
 						children = any_array_create_from_raw((void *[]){}, 0);
@@ -556,8 +556,8 @@ slot_layer_t_array_t *slot_layer_get_masks(slot_layer_t *raw, bool include_group
 
 bool slot_layer_has_masks(slot_layer_t *raw, bool include_group_masks) {
 	// Layer mask
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		slot_layer_t *l = project_layers->buffer[i];
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		slot_layer_t *l = g_project->_->layers->buffer[i];
 		if (l->parent == raw && slot_layer_is_mask(l)) {
 			return true;
 		}
@@ -565,8 +565,8 @@ bool slot_layer_has_masks(slot_layer_t *raw, bool include_group_masks) {
 
 	// Group mask
 	if (include_group_masks && raw->parent != NULL && slot_layer_is_group(raw->parent)) {
-		for (i32 i = 0; i < project_layers->length; ++i) {
-			slot_layer_t *l = project_layers->buffer[i];
+		for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+			slot_layer_t *l = g_project->_->layers->buffer[i];
 			if (l->parent == raw->parent && slot_layer_is_mask(l)) {
 				return true;
 			}
@@ -582,8 +582,8 @@ slot_layer_t_array_t *slot_layer_get_filters(slot_layer_t *raw, bool include_gro
 
 	slot_layer_t_array_t *children = NULL;
 	// Child filters of a layer
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		slot_layer_t *l = project_layers->buffer[i];
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		slot_layer_t *l = g_project->_->layers->buffer[i];
 		if (l->parent == raw && slot_layer_is_filter(l)) {
 			if (children == NULL) {
 				children = any_array_create_from_raw((void *[]){}, 0);
@@ -594,8 +594,8 @@ slot_layer_t_array_t *slot_layer_get_filters(slot_layer_t *raw, bool include_gro
 	// Child filters of a parent group
 	if (include_group_filters) {
 		if (raw->parent != NULL && slot_layer_is_group(raw->parent)) {
-			for (i32 i = 0; i < project_layers->length; ++i) {
-				slot_layer_t *l = project_layers->buffer[i];
+			for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+				slot_layer_t *l = g_project->_->layers->buffer[i];
 				if (l->parent == raw->parent && slot_layer_is_filter(l)) {
 					if (children == NULL) {
 						children = any_array_create_from_raw((void *[]){}, 0);
@@ -669,27 +669,27 @@ bool slot_layer_is_in_group(slot_layer_t *raw) {
 }
 
 bool slot_layer_can_move(slot_layer_t *raw, i32 to) {
-	i32 old_index = array_index_of(project_layers, raw);
+	i32 old_index = array_index_of(g_project->_->layers, raw);
 
 	i32 delta = to - old_index; // If delta > 0 the layer is moved up, otherwise down
-	if (to < 0 || to > project_layers->length - 1 || delta == 0) {
+	if (to < 0 || to > g_project->_->layers->length - 1 || delta == 0) {
 		return false;
 	}
 
 	// If the layer is moved up, all layers between the old position and the new one move one down
 	// The layers above the new position stay where they are
 	// If the new position is on top or on bottom no upper resp. lower layer exists
-	slot_layer_t *new_upper_layer = delta > 0 ? (to < project_layers->length - 1 ? project_layers->buffer[to + 1] : NULL) : project_layers->buffer[to];
+	slot_layer_t *new_upper_layer = delta > 0 ? (to < g_project->_->layers->length - 1 ? g_project->_->layers->buffer[to + 1] : NULL) : g_project->_->layers->buffer[to];
 
 	// Group or layer is collapsed so we check below and update the upper layer
 	if (new_upper_layer != NULL && !new_upper_layer->show_panel) {
 		slot_layer_t_array_t *children = slot_layer_get_recursive_children(new_upper_layer);
 		to -= children != NULL ? children->length : 0;
 		delta           = to - old_index;
-		new_upper_layer = delta > 0 ? (to < project_layers->length - 1 ? project_layers->buffer[to + 1] : NULL) : project_layers->buffer[to];
+		new_upper_layer = delta > 0 ? (to < g_project->_->layers->length - 1 ? g_project->_->layers->buffer[to + 1] : NULL) : g_project->_->layers->buffer[to];
 	}
 
-	slot_layer_t *new_lower_layer = delta > 0 ? project_layers->buffer[to] : (to > 0 ? project_layers->buffer[to - 1] : NULL);
+	slot_layer_t *new_lower_layer = delta > 0 ? g_project->_->layers->buffer[to] : (to > 0 ? g_project->_->layers->buffer[to - 1] : NULL);
 
 	if (slot_layer_is_mask(raw)) {
 		// Masks can not be on top
@@ -776,24 +776,24 @@ void slot_layer_move(slot_layer_t *raw, i32 to) {
 	}
 
 	i32_map_t    *pointers        = tab_layers_init_layer_map();
-	i32           old_index       = array_index_of(project_layers, raw);
+	i32           old_index       = array_index_of(g_project->_->layers, raw);
 	i32           delta           = to - old_index;
-	slot_layer_t *new_upper_layer = delta > 0 ? (to < project_layers->length - 1 ? project_layers->buffer[to + 1] : NULL) : project_layers->buffer[to];
+	slot_layer_t *new_upper_layer = delta > 0 ? (to < g_project->_->layers->length - 1 ? g_project->_->layers->buffer[to + 1] : NULL) : g_project->_->layers->buffer[to];
 
 	// Group or layer is collapsed so we check below and update the upper layer
 	if (new_upper_layer != NULL && !new_upper_layer->show_panel) {
 		slot_layer_t_array_t *children = slot_layer_get_recursive_children(new_upper_layer);
 		to -= children != NULL ? children->length : 0;
 		delta           = to - old_index;
-		new_upper_layer = delta > 0 ? (to < project_layers->length - 1 ? project_layers->buffer[to + 1] : NULL) : project_layers->buffer[to];
+		new_upper_layer = delta > 0 ? (to < g_project->_->layers->length - 1 ? g_project->_->layers->buffer[to + 1] : NULL) : g_project->_->layers->buffer[to];
 	}
 
 	context_set_layer(raw);
 	history_order_layers(to);
 	ui_base_hwnds->buffer[TAB_AREA_SIDEBAR0]->redraws = 2;
 
-	array_remove(project_layers, raw);
-	array_insert(project_layers, to, raw);
+	array_remove(g_project->_->layers, raw);
+	array_insert(g_project->_->layers, to, raw);
 
 	if (slot_layer_is_filter(raw)) {
 		// Precondition new_upper_layer != NULL, ensured in can_move
@@ -835,9 +835,9 @@ void slot_layer_move(slot_layer_t *raw, i32 to) {
 		if (layer_masks != NULL) {
 			for (i32 idx = 0; idx < layer_masks->length; ++idx) {
 				slot_layer_t *mask = layer_masks->buffer[idx];
-				array_remove(project_layers, mask);
+				array_remove(g_project->_->layers, mask);
 				// If the masks are moved down each step increases the index below the layer by one.
-				array_insert(project_layers, delta > 0 ? old_index + delta - 1 : old_index + delta + idx, mask);
+				array_insert(g_project->_->layers, delta > 0 ? old_index + delta - 1 : old_index + delta + idx, mask);
 			}
 		}
 
@@ -848,8 +848,8 @@ void slot_layer_move(slot_layer_t *raw, i32 to) {
 			i32 masks_count = layer_masks != NULL ? layer_masks->length : 0;
 			for (i32 idx = 0; idx < layer_filters->length; ++idx) {
 				slot_layer_t *filter = layer_filters->buffer[idx];
-				array_remove(project_layers, filter);
-				array_insert(project_layers, delta > 0 ? old_index + delta - 1 : old_index + delta + masks_count + idx, filter);
+				array_remove(g_project->_->layers, filter);
+				array_insert(g_project->_->layers, delta > 0 ? old_index + delta - 1 : old_index + delta + masks_count + idx, filter);
 			}
 		}
 
@@ -873,21 +873,21 @@ void slot_layer_move(slot_layer_t *raw, i32 to) {
 		if (children != NULL) {
 			for (i32 idx = 0; idx < children->length; ++idx) {
 				slot_layer_t *child = children->buffer[idx];
-				array_remove(project_layers, child);
+				array_remove(g_project->_->layers, child);
 				// If the children are moved down each step increases the index below the layer by one
-				array_insert(project_layers, delta > 0 ? old_index + delta - 1 : old_index + delta + idx, child);
+				array_insert(g_project->_->layers, delta > 0 ? old_index + delta - 1 : old_index + delta + idx, child);
 			}
 		}
 	}
 
-	for (i32 i = 0; i < project_materials->length; ++i) {
-		slot_material_t *m = project_materials->buffer[i];
+	for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+		slot_material_t *m = g_project->_->materials->buffer[i];
 		tab_layers_remap_layer_pointers(m->canvas->nodes, tab_layers_fill_layer_map(pointers));
 	}
 }
 
 void layers_init() {
-	slot_layer_clear(project_layers->buffer[0], color_from_floats(layers_default_base, layers_default_base, layers_default_base, 1.0), NULL, 1.0,
+	slot_layer_clear(g_project->_->layers->buffer[0], color_from_floats(layers_default_base, layers_default_base, layers_default_base, 1.0), NULL, 1.0,
 	                 layers_default_rough, 0.0);
 }
 
@@ -899,8 +899,8 @@ void layers_resize() {
 			sys_notify_on_next_frame(&slot_layer_unload, l);
 		}
 	}
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		slot_layer_t *l = project_layers->buffer[i];
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		slot_layer_t *l = g_project->_->layers->buffer[i];
 		slot_layer_resize_and_set_bits(l);
 	}
 	for (i32 i = 0; i < history_undo_layers->length; ++i) {
@@ -944,8 +944,8 @@ void layers_resize() {
 }
 
 void layers_set_bits() {
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		slot_layer_t *l = project_layers->buffer[i];
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		slot_layer_t *l = g_project->_->layers->buffer[i];
 		slot_layer_resize_and_set_bits(l);
 	}
 	for (i32 i = 0; i < history_undo_layers->length; ++i) {
@@ -955,7 +955,7 @@ void layers_set_bits() {
 }
 
 void layers_make_temp_img() {
-	slot_layer_t *l = project_layers->buffer[0];
+	slot_layer_t *l = g_project->_->layers->buffer[0];
 
 	if (layers_temp_image != NULL && (layers_temp_image->width != l->texpaint->width || layers_temp_image->height != l->texpaint->height ||
 	                                  layers_temp_image->format != l->texpaint->format)) {
@@ -998,7 +998,7 @@ void layers_make_temp_mask_img() {
 }
 
 void layers_make_export_img() {
-	slot_layer_t *l = project_layers->buffer[0];
+	slot_layer_t *l = g_project->_->layers->buffer[0];
 	if (layers_expa != NULL &&
 	    (layers_expa->width != l->texpaint->width || layers_expa->height != l->texpaint->height || layers_expa->format != l->texpaint->format)) {
 		gpu_texture_t *_expa = layers_expa;
@@ -1078,8 +1078,8 @@ bool layers_is_fill_material() {
 	}
 
 	slot_material_t *m = g_context->material;
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		slot_layer_t *l = project_layers->buffer[i];
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		slot_layer_t *l = g_project->_->layers->buffer[i];
 		if (l->fill_material == m) {
 			return true;
 		}
@@ -1132,14 +1132,14 @@ void layers_update_fill_layers() {
 
 	bool has_fill_layer = false;
 	bool has_fill_mask  = false;
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		slot_layer_t *l = project_layers->buffer[i];
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		slot_layer_t *l = g_project->_->layers->buffer[i];
 		if (slot_layer_is_layer(l) && l->fill_material == g_context->material) {
 			has_fill_layer = true;
 		}
 	}
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		slot_layer_t *l = project_layers->buffer[i];
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		slot_layer_t *l = g_project->_->layers->buffer[i];
 		if (slot_layer_is_mask(l) && l->fill_material == g_context->material) {
 			has_fill_mask = true;
 		}
@@ -1156,8 +1156,8 @@ void layers_update_fill_layers() {
 
 		if (has_fill_layer) {
 			bool first = true;
-			for (i32 i = 0; i < project_layers->length; ++i) {
-				slot_layer_t *l = project_layers->buffer[i];
+			for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+				slot_layer_t *l = g_project->_->layers->buffer[i];
 				if (slot_layer_is_layer(l) && l->fill_material == g_context->material) {
 					g_context->layer = l;
 					if (first) {
@@ -1184,8 +1184,8 @@ void layers_update_fill_layers() {
 		}
 		if (has_fill_mask) {
 			bool first = true;
-			for (i32 i = 0; i < project_layers->length; ++i) {
-				slot_layer_t *l = project_layers->buffer[i];
+			for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+				slot_layer_t *l = g_project->_->layers->buffer[i];
 				if (slot_layer_is_mask(l) && l->fill_material == g_context->material) {
 					g_context->layer = l;
 					if (first) {
@@ -1215,8 +1215,8 @@ void layers_update_fill_layers() {
 
 bool layers_is_path_material() {
 	slot_material_t *m = g_context->material;
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		slot_layer_t *l = project_layers->buffer[i];
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		slot_layer_t *l = g_project->_->layers->buffer[i];
 		if (slot_layer_is_path(l) && l->path_material == m) {
 			return true;
 		}
@@ -1225,8 +1225,8 @@ bool layers_is_path_material() {
 }
 
 void layers_update_path_layers() {
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		slot_layer_t *l = project_layers->buffer[i];
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		slot_layer_t *l = g_project->_->layers->buffer[i];
 		if (slot_layer_is_path(l) && l->path_material == g_context->material) {
 			util_layer_repaint_path(l);
 		}
@@ -1276,8 +1276,8 @@ void layers_update_fill_layer(bool parse_paint) {
 void layers_update_linked_layers() {
 	slot_material_t *_material  = g_context->material;
 	bool             any_linked = false;
-	for (i32 i = 0; i < project_materials->length; ++i) {
-		slot_material_t *m          = project_materials->buffer[i];
+	for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+		slot_material_t *m          = g_project->_->materials->buffer[i];
 		bool             has_linked = false;
 		for (i32 j = 0; j < m->canvas->nodes->length; ++j) {
 			ui_node_t *node = m->canvas->nodes->buffer[j];
@@ -1305,8 +1305,8 @@ void layers_set_object_mask() {
 	        tr("None"),
 	    },
 	    1);
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		mesh_object_t *p = project_paint_objects->buffer[i];
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		mesh_object_t *p = g_project->_->paint_objects->buffer[i];
 		any_array_push(ar, p->base->name);
 	}
 
@@ -1318,9 +1318,9 @@ void layers_set_object_mask() {
 		if (g_context->merged_object != NULL) {
 			g_context->merged_object->base->visible = false;
 		}
-		mesh_object_t *o = project_paint_objects->buffer[0];
-		for (i32 i = 0; i < project_paint_objects->length; ++i) {
-			mesh_object_t *p         = project_paint_objects->buffer[i];
+		mesh_object_t *o = g_project->_->paint_objects->buffer[0];
+		for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+			mesh_object_t *p         = g_project->_->paint_objects->buffer[i];
 			char          *mask_name = ar->buffer[mask];
 			if (string_equals(p->base->name, mask_name)) {
 				o = p;
@@ -1330,8 +1330,8 @@ void layers_set_object_mask() {
 		context_select_paint_object(o);
 	}
 	else {
-		i32  atlas_mask = g_context->layer_filter > project_paint_objects->length ? g_context->layer_filter : slot_layer_get_object_mask(g_context->layer);
-		bool is_atlas   = atlas_mask > project_paint_objects->length;
+		i32  atlas_mask = g_context->layer_filter > g_project->_->paint_objects->length ? g_context->layer_filter : slot_layer_get_object_mask(g_context->layer);
+		bool is_atlas   = atlas_mask > g_project->_->paint_objects->length;
 		if (g_context->merged_object == NULL || is_atlas || g_context->merged_object_is_atlas) {
 			mesh_object_t_array_t *visibles = is_atlas ? project_get_atlas_objects(atlas_mask) : NULL;
 			util_mesh_merge(visibles);
@@ -1348,7 +1348,7 @@ void layers_new_layer_clear(slot_layer_t *l) {
 }
 
 slot_layer_t *layers_new_layer(bool clear, i32 position, slot_layer_t *parent) {
-	if (project_layers->length > layers_max_layers) {
+	if (g_project->_->layers->length > layers_max_layers) {
 		return NULL;
 	}
 
@@ -1356,24 +1356,24 @@ slot_layer_t *layers_new_layer(bool clear, i32 position, slot_layer_t *parent) {
 	l->object_mask  = g_context->layer_filter;
 
 	if (position == -1 && slot_layer_is_filter(l)) {
-		position = array_index_of(project_layers, parent);
+		position = array_index_of(g_project->_->layers, parent);
 	}
 
 	if (position == -1) {
 		if (slot_layer_is_mask(g_context->layer) || slot_layer_is_filter(g_context->layer))
 			context_set_layer(g_context->layer->parent);
-		array_insert(project_layers, array_index_of(project_layers, g_context->layer) + 1, l);
+		array_insert(g_project->_->layers, array_index_of(g_project->_->layers, g_context->layer) + 1, l);
 	}
 	else {
-		array_insert(project_layers, position, l);
+		array_insert(g_project->_->layers, position, l);
 	}
 
 	context_set_layer(l);
 
 	if (parent == NULL) {
-		i32 li = array_index_of(project_layers, g_context->layer);
+		i32 li = array_index_of(g_project->_->layers, g_context->layer);
 		if (li > 0) {
-			slot_layer_t *below = project_layers->buffer[li - 1];
+			slot_layer_t *below = g_project->_->layers->buffer[li - 1];
 			if (slot_layer_is_layer(below)) {
 				g_context->layer->parent = below->parent;
 			}
@@ -1392,15 +1392,15 @@ void layers_new_mask_clear(slot_layer_t *l) {
 }
 
 slot_layer_t *layers_new_mask(bool clear, slot_layer_t *parent, i32 position) {
-	if (project_layers->length > layers_max_layers) {
+	if (g_project->_->layers->length > layers_max_layers) {
 		return NULL;
 	}
 
 	slot_layer_t *l = slot_layer_create("", LAYER_SLOT_TYPE_MASK, parent);
 	if (position == -1) {
-		position = array_index_of(project_layers, parent);
+		position = array_index_of(g_project->_->layers, parent);
 	}
-	array_insert(project_layers, position, l);
+	array_insert(g_project->_->layers, position, l);
 	context_set_layer(l);
 	if (clear) {
 		sys_notify_on_next_frame(&layers_new_mask_clear, l);
@@ -1410,12 +1410,12 @@ slot_layer_t *layers_new_mask(bool clear, slot_layer_t *parent, i32 position) {
 }
 
 slot_layer_t *layers_new_group() {
-	if (project_layers->length > layers_max_layers) {
+	if (g_project->_->layers->length > layers_max_layers) {
 		return NULL;
 	}
 
 	slot_layer_t *l = slot_layer_create("", LAYER_SLOT_TYPE_GROUP, NULL);
-	any_array_push(project_layers, l);
+	any_array_push(g_project->_->layers, l);
 	context_set_layer(l);
 	return l;
 }
@@ -1502,7 +1502,7 @@ void layers_create_filter_on_next_frame(void *_) {
 	}
 
 	ui_node_t *n                         = nodes_material_create_node("LAYER", NULL);
-	n->buttons->buffer[0]->default_value = f32_array_create_x(array_index_of(project_layers, l->parent));
+	n->buttons->buffer[0]->default_value = f32_array_create_x(array_index_of(g_project->_->layers, l->parent));
 	n->x                                 = -50;
 	n->y                                 = 100;
 
@@ -1567,31 +1567,31 @@ void layers_duplicate_layer(slot_layer_t *l) {
 				slot_layer_t *m = masks->buffer[i];
 				m               = slot_layer_duplicate(m);
 				m->parent       = new_layer;
-				array_remove(project_layers, m);
-				array_insert(project_layers, array_index_of(project_layers, new_layer), m);
+				array_remove(g_project->_->layers, m);
+				array_insert(g_project->_->layers, array_index_of(g_project->_->layers, new_layer), m);
 			}
 		}
 		context_set_layer(new_layer);
 	}
 	else {
 		slot_layer_t *new_group = layers_new_group();
-		array_remove(project_layers, new_group);
-		array_insert(project_layers, array_index_of(project_layers, l) + 1, new_group);
+		array_remove(g_project->_->layers, new_group);
+		array_insert(g_project->_->layers, array_index_of(g_project->_->layers, l) + 1, new_group);
 		// group.show_panel = true;
 		for (i32 i = 0; i < slot_layer_get_children(l)->length; ++i) {
 			slot_layer_t         *c         = slot_layer_get_children(l)->buffer[i];
 			slot_layer_t_array_t *masks     = slot_layer_get_masks(c, false);
 			slot_layer_t         *new_layer = slot_layer_duplicate(c);
 			new_layer->parent               = new_group;
-			array_remove(project_layers, new_layer);
-			array_insert(project_layers, array_index_of(project_layers, new_group), new_layer);
+			array_remove(g_project->_->layers, new_layer);
+			array_insert(g_project->_->layers, array_index_of(g_project->_->layers, new_group), new_layer);
 			if (masks != NULL) {
 				for (i32 i = 0; i < masks->length; ++i) {
 					slot_layer_t *m        = masks->buffer[i];
 					slot_layer_t *new_mask = slot_layer_duplicate(m);
 					new_mask->parent       = new_layer;
-					array_remove(project_layers, new_mask);
-					array_insert(project_layers, array_index_of(project_layers, new_layer), new_mask);
+					array_remove(g_project->_->layers, new_mask);
+					array_insert(g_project->_->layers, array_index_of(g_project->_->layers, new_layer), new_mask);
 				}
 			}
 		}
@@ -1601,8 +1601,8 @@ void layers_duplicate_layer(slot_layer_t *l) {
 				slot_layer_t *m        = group_masks->buffer[i];
 				slot_layer_t *new_mask = slot_layer_duplicate(m);
 				new_mask->parent       = new_group;
-				array_remove(project_layers, new_mask);
-				array_insert(project_layers, array_index_of(project_layers, new_group), new_mask);
+				array_remove(g_project->_->layers, new_mask);
+				array_insert(g_project->_->layers, array_index_of(g_project->_->layers, new_group), new_mask);
 			}
 		}
 		context_set_layer(new_group);
@@ -1633,7 +1633,7 @@ void layers_merge_down() {
 		context_set_layer(l1);
 	}
 
-	slot_layer_t *l0 = project_layers->buffer[array_index_of(project_layers, l1) - 1];
+	slot_layer_t *l0 = g_project->_->layers->buffer[array_index_of(g_project->_->layers, l1) - 1];
 
 	if (slot_layer_is_group(l0)) {
 		l0 = layers_merge_group(l0);
@@ -1804,7 +1804,7 @@ void layers_merge_layer(slot_layer_t *l0, slot_layer_t *l1, bool use_mask) {
 
 slot_layer_t *layers_flatten(bool height_to_normal, slot_layer_t_array_t *layers) {
 	if (layers == NULL) {
-		layers = project_layers;
+		layers = g_project->_->layers;
 	}
 	layers_make_temp_img();
 	layers_make_export_img();
@@ -1957,8 +1957,8 @@ void layers_on_resized_on_next_frame(void *_) {
 	layers_resize();
 	slot_layer_t    *_layer    = g_context->layer;
 	slot_material_t *_material = g_context->material;
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		slot_layer_t *l = project_layers->buffer[i];
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		slot_layer_t *l = g_project->_->layers->buffer[i];
 		if (l->fill_material != NULL) {
 			g_context->layer    = l;
 			g_context->material = l->fill_material;

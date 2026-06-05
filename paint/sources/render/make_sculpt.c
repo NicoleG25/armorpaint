@@ -294,8 +294,8 @@ void sculpt_init_sculpt_texture(slot_layer_t *l, mesh_data_t *md) {
 	sculpt_import_mesh_pack_to_texture(md, l->texpaint_sculpt);
 
 	i32 sculpt_layer_count = 0;
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		if (project_layers->buffer[i]->texpaint_sculpt != NULL) {
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		if (g_project->_->layers->buffer[i]->texpaint_sculpt != NULL) {
 			sculpt_layer_count++;
 		}
 	}
@@ -430,7 +430,7 @@ void render_path_sculpt_commands() {
 
 	material_context_t *material_context = NULL;
 	shader_context_t   *shader_context   = NULL;
-	material_data_t    *mat              = project_paint_objects->buffer[0]->material;
+	material_data_t    *mat              = g_project->_->paint_objects->buffer[0]->material;
 	for (i32 j = 0; j < mat->contexts->length; ++j) {
 		if (string_equals(mat->contexts->buffer[j]->name, "paint")) {
 			shader_context   = shader_data_get_context(mat->_->shader, "paint");
@@ -441,7 +441,7 @@ void render_path_sculpt_commands() {
 
 	gpu_set_pipeline(shader_context->_->pipe);
 	uniforms_set_context_consts(shader_context, _render_path_bind_params);
-	uniforms_set_obj_consts(shader_context, project_paint_objects->buffer[0]->base);
+	uniforms_set_obj_consts(shader_context, g_project->_->paint_objects->buffer[0]->base);
 	uniforms_set_material_consts(shader_context, material_context);
 	gpu_set_vertex_buffer(const_data_screen_aligned_vb);
 	gpu_set_index_buffer(const_data_screen_aligned_ib);
@@ -473,7 +473,7 @@ void slot_layer_apply_sculpt(slot_layer_t *raw) {
 		return;
 	}
 
-	mesh_object_t *o         = project_paint_objects->buffer[0];
+	mesh_object_t *o         = g_project->_->paint_objects->buffer[0];
 	mesh_data_t   *g         = o->data;
 	i16_array_t   *va0       = g->vertex_arrays->buffer[0]->values;
 	i32            num_verts = math_floor(va0->length / 4.0);

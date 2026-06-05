@@ -19,8 +19,8 @@ slot_material_t *slot_material_create(material_data_t *m, ui_node_canvas_t *c) {
 	raw->paint_emis      = true;
 	raw->paint_subs      = true;
 
-	for (i32 i = 0; i < project_materials->length; ++i) {
-		slot_material_t *mat = project_materials->buffer[i];
+	for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+		slot_material_t *mat = g_project->_->materials->buffer[i];
 		if (mat->id >= raw->id) {
 			raw->id = mat->id + 1;
 		}
@@ -72,9 +72,9 @@ void slot_material_unload(slot_material_t *raw) {
 
 void slot_material_delete(slot_material_t *raw) {
 	slot_material_unload(raw);
-	i32 mpos = array_index_of(project_materials, raw);
-	array_remove(project_materials, raw);
-	if (project_materials->length > 0) {
-		context_set_material(project_materials->buffer[mpos > 0 ? mpos - 1 : 0]);
+	i32 mpos = array_index_of(g_project->_->materials, raw);
+	array_remove(g_project->_->materials, raw);
+	if (g_project->_->materials->length > 0) {
+		context_set_material(g_project->_->materials->buffer[mpos > 0 ? mpos - 1 : 0]);
 	}
 }

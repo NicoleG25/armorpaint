@@ -178,10 +178,10 @@ bool context_use_deferred() {
 }
 
 void context_select_material(i32 i) {
-	if (project_materials->length <= i) {
+	if (g_project->_->materials->length <= i) {
 		return;
 	}
-	context_set_material(project_materials->buffer[i]);
+	context_set_material(g_project->_->materials->buffer[i]);
 }
 
 void context_set_material_on_next_frame(void *_) {
@@ -189,7 +189,7 @@ void context_set_material_on_next_frame(void *_) {
 }
 
 void context_set_material(slot_material_t *m) {
-	if (array_index_of(project_materials, m) == -1) {
+	if (array_index_of(g_project->_->materials, m) == -1) {
 		return;
 	}
 	g_context->material = m;
@@ -208,14 +208,14 @@ void context_set_material(slot_material_t *m) {
 }
 
 void context_select_brush(i32 i) {
-	if (project_brushes->length <= i) {
+	if (g_project->_->brushes->length <= i) {
 		return;
 	}
-	context_set_brush(project_brushes->buffer[i]);
+	context_set_brush(g_project->_->brushes->buffer[i]);
 }
 
 void context_set_brush(slot_brush_t *b) {
-	if (array_index_of(project_brushes, b) == -1) {
+	if (array_index_of(g_project->_->brushes, b) == -1) {
 		return;
 	}
 	g_context->brush = b;
@@ -227,7 +227,7 @@ void context_set_brush(slot_brush_t *b) {
 }
 
 void context_set_font(slot_font_t *f) {
-	if (array_index_of(project_fonts, f) == -1) {
+	if (array_index_of(g_project->_->fonts, f) == -1) {
 		return;
 	}
 	g_context->font = f;
@@ -238,17 +238,17 @@ void context_set_font(slot_font_t *f) {
 }
 
 void context_select_font(i32 i) {
-	if (project_fonts->length <= i) {
+	if (g_project->_->fonts->length <= i) {
 		return;
 	}
-	context_set_font(project_fonts->buffer[i]);
+	context_set_font(g_project->_->fonts->buffer[i]);
 }
 
 void context_select_layer(i32 i) {
-	if (project_layers->length <= i) {
+	if (g_project->_->layers->length <= i) {
 		return;
 	}
-	context_set_layer(project_layers->buffer[i]);
+	context_set_layer(g_project->_->layers->buffer[i]);
 }
 
 void context_set_layer(slot_layer_t *l) {
@@ -303,8 +303,8 @@ void context_init_tool() {
 
 void context_select_paint_object(mesh_object_t *o) {
 	ui_header_handle->redraws = 2;
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		mesh_object_t *p = project_paint_objects->buffer[i];
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		mesh_object_t *p = g_project->_->paint_objects->buffer[i];
 		p->skip_context  = "paint";
 	}
 
@@ -328,21 +328,21 @@ void context_select_paint_object(mesh_object_t *o) {
 }
 
 mesh_object_t *context_main_object() {
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		mesh_object_t *po = project_paint_objects->buffer[i];
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		mesh_object_t *po = g_project->_->paint_objects->buffer[i];
 		if (po->base->children->length > 0) {
 			return po;
 		}
 	}
-	return project_paint_objects->buffer[0];
+	return g_project->_->paint_objects->buffer[0];
 }
 
 bool context_layer_filter_used() {
-	return g_context->layer_filter > 0 && g_context->layer_filter <= project_paint_objects->length;
+	return g_context->layer_filter > 0 && g_context->layer_filter <= g_project->_->paint_objects->length;
 }
 
 bool context_object_mask_used() {
-	return slot_layer_get_object_mask(g_context->layer) > 0 && slot_layer_get_object_mask(g_context->layer) <= project_paint_objects->length;
+	return slot_layer_get_object_mask(g_context->layer) > 0 && slot_layer_get_object_mask(g_context->layer) <= g_project->_->paint_objects->length;
 }
 
 bool context_in_3d_view() {

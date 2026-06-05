@@ -21,7 +21,7 @@ void tab_layers_set_drag_layer(slot_layer_t *layer, f32 off_x, f32 off_y) {
 	gc_unroot(base_drag_layer);
 	base_drag_layer = layer;
 	gc_root(base_drag_layer);
-	g_context->drag_dest = array_index_of(project_layers, layer);
+	g_context->drag_dest = array_index_of(g_project->_->layers, layer);
 }
 
 void tab_layers_handle_layer_icon_state(slot_layer_t *l, i32 i, ui_state_t state, f32 uix, f32 uiy) {
@@ -223,8 +223,8 @@ void tab_layers_delete_layer(slot_layer_t *l) {
 		slot_layer_delete(l->parent);
 	}
 	g_context->ddirty = 2;
-	for (i32 i = 0; i < project_materials->length; ++i) {
-		slot_material_t *m = project_materials->buffer[i];
+	for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+		slot_material_t *m = g_project->_->materials->buffer[i];
 		tab_layers_remap_layer_pointers(m->canvas->nodes, tab_layers_fill_layer_map(pointers));
 	}
 }
@@ -245,8 +245,8 @@ ui_handle_t *tab_layers_combo_object(slot_layer_t *l, bool label) {
 	        tr("Shared"),
 	    },
 	    1);
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		mesh_object_t *p = project_paint_objects->buffer[i];
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		mesh_object_t *p = g_project->_->paint_objects->buffer[i];
 		any_array_push(ar, p->base->name);
 	}
 	string_array_t *atlases = project_get_used_atlases();
@@ -320,8 +320,8 @@ bool tab_layers_can_delete(slot_layer_t *l) {
 		return true;
 	}
 
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		slot_layer_t *slot = project_layers->buffer[i];
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		slot_layer_t *slot = g_project->_->layers->buffer[i];
 		if (slot_layer_is_layer(slot)) {
 			++num_layers;
 		}
@@ -515,9 +515,9 @@ void tab_layers_draw_layer_context_menu_to_paint_layer(void *_) {
 	slot_layer_t *l = tab_layers_l;
 
 	if (slot_layer_is_filter(l)) {
-		i32 pi = array_index_of(project_layers, l->parent);
-		array_remove(project_layers, l);
-		array_insert(project_layers, pi, l);
+		i32 pi = array_index_of(g_project->_->layers, l->parent);
+		array_remove(g_project->_->layers, l);
+		array_insert(g_project->_->layers, pi, l);
 		l->parent = NULL;
 	}
 
@@ -542,21 +542,21 @@ void tab_layers_make_mask_preview_rgba32_on_next_frame(void *_) {
 }
 
 bool tab_layers_can_merge_down(slot_layer_t *l) {
-	i32 index = array_index_of(project_layers, l);
+	i32 index = array_index_of(g_project->_->layers, l);
 	// Lowest layer
 	if (index == 0) {
 		return false;
 	}
 	// Lowest layer that has masks
-	if (slot_layer_is_layer(l) && slot_layer_is_mask(project_layers->buffer[0]) && project_layers->buffer[0]->parent == l) {
+	if (slot_layer_is_layer(l) && slot_layer_is_mask(g_project->_->layers->buffer[0]) && g_project->_->layers->buffer[0]->parent == l) {
 		return false;
 	}
 	// The lowest toplevel layer is a group
-	if (slot_layer_is_group(l) && slot_layer_is_in_group(project_layers->buffer[0]) && slot_layer_get_containing_group(project_layers->buffer[0]) == l) {
+	if (slot_layer_is_group(l) && slot_layer_is_in_group(g_project->_->layers->buffer[0]) && slot_layer_get_containing_group(g_project->_->layers->buffer[0]) == l) {
 		return false;
 	}
 	// Masks must be merged down to masks
-	if (slot_layer_is_mask(l) && !slot_layer_is_mask(project_layers->buffer[index - 1])) {
+	if (slot_layer_is_mask(l) && !slot_layer_is_mask(g_project->_->layers->buffer[index - 1])) {
 		return false;
 	}
 	return true;
@@ -938,9 +938,9 @@ void tab_layers_draw_layer_slot(slot_layer_t *l, i32 i, bool mini) {
 	f32 absy = ui->_window_y + ui->_y;
 	if (base_is_dragging && base_drag_layer != NULL && context_in_layers()) {
 		if (mouse_y > absy + step && mouse_y < absy + step * 3) {
-			bool down                          = array_index_of(project_layers, base_drag_layer) >= i;
+			bool down                          = array_index_of(g_project->_->layers, base_drag_layer) >= i;
 			g_context->drag_dest               = down ? i : i - 1;
-			slot_layer_t_array_t *ls           = project_layers;
+			slot_layer_t_array_t *ls           = g_project->_->layers;
 			i32                   dest         = g_context->drag_dest;
 			bool                  to_group     = down ? dest > 0 && ls->buffer[dest - 1]->parent != NULL && ls->buffer[dest - 1]->parent->show_panel
 			                                          : dest < ls->length && ls->buffer[dest]->parent != NULL && ls->buffer[dest]->parent->show_panel;
@@ -951,8 +951,8 @@ void tab_layers_draw_layer_slot(slot_layer_t *l, i32 i, bool mini) {
 				}
 			}
 		}
-		else if (i == project_layers->length - 1 && mouse_y < absy + step) {
-			g_context->drag_dest = project_layers->length - 1;
+		else if (i == g_project->_->layers->length - 1 && mouse_y < absy + step) {
+			g_context->drag_dest = g_project->_->layers->length - 1;
 			if (slot_layer_can_move(g_context->layer, g_context->drag_dest)) {
 				ui_fill(checkw, 0, (ui->_window_w / (float)UI_SCALE() - 2) - checkw, 2 * UI_SCALE(), ui->ops->theme->HIGHLIGHT_COL);
 			}
@@ -965,9 +965,9 @@ void tab_layers_draw_layer_slot(slot_layer_t *l, i32 i, bool mini) {
 				ui_fill(checkw, 2 * step, (ui->_window_w / (float)UI_SCALE() - 2) - checkw, 2 * UI_SCALE(), ui->ops->theme->HIGHLIGHT_COL);
 			}
 		}
-		else if (i == project_layers->length - 1 && mouse_y < absy + step) {
-			g_context->drag_dest = project_layers->length;
-			if (tab_layers_can_drop_new_layer(project_layers->length)) {
+		else if (i == g_project->_->layers->length - 1 && mouse_y < absy + step) {
+			g_context->drag_dest = g_project->_->layers->length;
+			if (tab_layers_can_drop_new_layer(g_project->_->layers->length)) {
 				ui_fill(checkw, 0, (ui->_window_w / (float)UI_SCALE() - 2) - checkw, 2 * UI_SCALE(), ui->ops->theme->HIGHLIGHT_COL);
 			}
 		}
@@ -982,12 +982,12 @@ void tab_layers_draw_layer_slot(slot_layer_t *l, i32 i, bool mini) {
 }
 
 void tab_layers_draw_slots(bool mini) {
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		if (i >= project_layers->length) {
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		if (i >= g_project->_->layers->length) {
 			break; // Layer was deleted
 		}
-		i32           j = project_layers->length - 1 - i;
-		slot_layer_t *l = project_layers->buffer[j];
+		i32           j = g_project->_->layers->length - 1 - i;
+		slot_layer_t *l = g_project->_->layers->buffer[j];
 		tab_layers_draw_layer_slot(l, j, mini);
 	}
 }
@@ -1057,8 +1057,8 @@ void tab_layers_button_new_menu() {
 
 		i32_map_t    *pointers = tab_layers_init_layer_map();
 		slot_layer_t *m        = layers_new_mask(false, l, -1);
-		for (i32 i = 0; i < project_materials->length; ++i) {
-			slot_material_t *mat = project_materials->buffer[i];
+		for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+			slot_material_t *mat = g_project->_->materials->buffer[i];
 			tab_layers_remap_layer_pointers(mat->canvas->nodes, tab_layers_fill_layer_map(pointers));
 		}
 		sys_notify_on_next_frame(&tab_layers_button_new_black_mask, m);
@@ -1074,8 +1074,8 @@ void tab_layers_button_new_menu() {
 
 		i32_map_t    *pointers = tab_layers_init_layer_map();
 		slot_layer_t *m        = layers_new_mask(false, l, -1);
-		for (i32 i = 0; i < project_materials->length; ++i) {
-			slot_material_t *mat = project_materials->buffer[i];
+		for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+			slot_material_t *mat = g_project->_->materials->buffer[i];
 			tab_layers_remap_layer_pointers(mat->canvas->nodes, tab_layers_fill_layer_map(pointers));
 		}
 		sys_notify_on_next_frame(&tab_layers_button_new_layer_clear, m);
@@ -1091,8 +1091,8 @@ void tab_layers_button_new_menu() {
 
 		i32_map_t    *pointers = tab_layers_init_layer_map();
 		slot_layer_t *m        = layers_new_mask(false, l, -1);
-		for (i32 i = 0; i < project_materials->length; ++i) {
-			slot_material_t *mat = project_materials->buffer[i];
+		for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+			slot_material_t *mat = g_project->_->materials->buffer[i];
 			tab_layers_remap_layer_pointers(mat->canvas->nodes, tab_layers_fill_layer_map(pointers));
 		}
 		sys_notify_on_next_frame(&tab_layers_button_new_to_fill_layer, m);
@@ -1119,11 +1119,11 @@ void tab_layers_button_new_menu() {
 		i32_map_t    *pointers = tab_layers_init_layer_map();
 		slot_layer_t *group    = layers_new_group();
 		context_set_layer(l);
-		array_remove(project_layers, group);
-		array_insert(project_layers, array_index_of(project_layers, l) + 1, group);
+		array_remove(g_project->_->layers, group);
+		array_insert(g_project->_->layers, array_index_of(g_project->_->layers, l) + 1, group);
 		l->parent = group;
-		for (i32 i = 0; i < project_materials->length; ++i) {
-			slot_material_t *m = project_materials->buffer[i];
+		for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+			slot_material_t *m = g_project->_->materials->buffer[i];
 			tab_layers_remap_layer_pointers(m->canvas->nodes, tab_layers_fill_layer_map(pointers));
 		}
 		context_set_layer(group);
@@ -1141,26 +1141,26 @@ void tab_layers_button_new(char *text) {
 void tab_layers_apply_filter(i32 filter) {
 	g_context->layer_filter = filter;
 	char *filter_name       = NULL;
-	if (filter > 0 && filter <= project_paint_objects->length) {
-		filter_name = project_paint_objects->buffer[filter - 1]->base->name;
+	if (filter > 0 && filter <= g_project->_->paint_objects->length) {
+		filter_name = g_project->_->paint_objects->buffer[filter - 1]->base->name;
 	}
-	else if (filter > project_paint_objects->length) {
+	else if (filter > g_project->_->paint_objects->length) {
 		string_array_t *atlases = project_get_used_atlases();
 		if (atlases != NULL) {
-			filter_name = atlases->buffer[filter - project_paint_objects->length - 1];
+			filter_name = atlases->buffer[filter - g_project->_->paint_objects->length - 1];
 		}
 	}
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		mesh_object_t *p = project_paint_objects->buffer[i];
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		mesh_object_t *p = g_project->_->paint_objects->buffer[i];
 		p->base->visible = filter == 0 || (filter_name != NULL && string_equals(p->base->name, filter_name)) || project_is_atlas_object(p);
 	}
 	if (filter == 0 && g_context->merged_object_is_atlas) {
 		util_mesh_merge(NULL);
 	}
-	else if (filter > project_paint_objects->length) {
+	else if (filter > g_project->_->paint_objects->length) {
 		mesh_object_t_array_t *visibles = any_array_create_from_raw((void *[]){}, 0);
-		for (i32 i = 0; i < project_paint_objects->length; ++i) {
-			mesh_object_t *p = project_paint_objects->buffer[i];
+		for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+			mesh_object_t *p = g_project->_->paint_objects->buffer[i];
 			if (p->base->visible) {
 				any_array_push(visibles, p);
 			}
@@ -1179,8 +1179,8 @@ void tab_layers_combo_filter() {
 	        tr("All"),
 	    },
 	    1);
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		mesh_object_t *p = project_paint_objects->buffer[i];
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		mesh_object_t *p = g_project->_->paint_objects->buffer[i];
 		any_array_push(ar, p->base->name);
 	}
 	string_array_t *atlases = project_get_used_atlases();
@@ -1247,9 +1247,9 @@ void tab_layers_draw_full(ui_handle_t *htab) {
 		if (in_focus) {
 			// Layer selection
 			if (ui->is_key_pressed && ui->key_code == KEY_CODE_UP) {
-				i32 i = array_index_of(project_layers, g_context->layer);
-				while (++i < project_layers->length) {
-					slot_layer_t *candidate = project_layers->buffer[i];
+				i32 i = array_index_of(g_project->_->layers, g_context->layer);
+				while (++i < g_project->_->layers->length) {
+					slot_layer_t *candidate = g_project->_->layers->buffer[i];
 					if (candidate->parent != NULL && !candidate->parent->show_panel)
 						continue;
 					if (candidate->parent != NULL && candidate->parent->parent != NULL && !candidate->parent->parent->show_panel)
@@ -1260,9 +1260,9 @@ void tab_layers_draw_full(ui_handle_t *htab) {
 				}
 			}
 			if (ui->is_key_pressed && ui->key_code == KEY_CODE_DOWN) {
-				i32 i = array_index_of(project_layers, g_context->layer);
+				i32 i = array_index_of(g_project->_->layers, g_context->layer);
 				while (--i >= 0) {
-					slot_layer_t *candidate = project_layers->buffer[i];
+					slot_layer_t *candidate = g_project->_->layers->buffer[i];
 					if (candidate->parent != NULL && !candidate->parent->show_panel)
 						continue;
 					if (candidate->parent != NULL && candidate->parent->parent != NULL && !candidate->parent->parent->show_panel)
@@ -1302,8 +1302,8 @@ void tab_layers_remap_layer_pointers(ui_node_t_array_t *nodes, i32_imap_t *point
 
 i32_map_t *tab_layers_init_layer_map() {
 	i32_map_t *res = any_map_create();
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		i32_map_set(res, project_layers->buffer[i], i);
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		i32_map_set(res, g_project->_->layers->buffer[i], i);
 	}
 	return res;
 }
@@ -1313,7 +1313,7 @@ i32_imap_t *tab_layers_fill_layer_map(i32_map_t *map) {
 	string_array_t *keys = map_keys(map);
 	for (i32 i = 0; i < keys->length; ++i) {
 		char *l = keys->buffer[i];
-		i32_imap_set(res, i32_map_get(map, l), array_index_of(project_layers, l) > -1 ? array_index_of(project_layers, l) : 9999);
+		i32_imap_set(res, i32_map_get(map, l), array_index_of(g_project->_->layers, l) > -1 ? array_index_of(g_project->_->layers, l) : 9999);
 	}
 	return res;
 }
@@ -1333,7 +1333,7 @@ void tab_layers_make_mask_preview_rgba32(slot_layer_t *l) {
 }
 
 bool tab_layers_can_drop_new_layer(i32 position) {
-	if (position > 0 && position < project_layers->length && slot_layer_is_mask(project_layers->buffer[position - 1])) {
+	if (position > 0 && position < g_project->_->layers->length && slot_layer_is_mask(g_project->_->layers->buffer[position - 1])) {
 		// 1. The layer to insert is inserted in the middle
 		// 2. The layer below is a mask, i.e. the layer would have to be a (group) mask, too.
 		return false;

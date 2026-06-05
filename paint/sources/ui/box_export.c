@@ -11,8 +11,8 @@ void box_export_tab_export_textures_run(void *_) {
 		i32 _dilate_radius      = g_config->dilate_radius;
 		g_config->dilate_radius = 256;
 		slot_layer_t *_layer    = g_context->layer;
-		for (i32 i = 0; i < project_layers->length; ++i) {
-			g_context->layer = project_layers->buffer[i];
+		for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+			g_context->layer = g_project->_->layers->buffer[i];
 			render_path_paint_dilate(true, true);
 		}
 		g_context->layer        = _layer;
@@ -394,18 +394,18 @@ void box_export_tab_presets() {
 void box_export_tab_atlases() {
 	bool tab_vertical = g_config->touch_ui;
 	if (ui_tab(box_export_htab, tr("Atlases"), tab_vertical, -1, false)) {
-		if (g_project->atlas_objects == NULL || g_project->atlas_objects->length != project_paint_objects->length) {
+		if (g_project->atlas_objects == NULL || g_project->atlas_objects->length != g_project->_->paint_objects->length) {
 			g_project->atlas_objects = i32_array_create_from_raw((i32[]){}, 0);
 			g_project->atlas_names = any_array_create_from_raw((void *[]){}, 0);
-			for (i32 i = 0; i < project_paint_objects->length; ++i) {
+			for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
 				i32_array_push(g_project->atlas_objects, 0);
 				i32 i1 = i + 1;
 				any_array_push(g_project->atlas_names, string("%s %s", tr("Atlas"), i32_to_string(i1)));
 			}
 		}
-		for (i32 i = 0; i < project_paint_objects->length; ++i) {
+		for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
 			ui_row2();
-			ui_text(project_paint_objects->buffer[i]->base->name, UI_ALIGN_LEFT, 0x00000000);
+			ui_text(g_project->_->paint_objects->buffer[i]->base->name, UI_ALIGN_LEFT, 0x00000000);
 			ui_handle_t *hatlas               = ui_nest(ui_handle(__ID__), i);
 			hatlas->i                         = g_project->atlas_objects->buffer[i];
 			g_project->atlas_objects->buffer[i] = ui_combo(hatlas, g_project->atlas_names, tr("Atlas"), false, UI_ALIGN_LEFT, true);
@@ -431,7 +431,7 @@ void box_export_tab_export_mesh_path_picked(char *path) {
 		paint_objects = NULL;
 	}
 	else {
-		mesh_object_t *po = project_paint_objects->buffer[box_export_mesh_handle->i - 1];
+		mesh_object_t *po = g_project->_->paint_objects->buffer[box_export_mesh_handle->i - 1];
 		paint_objects     = any_array_create_from_raw(
             (void *[]){
                 po,
@@ -467,8 +467,8 @@ void box_export_tab_export_mesh(ui_handle_t *htab) {
 		        tr("All"),
 		    },
 		    1);
-		for (i32 i = 0; i < project_paint_objects->length; ++i) {
-			mesh_object_t *p = project_paint_objects->buffer[i];
+		for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+			mesh_object_t *p = g_project->_->paint_objects->buffer[i];
 			any_array_push(ar, p->base->name);
 		}
 		ui_combo(box_export_mesh_handle, ar, tr("Meshes"), true, UI_ALIGN_LEFT, true);
@@ -485,10 +485,10 @@ void box_export_tab_export_mesh(ui_handle_t *htab) {
 		i32                    pos  = box_export_mesh_handle->i;
 		mesh_object_t_array_t *paint_objects;
 		if (pos == 0) {
-			paint_objects = project_paint_objects;
+			paint_objects = g_project->_->paint_objects;
 		}
 		else {
-			mesh_object_t *po = project_paint_objects->buffer[pos - 1];
+			mesh_object_t *po = g_project->_->paint_objects->buffer[pos - 1];
 			paint_objects     = any_array_create_from_raw(
                 (void *[]){
                     po,

@@ -26,7 +26,7 @@ void util_uv_cache_uv_map() {
 
 	util_uv_uvmap_cached  = true;
 	i32            mask   = slot_layer_get_object_mask(g_context->layer);
-	mesh_object_t *merged = (mask > 0 && mask <= project_paint_objects->length) ? project_paint_objects->buffer[mask - 1] : g_context->merged_object;
+	mesh_object_t *merged = (mask > 0 && mask <= g_project->_->paint_objects->length) ? g_project->_->paint_objects->buffer[mask - 1] : g_context->merged_object;
 	mesh_data_t   *mesh   = (g_context->layer_filter == 0 && merged != NULL) ? merged->data : g_context->paint_object->data;
 
 	i16_array_t *texa = mesh->vertex_arrays->buffer[2]->values;

@@ -86,7 +86,7 @@ f32 uniforms_ext_f32_link(object_t *object, material_data_t *mat, char *link) {
 		return val;
 	}
 	else if (string_equals(link, "_object_id")) {
-		return array_index_of(project_paint_objects, object->ext);
+		return array_index_of(g_project->_->paint_objects, object->ext);
 	}
 	else if (string_equals(link, "_dilate_radius")) {
 		return util_uv_dilatemap != NULL ? g_config->dilate_radius : 0.0;
@@ -332,12 +332,12 @@ gpu_texture_t *uniforms_ext_tex_link(object_t *object, material_data_t *mat, cha
 		return rt->_image;
 	}
 	else if (string_equals(link, "_texcolorid")) {
-		if (project_assets->length == 0) {
+		if (g_project->_->assets->length == 0) {
 			render_target_t *rt = any_map_get(render_path_render_targets, "empty_white");
 			return rt->_image;
 		}
 		else {
-			return project_get_image(project_assets->buffer[g_context->colorid]);
+			return project_get_image(g_project->_->assets->buffer[g_context->colorid]);
 		}
 	}
 	else if (string_equals(link, "_textexttool")) { // Opacity map for text
@@ -381,15 +381,15 @@ gpu_texture_t *uniforms_ext_tex_link(object_t *object, material_data_t *mat, cha
 	}
 	if (starts_with(link, "_texpaint_vert")) {
 		i32 tid = parse_int(substring(link, string_length(link) - 1, string_length(link)));
-		return tid < project_layers->length ? project_layers->buffer[tid]->texpaint : NULL;
+		return tid < g_project->_->layers->length ? g_project->_->layers->buffer[tid]->texpaint : NULL;
 	}
 	if (starts_with(link, "_texpaint_nor")) {
 		i32 tid = parse_int(substring(link, string_length(link) - 1, string_length(link)));
-		return tid < project_layers->length ? project_layers->buffer[tid]->texpaint_nor : NULL;
+		return tid < g_project->_->layers->length ? g_project->_->layers->buffer[tid]->texpaint_nor : NULL;
 	}
 	if (starts_with(link, "_texpaint_pack")) {
 		i32 tid = parse_int(substring(link, string_length(link) - 1, string_length(link)));
-		return tid < project_layers->length ? project_layers->buffer[tid]->texpaint_pack : NULL;
+		return tid < g_project->_->layers->length ? g_project->_->layers->buffer[tid]->texpaint_pack : NULL;
 	}
 	if (string_equals(link, "_texpaint_sculpt_base")) {
 		render_target_t *rt = any_map_get(render_path_render_targets, "texpaint_sculpt_base");
@@ -397,11 +397,11 @@ gpu_texture_t *uniforms_ext_tex_link(object_t *object, material_data_t *mat, cha
 	}
 	if (starts_with(link, "_texpaint_sculpt")) {
 		i32 tid = parse_int(substring(link, string_length(link) - 1, string_length(link)));
-		return tid < project_layers->length ? project_layers->buffer[tid]->texpaint_sculpt : NULL;
+		return tid < g_project->_->layers->length ? g_project->_->layers->buffer[tid]->texpaint_sculpt : NULL;
 	}
 	if (starts_with(link, "_texpaint")) {
 		i32 tid = parse_int(substring(link, string_length(link) - 1, string_length(link)));
-		return tid < project_layers->length ? project_layers->buffer[tid]->texpaint : NULL;
+		return tid < g_project->_->layers->length ? g_project->_->layers->buffer[tid]->texpaint : NULL;
 	}
 	if (starts_with(link, "_texblur_")) {
 		char *id = substring(link, 9, string_length(link));

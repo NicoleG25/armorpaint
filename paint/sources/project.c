@@ -42,17 +42,13 @@ void project_save_on_next_frame(void *_) {
 }
 
 void project_save(bool save_and_quit) {
-	if (string_equals(project_filepath, "")) {
+	if (string_equals(g_project->_->filepath, "")) {
 #ifdef IRON_IOS
 		char *document_directory = iron_save_dialog("", "");
 		document_directory       = string_copy(substring(document_directory, 0, string_length(document_directory) - 8)); // Strip /"untitled"
-		gc_unroot(project_filepath);
-		project_filepath = string("%s/%s.arm", document_directory, sys_title());
-		gc_root(project_filepath);
+		g_project->_->filepath = string("%s/%s.arm", document_directory, sys_title());
 #elif defined(IRON_ANDROID)
-		gc_unroot(project_filepath);
-		project_filepath = string("%s/%s.arm", iron_internal_save_path(), sys_title());
-		gc_root(project_filepath);
+		g_project->_->filepath = string("%s/%s.arm", iron_internal_save_path(), sys_title());
 #else
 		project_save_as(save_and_quit);
 		return;
@@ -60,7 +56,7 @@ void project_save(bool save_and_quit) {
 	}
 
 #if defined(IRON_WINDOWS) || defined(IRON_LINUX) || defined(IRON_MACOS)
-	char *filename = substring(project_filepath, string_last_index_of(project_filepath, PATH_SEP) + 1, string_length(project_filepath) - 4);
+	char *filename = substring(g_project->_->filepath, string_last_index_of(g_project->_->filepath, PATH_SEP) + 1, string_length(g_project->_->filepath) - 4);
 	sys_title_set(string("%s - %s", filename, manifest_title));
 #endif
 
@@ -74,13 +70,9 @@ void project_save_as_on_file_picked(char *path) {
 	if (string_equals(f, "")) {
 		f = string_copy(tr("untitled"));
 	}
-	gc_unroot(project_filepath);
-	project_filepath = string("%s%s%s", path, PATH_SEP, f);
-	gc_root(project_filepath);
-	if (!ends_with(project_filepath, ".arm")) {
-		gc_unroot(project_filepath);
-		project_filepath = string("%s.arm", project_filepath);
-		gc_root(project_filepath);
+	g_project->_->filepath = string("%s%s%s", path, PATH_SEP, f);
+	if (!ends_with(g_project->_->filepath, ".arm")) {
+		g_project->_->filepath = string("%s.arm", g_project->_->filepath);
 	}
 	project_save(_project_save_and_quit);
 }
@@ -91,16 +83,16 @@ void project_save_as(bool save_and_quit) {
 }
 
 void project_fetch_default_meshes() {
-	if (project_mesh_list == NULL) {
-		gc_unroot(project_mesh_list);
-		project_mesh_list = file_read_directory(string("%s%smeshes", path_data(), PATH_SEP));
-		gc_root(project_mesh_list);
-		for (i32 i = 0; i < project_mesh_list->length; ++i) {
-			char *s                      = project_mesh_list->buffer[i];
-			project_mesh_list->buffer[i] = substring(project_mesh_list->buffer[i], 0, string_length(s) - 4); // Trim .arm
+	if (project_default_mesh_list == NULL) {
+		gc_unroot(project_default_mesh_list);
+		project_default_mesh_list = file_read_directory(string("%s%smeshes", path_data(), PATH_SEP));
+		gc_root(project_default_mesh_list);
+		for (i32 i = 0; i < project_default_mesh_list->length; ++i) {
+			char *s                      = project_default_mesh_list->buffer[i];
+			project_default_mesh_list->buffer[i] = substring(project_default_mesh_list->buffer[i], 0, string_length(s) - 4); // Trim .arm
 		}
-		any_array_push(project_mesh_list, "plane");
-		any_array_push(project_mesh_list, "sphere");
+		any_array_push(project_default_mesh_list, "plane");
+		any_array_push(project_default_mesh_list, "sphere");
 	}
 }
 
@@ -109,7 +101,7 @@ void project_new_box_draw() {
 
 	ui_handle_t *h_project_type = ui_handle(__ID__);
 	h_project_type->i           = g_context->project_type;
-	g_context->project_type     = ui_combo(h_project_type, project_mesh_list, tr("Template"), true, UI_ALIGN_LEFT, true);
+	g_context->project_type     = ui_combo(h_project_type, project_default_mesh_list, tr("Template"), true, UI_ALIGN_LEFT, true);
 	ui_end_element();
 	ui_row2();
 	if (ui_icon_button(tr("Cancel"), ICON_CLOSE, UI_ALIGN_CENTER)) {
@@ -132,9 +124,9 @@ void project_cleanup() {
 		g_context->merged_object = NULL;
 	}
 
-	if (project_paint_objects != NULL) {
-		for (i32 i = 1; i < project_paint_objects->length; ++i) {
-			mesh_object_t *p = project_paint_objects->buffer[i];
+	if (g_project->_->paint_objects != NULL) {
+		for (i32 i = 1; i < g_project->_->paint_objects->length; ++i) {
+			mesh_object_t *p = g_project->_->paint_objects->buffer[i];
 			if (p == g_context->paint_object) {
 				continue;
 			}
@@ -148,8 +140,8 @@ void project_cleanup() {
 		data_delete_mesh(handle);
 	}
 
-	for (i32 i = 0; i < project_assets->length; ++i) {
-		asset_t *a = project_assets->buffer[i];
+	for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+		asset_t *a = g_project->_->assets->buffer[i];
 		data_delete_image(a->file);
 	}
 }
@@ -171,14 +163,12 @@ void project_new_resize_layers(void *_) {
 void project_new(bool reset_layers) {
 	if (g_context->paint_object != NULL) {
 		project_cleanup();
-		gc_unroot(project_filepath);
-		project_filepath = "";
-		gc_root(project_filepath);
+		g_project->_->filepath = "";
 	}
 
-	if (project_layers->length == 0) {
-		any_array_push(project_layers, slot_layer_create("", LAYER_SLOT_TYPE_LAYER, NULL));
-		g_context->layer = project_layers->buffer[0];
+	if (g_project->_->layers->length == 0) {
+		any_array_push(g_project->_->layers, slot_layer_create("", LAYER_SLOT_TYPE_LAYER, NULL));
+		g_context->layer = g_project->_->layers->buffer[0];
 	}
 
 	g_context->layer_preview_dirty = true;
@@ -187,7 +177,7 @@ void project_new(bool reset_layers) {
 	g_project->mesh_assets = any_array_create_from_raw((void *[]){}, 0);
 
 	mesh_data_t *raw       = NULL;
-	char        *mesh_name = project_mesh_list == NULL ? "box_bevel" : project_mesh_list->buffer[g_context->project_type];
+	char        *mesh_name = project_default_mesh_list == NULL ? "box_bevel" : project_default_mesh_list->buffer[g_context->project_type];
 
 	if (string_equals(mesh_name, "sphere")) {
 		raw_mesh_t *mesh = geom_make_uv_sphere(1, 512, 256, true, 1.0);
@@ -225,13 +215,11 @@ void project_new(bool reset_layers) {
 		mesh_object_set_data(g_context->paint_object, md);
 	}
 
-	gc_unroot(project_paint_objects);
-	project_paint_objects = any_array_create_from_raw(
+	g_project->_->paint_objects = any_array_create_from_raw(
 	    (void *[]){
 	        g_context->paint_object,
 	    },
 	    1);
-	gc_root(project_paint_objects);
 	g_context->paint_object = context_main_object();
 	context_select_paint_object(context_main_object());
 
@@ -239,36 +227,30 @@ void project_new(bool reset_layers) {
 	transform_build_matrix(g_context->paint_object->base->transform);
 	g_context->paint_object->base->name = "Tessellated";
 
-	while (project_materials->length > 0) {
-		slot_material_unload(array_pop(project_materials));
+	while (g_project->_->materials->length > 0) {
+		slot_material_unload(array_pop(g_project->_->materials));
 	}
-	any_array_push(project_materials, slot_material_create(m, NULL));
+	any_array_push(g_project->_->materials, slot_material_create(m, NULL));
 
 	g_context->picker_mask = PICKER_MASK_NONE;
-	g_context->material    = project_materials->buffer[0];
+	g_context->material    = g_project->_->materials->buffer[0];
 	ui_nodes_hwnd->redraws = 2;
 	gc_unroot(ui_nodes_group_stack);
 	ui_nodes_group_stack = any_array_create_from_raw((void *[]){}, 0);
 	gc_root(ui_nodes_group_stack);
-	gc_unroot(project_material_groups);
-	project_material_groups = any_array_create_from_raw((void *[]){}, 0);
-	gc_root(project_material_groups);
-	gc_unroot(project_brushes);
-	project_brushes = any_array_create_from_raw(
+	g_project->_->material_groups = any_array_create_from_raw((void *[]){}, 0);
+	g_project->_->brushes = any_array_create_from_raw(
 	    (void *[]){
 	        slot_brush_create(NULL),
 	    },
 	    1);
-	gc_root(project_brushes);
-	g_context->brush = project_brushes->buffer[0];
-	gc_unroot(project_fonts);
-	project_fonts = any_array_create_from_raw(
+	g_context->brush = g_project->_->brushes->buffer[0];
+	g_project->_->fonts = any_array_create_from_raw(
 	    (void *[]){
 	        slot_font_create("default.ttf", base_font, ""),
 	    },
 	    1);
-	gc_root(project_fonts);
-	g_context->font = project_fonts->buffer[0];
+	g_context->font = g_project->_->fonts->buffer[0];
 	project_set_default_swatches();
 	g_context->swatch                = g_project->swatches->buffer[0];
 	g_context->picked_color          = project_make_swatch(0xffffffff);
@@ -279,23 +261,21 @@ void project_new(bool reset_layers) {
 	make_material_parse_paint_material(true);
 	make_material_parse_brush();
 
-	gc_unroot(project_assets);
-	project_assets = any_array_create_from_raw((void *[]){}, 0);
-	gc_root(project_assets);
-	project_asset_id                                  = 0;
+	g_project->_->assets = any_array_create_from_raw((void *[]){}, 0);
+	g_project->_->next_asset_id                                  = 0;
 	g_project->packed_assets                          = any_array_create_from_raw((void *[]){}, 0);
 	g_context->ddirty                                 = 4;
 	ui_base_hwnds->buffer[TAB_AREA_SIDEBAR0]->redraws = 2;
 	ui_base_hwnds->buffer[TAB_AREA_SIDEBAR1]->redraws = 2;
 
 	if (reset_layers) {
-		bool res_changed = project_layers->buffer[0]->texpaint->width != config_get_texture_res_x() ||
-		                   project_layers->buffer[0]->texpaint->height != config_get_texture_res_y();
-		while (project_layers->length > 0) {
-			slot_layer_unload(array_pop(project_layers));
+		bool res_changed = g_project->_->layers->buffer[0]->texpaint->width != config_get_texture_res_x() ||
+		                   g_project->_->layers->buffer[0]->texpaint->height != config_get_texture_res_y();
+		while (g_project->_->layers->length > 0) {
+			slot_layer_unload(array_pop(g_project->_->layers));
 		}
 		slot_layer_t *layer = slot_layer_create("", LAYER_SLOT_TYPE_LAYER, NULL);
-		any_array_push(project_layers, layer);
+		any_array_push(g_project->_->layers, layer);
 		context_set_layer(layer);
 		if (res_changed) {
 			sys_notify_on_next_frame(&project_new_resize_layers, NULL);
@@ -356,8 +336,8 @@ void project_import_brush_on_file_picked(char *path) {
 		// Import texture
 		import_asset_run(path, -1.0, -1.0, true, true, NULL);
 		i32 asset_index = 0;
-		for (i32 i = 0; i < project_assets->length; ++i) {
-			if (string_equals(project_assets->buffer[i]->file, path)) {
+		for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+			if (string_equals(g_project->_->assets->buffer[i]->file, path)) {
 				asset_index = i;
 				break;
 			}
@@ -365,7 +345,7 @@ void project_import_brush_on_file_picked(char *path) {
 
 		// Create a new brush
 		g_context->brush = slot_brush_create(NULL);
-		any_array_push(project_brushes, g_context->brush);
+		any_array_push(g_project->_->brushes, g_context->brush);
 
 		// Create and link image node
 		ui_node_t *n                         = nodes_brush_create_node("TEX_IMAGE");
@@ -566,8 +546,8 @@ void project_import_swatches(bool replace_existing) {
 }
 
 void project_reimport_textures() {
-	for (i32 i = 0; i < project_assets->length; ++i) {
-		asset_t *asset = project_assets->buffer[i];
+	for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+		asset_t *asset = g_project->_->assets->buffer[i];
 		project_reimport_texture(asset);
 	}
 }
@@ -580,15 +560,15 @@ void project_reimport_texture_load_on_next_frame(void *_) {
 
 void project_reimport_texture_load(char *path, asset_t *asset) {
 	asset->file = string_copy(path);
-	i32 i       = array_index_of(project_assets, asset);
+	i32 i       = array_index_of(g_project->_->assets, asset);
 	data_delete_image(asset->file);
-	asset_t *old_asset = project_assets->buffer[i];
-	array_splice(project_assets, i, 1);
+	asset_t *old_asset = g_project->_->assets->buffer[i];
+	array_splice(g_project->_->assets, i, 1);
 	import_texture_run(asset->file, true);
-	array_insert(project_assets, i, array_pop(project_assets));
+	array_insert(g_project->_->assets, i, array_pop(g_project->_->assets));
 
 	if (g_context->texture == old_asset) {
-		g_context->texture = project_assets->buffer[i];
+		g_context->texture = g_project->_->assets->buffer[i];
 	}
 
 	sys_notify_on_next_frame(&project_reimport_texture_load_on_next_frame, NULL);
@@ -615,6 +595,10 @@ gpu_texture_t *project_get_image(asset_t *asset) {
 	return asset != NULL ? asset->image : NULL;
 }
 
+asset_t_array_t *project_get_assets() {
+	return g_project->_->assets;
+}
+
 string_array_t *project_get_used_atlases() {
 	if (g_project->atlas_objects == NULL) {
 		return NULL;
@@ -639,26 +623,26 @@ string_array_t *project_get_used_atlases() {
 }
 
 bool project_is_atlas_object(mesh_object_t *p) {
-	if (g_context->layer_filter <= project_paint_objects->length) {
+	if (g_context->layer_filter <= g_project->_->paint_objects->length) {
 		return false;
 	}
-	char *atlas_name = project_get_used_atlases()->buffer[g_context->layer_filter - project_paint_objects->length - 1];
+	char *atlas_name = project_get_used_atlases()->buffer[g_context->layer_filter - g_project->_->paint_objects->length - 1];
 	i32   atlas_i    = string_array_index_of(g_project->atlas_names, atlas_name);
-	return atlas_i == g_project->atlas_objects->buffer[array_index_of(project_paint_objects, p)];
+	return atlas_i == g_project->atlas_objects->buffer[array_index_of(g_project->_->paint_objects, p)];
 }
 
 mesh_object_t_array_t *project_get_atlas_objects(i32 object_mask) {
 	string_array_t *atlases = project_get_used_atlases();
-	i32             i       = object_mask - project_paint_objects->length - 1;
+	i32             i       = object_mask - g_project->_->paint_objects->length - 1;
 	if (atlases == NULL || i >= atlases->length) {
-		return project_paint_objects;
+		return g_project->_->paint_objects;
 	}
 	char                  *atlas_name = atlases->buffer[i];
 	i32                    atlas_i    = string_array_index_of(g_project->atlas_names, atlas_name);
 	mesh_object_t_array_t *visibles   = any_array_create_from_raw((void *[]){}, 0);
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
 		if (g_project->atlas_objects->buffer[i] == atlas_i) {
-			any_array_push(visibles, project_paint_objects->buffer[i]);
+			any_array_push(visibles, g_project->_->paint_objects->buffer[i]);
 		}
 	}
 	return visibles;
@@ -730,8 +714,8 @@ void project_set_default_swatches() {
 }
 
 node_group_t *project_get_material_group_by_name(char *group_name) {
-	for (i32 i = 0; i < project_material_groups->length; ++i) {
-		node_group_t *g = project_material_groups->buffer[i];
+	for (i32 i = 0; i < g_project->_->material_groups->length; ++i) {
+		node_group_t *g = g_project->_->material_groups->buffer[i];
 		if (string_equals(g->canvas->name, group_name)) {
 			return g;
 		}
@@ -741,12 +725,12 @@ node_group_t *project_get_material_group_by_name(char *group_name) {
 
 bool project_is_material_group_in_use(node_group_t *group) {
 	ui_node_canvas_t_array_t *canvases = any_array_create_from_raw((void *[]){}, 0);
-	for (i32 i = 0; i < project_materials->length; ++i) {
-		slot_material_t *m = project_materials->buffer[i];
+	for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+		slot_material_t *m = g_project->_->materials->buffer[i];
 		any_array_push(canvases, m->canvas);
 	}
-	for (i32 i = 0; i < project_material_groups->length; ++i) {
-		node_group_t *m = project_material_groups->buffer[i];
+	for (i32 i = 0; i < g_project->_->material_groups->length; ++i) {
+		node_group_t *m = g_project->_->material_groups->buffer[i];
 		any_array_push(canvases, m->canvas);
 	}
 	for (i32 i = 0; i < canvases->length; ++i) {

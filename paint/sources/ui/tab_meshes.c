@@ -15,16 +15,16 @@ void tab_meshes_draw_context_menu_delete_next_frame(mesh_object_t *o) {
 }
 
 void tab_meshes_draw_context_menu_delete(mesh_object_t *o) {
-	array_remove(project_paint_objects, o);
+	array_remove(g_project->_->paint_objects, o);
 	while (o->base->children->length > 0) {
 		object_t *child = o->base->children->buffer[0];
 		object_set_parent(child, NULL);
-		if (project_paint_objects->buffer[0]->base != child) {
-			object_set_parent(child, project_paint_objects->buffer[0]->base);
+		if (g_project->_->paint_objects->buffer[0]->base != child) {
+			object_set_parent(child, g_project->_->paint_objects->buffer[0]->base);
 		}
 		if (o->base->children->length == 0) {
-			project_paint_objects->buffer[0]->base->transform->scale = o->base->transform->scale;
-			transform_build_matrix(project_paint_objects->buffer[0]->base->transform);
+			g_project->_->paint_objects->buffer[0]->base->transform->scale = o->base->transform->scale;
+			transform_build_matrix(g_project->_->paint_objects->buffer[0]->base->transform);
 		}
 	}
 	sys_notify_on_next_frame(tab_meshes_draw_context_menu_delete_next_frame, o);
@@ -36,13 +36,13 @@ static char *f32_to_string2(float f) {
 
 void tab_meshes_draw_context_menu() {
 	i32            i = _tab_meshes_draw_i;
-	mesh_object_t *o = project_paint_objects->buffer[i];
+	mesh_object_t *o = g_project->_->paint_objects->buffer[i];
 
 	if (ui_menu_button(tr("Export"), "", ICON_EXPORT)) {
 		g_context->export_mesh_index = i + 1;
 		box_export_show_mesh();
 	}
-	if (project_paint_objects->length > 1 && ui_menu_button(tr("Delete"), "delete", ICON_DELETE)) {
+	if (g_project->_->paint_objects->length > 1 && ui_menu_button(tr("Delete"), "delete", ICON_DELETE)) {
 		sys_notify_on_next_frame(tab_meshes_draw_context_menu_delete, o);
 	}
 	if (ui_menu_button(tr("Duplicate"), "ctrl+d", ICON_DUPLICATE)) {
@@ -281,7 +281,7 @@ void tab_meshes_draw_edit() {
 	}
 
 	if (ui_menu_button(tr("Apply Displacement"), "", ICON_NONE)) {
-		util_mesh_apply_displacement(project_layers->buffer[0]->texpaint_pack, 0.1, 1.0);
+		util_mesh_apply_displacement(g_project->_->layers->buffer[0]->texpaint_pack, 0.1, 1.0);
 		util_mesh_calc_normals(false);
 		g_context->ddirty = 2;
 	}
@@ -350,19 +350,19 @@ void tab_meshes_append_shape(char *mesh_name) {
 	// util_mesh_pack_uvs(raw->vertex_arrays->buffer[2]->values);
 	mesh_data_t *md   = mesh_data_create(raw);
 	md->_->handle     = md->name;
-	mesh_object_t *mo = scene_add_mesh_object(md, project_paint_objects->buffer[0]->material, NULL);
+	mesh_object_t *mo = scene_add_mesh_object(md, g_project->_->paint_objects->buffer[0]->material, NULL);
 	mo->base->name    = md->name;
 	obj_t *o          = GC_ALLOC_INIT(obj_t, {0});
 	o->_              = GC_ALLOC_INIT(obj_runtime_t, {._gc = scene_raw});
 	mo->base->raw     = o;
 	any_map_set(data_cached_meshes, md->_->handle, md);
-	any_array_push(project_paint_objects, mo);
+	any_array_push(g_project->_->paint_objects, mo);
 }
 
 void tab_meshes_draw_append_shape() {
-	for (i32 i = 0; i < project_mesh_list->length; ++i) {
-		if (ui_menu_button(project_mesh_list->buffer[i], "", ICON_NONE)) {
-			tab_meshes_append_shape(project_mesh_list->buffer[i]);
+	for (i32 i = 0; i < project_default_mesh_list->length; ++i) {
+		if (ui_menu_button(project_default_mesh_list->buffer[i], "", ICON_NONE)) {
+			tab_meshes_append_shape(project_default_mesh_list->buffer[i]);
 		}
 	}
 }
@@ -563,7 +563,7 @@ void tab_meshes_draw(ui_handle_t *htab) {
 		f32 uix = 0.0;
 		f32 uiy = 0.0;
 
-		for (i32 row = 0; row < math_floor(math_ceil(project_paint_objects->length / (float)num)); ++row) {
+		for (i32 row = 0; row < math_floor(math_ceil(g_project->_->paint_objects->length / (float)num)); ++row) {
 			f32_array_t *ar = f32_array_create_from_raw((f32[]){}, 0);
 			for (i32 i = 0; i < num * 2; ++i) {
 				f32_array_push(ar, 1 / (float)num);
@@ -578,13 +578,13 @@ void tab_meshes_draw(ui_handle_t *htab) {
 			for (i32 j = 0; j < num; ++j) {
 				i32 imgw = math_floor(75 * UI_SCALE());
 				i32 i    = j + row * num;
-				if (i >= project_paint_objects->length) {
+				if (i >= g_project->_->paint_objects->length) {
 					ui_end_element_of_size(imgw);
 					ui_end_element_of_size(0);
 					continue;
 				}
 
-				mesh_object_t *o = project_paint_objects->buffer[i];
+				mesh_object_t *o = g_project->_->paint_objects->buffer[i];
 				uix              = ui->_x;
 				uiy              = ui->_y;
 
@@ -656,8 +656,8 @@ void tab_meshes_draw(ui_handle_t *htab) {
 
 				if (h->changed) {
 					mesh_object_t_array_t *visibles = any_array_create_from_raw((void *[]){}, 0);
-					for (i32 k = 0; k < project_paint_objects->length; ++k) {
-						mesh_object_t *p = project_paint_objects->buffer[k];
+					for (i32 k = 0; k < g_project->_->paint_objects->length; ++k) {
+						mesh_object_t *p = g_project->_->paint_objects->buffer[k];
 						if (p->base->visible) {
 							any_array_push(visibles, p);
 						}
@@ -667,7 +667,7 @@ void tab_meshes_draw(ui_handle_t *htab) {
 				}
 
 				ui->_y -= slotw * 0.9 + 8;
-				if (i == project_paint_objects->length - 1) {
+				if (i == g_project->_->paint_objects->length - 1) {
 					ui->_y += j == num - 1 ? imgw : imgw + UI_ELEMENT_H() + UI_ELEMENT_OFFSET();
 				}
 			}

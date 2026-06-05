@@ -172,8 +172,8 @@ static void tab_timeline_save_origins() {
 	gpu_texture_format_t fmt = tab_timeline_tex_format();
 	i32                  w   = config_get_texture_res_x();
 	i32                  h   = config_get_texture_res_y();
-	for (i32 li = 0; li < project_layers->length; li++) {
-		slot_layer_t *l = project_layers->buffer[li];
+	for (i32 li = 0; li < g_project->_->layers->length; li++) {
+		slot_layer_t *l = g_project->_->layers->buffer[li];
 		if (!slot_layer_is_layer(l)) {
 			continue;
 		}
@@ -198,12 +198,12 @@ static void tab_timeline_save_origins() {
 }
 
 static void tab_timeline_load_origins() {
-	for (i32 li = 0; li < project_layers->length; li++) {
+	for (i32 li = 0; li < g_project->_->layers->length; li++) {
 		i32 oi = tab_timeline_find_origin(li);
 		if (oi < 0) {
 			continue;
 		}
-		slot_layer_t          *l = project_layers->buffer[li];
+		slot_layer_t          *l = g_project->_->layers->buffer[li];
 		tab_timeline_origin_t *o = tab_timeline_origins->buffer[oi];
 		if (slot_layer_is_layer(l)) {
 			tab_timeline_copy_tex(l->texpaint, o->texpaint);
@@ -217,12 +217,12 @@ static void tab_timeline_load_origins() {
 }
 
 static void tab_timeline_save_to_keyframes(i32 frame) {
-	for (i32 li = 0; li < project_layers->length; li++) {
+	for (i32 li = 0; li < g_project->_->layers->length; li++) {
 		i32 kfi = tab_timeline_find_keyframe(frame, li);
 		if (kfi < 0) {
 			continue;
 		}
-		slot_layer_t            *l  = project_layers->buffer[li];
+		slot_layer_t            *l  = g_project->_->layers->buffer[li];
 		tab_timeline_keyframe_t *kf = tab_timeline_keyframes->buffer[kfi];
 		if (slot_layer_is_layer(l)) {
 			tab_timeline_copy_tex(kf->texpaint, l->texpaint);
@@ -235,8 +235,8 @@ static void tab_timeline_save_to_keyframes(i32 frame) {
 
 static void tab_timeline_load_from_keyframes(i32 frame) {
 	bool any = false;
-	for (i32 li = 0; li < project_layers->length; li++) {
-		slot_layer_t *l = project_layers->buffer[li];
+	for (i32 li = 0; li < g_project->_->layers->length; li++) {
+		slot_layer_t *l = g_project->_->layers->buffer[li];
 		if (!slot_layer_is_layer(l)) {
 			continue;
 		}
@@ -270,8 +270,8 @@ static void tab_timeline_load_from_keyframes(i32 frame) {
 static void tab_timeline_tween_from_keyframes(f32 frame_f) {
 	bool any     = false;
 	i32  frame_i = (i32)frame_f;
-	for (i32 li = 0; li < project_layers->length; li++) {
-		slot_layer_t *l = project_layers->buffer[li];
+	for (i32 li = 0; li < g_project->_->layers->length; li++) {
+		slot_layer_t *l = g_project->_->layers->buffer[li];
 		if (!slot_layer_is_layer(l)) {
 			continue;
 		}
@@ -375,8 +375,8 @@ static i32 tab_timeline_find_next_mesh_keyframe(i32 frame, i32 mesh_index) {
 }
 
 static void tab_timeline_save_mesh_origins() {
-	for (i32 mi = 0; mi < project_paint_objects->length; mi++) {
-		mesh_object_t              *o  = project_paint_objects->buffer[mi];
+	for (i32 mi = 0; mi < g_project->_->paint_objects->length; mi++) {
+		mesh_object_t              *o  = g_project->_->paint_objects->buffer[mi];
 		i32                         oi = tab_timeline_find_mesh_origin(mi);
 		tab_timeline_mesh_origin_t *orig;
 		if (oi < 0) {
@@ -392,26 +392,26 @@ static void tab_timeline_save_mesh_origins() {
 }
 
 static void tab_timeline_load_mesh_origins() {
-	for (i32 mi = 0; mi < project_paint_objects->length; mi++) {
+	for (i32 mi = 0; mi < g_project->_->paint_objects->length; mi++) {
 		i32 oi = tab_timeline_find_mesh_origin(mi);
 		if (oi < 0) {
 			continue;
 		}
 		tab_timeline_mesh_origin_t *orig = tab_timeline_mesh_origins->buffer[oi];
-		mesh_object_t              *o    = project_paint_objects->buffer[mi];
+		mesh_object_t              *o    = g_project->_->paint_objects->buffer[mi];
 		transform_set_matrix(o->base->transform, orig->transform);
 	}
 	g_context->ddirty = 2;
 }
 
 static void tab_timeline_save_mesh_to_keyframes(i32 frame) {
-	for (i32 mi = 0; mi < project_paint_objects->length; mi++) {
+	for (i32 mi = 0; mi < g_project->_->paint_objects->length; mi++) {
 		i32 kfi = tab_timeline_find_mesh_keyframe(frame, mi);
 		if (kfi < 0) {
 			continue;
 		}
 		tab_timeline_mesh_keyframe_t *kf = tab_timeline_mesh_keyframes->buffer[kfi];
-		mesh_object_t                *o  = project_paint_objects->buffer[mi];
+		mesh_object_t                *o  = g_project->_->paint_objects->buffer[mi];
 		kf->transform                    = o->base->transform->local;
 	}
 }
@@ -419,8 +419,8 @@ static void tab_timeline_save_mesh_to_keyframes(i32 frame) {
 static void tab_timeline_load_mesh_from_keyframes(float frame_f) {
 	bool any     = false;
 	i32  frame_i = (i32)frame_f;
-	for (i32 mi = 0; mi < project_paint_objects->length; mi++) {
-		mesh_object_t *o       = project_paint_objects->buffer[mi];
+	for (i32 mi = 0; mi < g_project->_->paint_objects->length; mi++) {
+		mesh_object_t *o       = g_project->_->paint_objects->buffer[mi];
 		i32            act_kfi = tab_timeline_find_active_mesh_keyframe(frame_i, mi);
 		i32            nxt_kfi = tab_timeline_find_next_mesh_keyframe(frame_i, mi);
 
@@ -498,10 +498,10 @@ static void tab_timeline_add_keyframe_on_next_frame(void *_) {
 	tab_timeline_pending_kf_frame = -1;
 	tab_timeline_pending_kf_layer = -1;
 
-	if (fr <= 0 || li < 0 || li >= project_layers->length) {
+	if (fr <= 0 || li < 0 || li >= g_project->_->layers->length) {
 		return;
 	}
-	slot_layer_t *l = project_layers->buffer[li];
+	slot_layer_t *l = g_project->_->layers->buffer[li];
 	if (!slot_layer_is_layer(l)) {
 		return;
 	}
@@ -550,10 +550,10 @@ static void tab_timeline_add_mesh_keyframe_on_next_frame(void *_) {
 	tab_timeline_pending_mesh_add_frame = -1;
 	tab_timeline_pending_mesh_add_index = -1;
 
-	if (fr <= 0 || mi < 0 || mi >= project_paint_objects->length) {
+	if (fr <= 0 || mi < 0 || mi >= g_project->_->paint_objects->length) {
 		return;
 	}
-	mesh_object_t                *o   = project_paint_objects->buffer[mi];
+	mesh_object_t                *o   = g_project->_->paint_objects->buffer[mi];
 	i32                           kfi = tab_timeline_find_mesh_keyframe(fr, mi);
 	tab_timeline_mesh_keyframe_t *kf;
 	if (kfi < 0) {
@@ -754,12 +754,12 @@ void tab_timeline_import(project_t *raw) {
 }
 
 static char *tab_timeline_row_name(i32 row) {
-	i32 layer_count = project_layers->length;
+	i32 layer_count = g_project->_->layers->length;
 	if (row >= layer_count) {
-		mesh_object_t *o = project_paint_objects->buffer[row - layer_count];
+		mesh_object_t *o = g_project->_->paint_objects->buffer[row - layer_count];
 		return o->base->name;
 	}
-	slot_layer_t *l = project_layers->buffer[row];
+	slot_layer_t *l = g_project->_->layers->buffer[row];
 	return l->name;
 }
 
@@ -795,7 +795,7 @@ static void tab_timeline_delete_script(i32 row, i32 frame) {
 }
 
 static bool tab_timeline_can_delete() {
-	i32  layer_count = project_layers->length;
+	i32  layer_count = g_project->_->layers->length;
 	bool is_mesh     = tab_timeline_selected_row >= layer_count;
 	bool has_kf;
 	if (!is_mesh) {
@@ -811,7 +811,7 @@ static bool tab_timeline_can_delete() {
 }
 
 static void tab_timeline_delete_selected() {
-	i32  layer_count = project_layers->length;
+	i32  layer_count = g_project->_->layers->length;
 	bool is_mesh     = tab_timeline_selected_row >= layer_count;
 
 	if (!is_mesh) {
@@ -832,7 +832,7 @@ static void tab_timeline_run_frame_scripts(i32 frame) {
 	if (g_project->script_names == NULL) {
 		return;
 	}
-	i32 row_count = project_layers->length + project_paint_objects->length;
+	i32 row_count = g_project->_->layers->length + g_project->_->paint_objects->length;
 	for (i32 ri = 0; ri < row_count; ri++) {
 		i32 i = string_array_index_of(g_project->script_names, tab_timeline_script_name(ri, frame));
 		if (i >= 0) {
@@ -877,7 +877,7 @@ void tab_timeline_player_update() {
 }
 
 void tab_timeline_draw_frame_context_menu() {
-	i32  layer_count = project_layers->length;
+	i32  layer_count = g_project->_->layers->length;
 	bool is_mesh     = tab_timeline_selected_row >= layer_count;
 	bool has_kf;
 	i32  mesh_kfi  = -1;
@@ -967,14 +967,14 @@ void tab_timeline_draw(ui_handle_t *htab) {
 		ui_row(row);
 		if (ui_icon_button(tr("Keyframe"), ICON_PLUS, UI_ALIGN_CENTER)) {
 			i32 li = tab_timeline_selected_row;
-			if (tab_timeline_selected_frame > 0 && li < project_layers->length && slot_layer_is_layer(project_layers->buffer[li])) {
+			if (tab_timeline_selected_frame > 0 && li < g_project->_->layers->length && slot_layer_is_layer(g_project->_->layers->buffer[li])) {
 				tab_timeline_pending_kf_frame = tab_timeline_selected_frame;
 				tab_timeline_pending_kf_layer = li;
 				sys_notify_on_next_frame(&tab_timeline_add_keyframe_on_next_frame, NULL);
 			}
-			else if (tab_timeline_selected_frame > 0 && li >= project_layers->length) {
-				i32 mi = li - project_layers->length;
-				if (mi < project_paint_objects->length) {
+			else if (tab_timeline_selected_frame > 0 && li >= g_project->_->layers->length) {
+				i32 mi = li - g_project->_->layers->length;
+				if (mi < g_project->_->paint_objects->length) {
 					tab_timeline_pending_mesh_add_frame = tab_timeline_selected_frame;
 					tab_timeline_pending_mesh_add_index = mi;
 					sys_notify_on_next_frame(&tab_timeline_add_mesh_keyframe_on_next_frame, NULL);
@@ -1059,13 +1059,13 @@ void tab_timeline_draw(ui_handle_t *htab) {
 		u32 base_col   = ui->ops->theme->BUTTON_COL;
 		u32 bright_col = base_col + 0x00101010;
 		u32 sel_col    = ui->ops->theme->HIGHLIGHT_COL;
-		i32 row_count  = project_layers->length;
+		i32 row_count  = g_project->_->layers->length;
 
 		gpu_texture_t *icons     = resource_get("icons.k");
 		f32            icon_size = strip_h - 2;
 
 		for (i32 ri = 0; ri < row_count; ri++) {
-			slot_layer_t *layer  = project_layers->buffer[ri];
+			slot_layer_t *layer  = g_project->_->layers->buffer[ri];
 			f32           row_y  = start_y + font_h + 2 + ri * strip_h;
 			f32           icon_y = row_y + (strip_h - icon_size) / 2.0f;
 
@@ -1121,9 +1121,9 @@ void tab_timeline_draw(ui_handle_t *htab) {
 			}
 		}
 
-		i32 mesh_count = project_paint_objects->length;
+		i32 mesh_count = g_project->_->paint_objects->length;
 		for (i32 mi = 0; mi < mesh_count; mi++) {
-			mesh_object_t *mesh   = project_paint_objects->buffer[mi];
+			mesh_object_t *mesh   = g_project->_->paint_objects->buffer[mi];
 			i32            ri     = row_count + mi;
 			f32            row_y  = start_y + font_h + 2 + ri * strip_h;
 			f32            icon_y = row_y + (strip_h - icon_size) / 2.0f;

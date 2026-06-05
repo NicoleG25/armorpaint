@@ -19,8 +19,8 @@ void nodes_material_new_group_button(i32 node_id) {
 		for (i32 i = 1; i < 999; ++i) {
 			node->name = string("%s %s", tr("Group"), i32_to_string(i));
 			bool found = false;
-			for (i32 i = 0; i < project_material_groups->length; ++i) {
-				node_group_t *g     = project_material_groups->buffer[i];
+			for (i32 i = 0; i < g_project->_->material_groups->length; ++i) {
+				node_group_t *g     = g_project->_->material_groups->buffer[i];
 				char         *cname = g->canvas->name;
 				if (string_equals(cname, node->name)) {
 					found = true;
@@ -78,11 +78,11 @@ void nodes_material_new_group_button(i32 node_id) {
 		                       2),
 		                   .links = any_array_create_from_raw((void *[]){}, 0)});
 		node_group_t *ng = GC_ALLOC_INIT(node_group_t, {.canvas = canvas, .nodes = ui_nodes_create()});
-		any_array_push(project_material_groups, ng);
+		any_array_push(g_project->_->material_groups, ng);
 	}
 	node_group_t *group = NULL;
-	for (i32 i = 0; i < project_material_groups->length; ++i) {
-		node_group_t *g     = project_material_groups->buffer[i];
+	for (i32 i = 0; i < g_project->_->material_groups->length; ++i) {
+		node_group_t *g     = g_project->_->material_groups->buffer[i];
 		char         *cname = g->canvas->name;
 		if (string_equals(cname, node->name)) {
 			group = g;
@@ -171,12 +171,12 @@ void nodes_material_sync_group_sockets(ui_node_canvas_t *canvas, char *group_nam
 void nodes_material_sync_sockets(ui_node_t *node) {
 	node_group_t_array_t *group_stack = ui_nodes_group_stack;
 	ui_node_canvas_t     *c           = group_stack->buffer[group_stack->length - 1]->canvas;
-	for (i32 i = 0; i < project_materials->length; ++i) {
-		slot_material_t *m = project_materials->buffer[i];
+	for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+		slot_material_t *m = g_project->_->materials->buffer[i];
 		nodes_material_sync_group_sockets(m->canvas, c->name, node);
 	}
-	for (i32 i = 0; i < project_material_groups->length; ++i) {
-		node_group_t *g = project_material_groups->buffer[i];
+	for (i32 i = 0; i < g_project->_->material_groups->length; ++i) {
+		node_group_t *g = g_project->_->material_groups->buffer[i];
 		nodes_material_sync_group_sockets(g->canvas, c->name, node);
 	}
 }

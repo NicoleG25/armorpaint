@@ -113,8 +113,8 @@ void box_preferences_interface_tab() {
 	h_node_previews->b           = g_config->node_previews;
 	g_config->node_previews      = ui_check(h_node_previews, tr("Node Previews"), "");
 	if (h_node_previews->changed) {
-		for (i32 i = 0; i < project_materials->length; ++i) {
-			ui_node_canvas_t *c = project_materials->buffer[i]->canvas;
+		for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+			ui_node_canvas_t *c = g_project->_->materials->buffer[i]->canvas;
 			for (i32 j = 0; j < c->nodes->length; ++j) {
 				ui_node_t *n = c->nodes->buffer[j];
 				if (g_config->node_previews) {

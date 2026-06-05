@@ -72,8 +72,8 @@ void import_folder_run(char *path) {
 	}
 
 	// Create material
-	g_context->material = slot_material_create(project_materials->buffer[0]->data, NULL);
-	any_array_push(project_materials, g_context->material);
+	g_context->material = slot_material_create(g_project->_->materials->buffer[0]->data, NULL);
+	any_array_push(g_project->_->materials, g_context->material);
 	ui_nodes_t       *nodes  = g_context->material->nodes;
 	ui_node_canvas_t *canvas = g_context->material->canvas;
 	string_array_t   *dirs   = string_split(path, PATH_SEP);

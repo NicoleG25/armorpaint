@@ -27,8 +27,8 @@ void tab_browser_draw_import_asset(char *path) {
 void tab_browser_draw_set_as_color_id_map_on_next_frame(void *_) {
 	char *file        = _tab_browser_draw_file;
 	i32   asset_index = -1;
-	for (i32 i = 0; i < project_assets->length; ++i) {
-		if (string_equals(project_assets->buffer[i]->file, file)) {
+	for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+		if (string_equals(g_project->_->assets->buffer[i]->file, file)) {
 			asset_index = i;
 			break;
 		}
@@ -52,14 +52,14 @@ void tab_browser_draw_set_as_color_id_map() {
 void tab_browser_draw_set_as_mask_on_next_frame(void *_) {
 	char *file        = _tab_browser_draw_file;
 	i32   asset_index = -1;
-	for (i32 i = 0; i < project_assets->length; ++i) {
-		if (string_equals(project_assets->buffer[i]->file, file)) {
+	for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+		if (string_equals(g_project->_->assets->buffer[i]->file, file)) {
 			asset_index = i;
 			break;
 		}
 	}
 	if (asset_index != -1) {
-		layers_create_image_mask(project_assets->buffer[asset_index]);
+		layers_create_image_mask(g_project->_->assets->buffer[asset_index]);
 	}
 }
 
@@ -70,15 +70,15 @@ void tab_browser_draw_set_as_mask() {
 void tab_browser_draw_set_as_envmap_on_next_frame(void *_) {
 	char *file        = _tab_browser_draw_file;
 	i32   asset_index = -1;
-	for (i32 i = 0; i < project_assets->length; ++i) {
-		if (string_equals(project_assets->buffer[i]->file, file)) {
+	for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+		if (string_equals(g_project->_->assets->buffer[i]->file, file)) {
 			asset_index = i;
 			break;
 		}
 	}
 
 	if (asset_index != -1) {
-		import_envmap_run(file, project_get_image(project_assets->buffer[asset_index]));
+		import_envmap_run(file, project_get_image(g_project->_->assets->buffer[asset_index]));
 	}
 }
 

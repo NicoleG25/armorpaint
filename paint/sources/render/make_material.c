@@ -26,7 +26,7 @@ void make_material_delete_context(shader_context_t *c) {
 }
 
 void make_material_parse_mesh_material() {
-	material_data_t *m = project_materials->buffer[0]->data;
+	material_data_t *m = g_project->_->materials->buffer[0]->data;
 
 	for (i32 i = 0; i < m->_->shader->contexts->length; ++i) {
 		shader_context_t *c = m->_->shader->contexts->buffer[i];
@@ -98,7 +98,7 @@ void make_material_parse_mesh_preview_material() {
 		return;
 	}
 
-	material_data_t  *m    = project_materials->buffer[0]->data;
+	material_data_t  *m    = g_project->_->materials->buffer[0]->data;
 	shader_context_t *scon = NULL;
 	for (i32 i = 0; i < m->_->shader->contexts->length; ++i) {
 		shader_context_t *c = m->_->shader->contexts->buffer[i];
@@ -243,8 +243,8 @@ void make_material_traverse_nodes(ui_node_t_array_t *nodes, ui_node_canvas_t *gr
 		ui_node_t *node = nodes->buffer[i];
 		make_material_bake_node_preview(node, group, parents);
 		if (string_equals(node->type, "GROUP")) {
-			for (i32 j = 0; j < project_material_groups->length; ++j) {
-				node_group_t *g     = project_material_groups->buffer[j];
+			for (i32 j = 0; j < g_project->_->material_groups->length; ++j) {
+				node_group_t *g     = g_project->_->material_groups->buffer[j];
 				char         *cname = g->canvas->name;
 				if (string_equals(cname, node->name)) {
 					any_array_push(parents, node);
@@ -291,7 +291,7 @@ void make_material_parse_paint_material(bool bake_previews) {
 			draw_begin(current, false, 0);
 	}
 
-	material_data_t *m = project_materials->buffer[0]->data;
+	material_data_t *m = g_project->_->materials->buffer[0]->data;
 	for (i32 i = 0; i < m->_->shader->contexts->length; ++i) {
 		shader_context_t *c = m->_->shader->contexts->buffer[i];
 		if (string_equals(c->name, "paint")) {
@@ -343,7 +343,7 @@ void make_material_parse_paint_material(bool bake_previews) {
 }
 
 void make_material_save_paint_material() {
-	material_data_t *m = project_materials->buffer[0]->data;
+	material_data_t *m = g_project->_->materials->buffer[0]->data;
 	for (i32 i = 0; i < m->_->shader->contexts->length; ++i) {
 		shader_context_t *c = m->_->shader->contexts->buffer[i];
 		if (string_equals(c->name, "paint")) {
@@ -368,7 +368,7 @@ void make_material_restore_paint_material() {
 	if (make_material_saved_scon == NULL) {
 		return;
 	}
-	material_data_t *m = project_materials->buffer[0]->data;
+	material_data_t *m = g_project->_->materials->buffer[0]->data;
 	for (i32 i = 0; i < m->_->shader->contexts->length; ++i) {
 		shader_context_t *c = m->_->shader->contexts->buffer[i];
 		if (string_equals(c->name, "paint")) {
@@ -516,7 +516,7 @@ f32 make_material_get_displace_strength() {
 }
 
 void make_material_parse_depth_material() {
-	material_data_t *m = project_materials->buffer[0]->data;
+	material_data_t *m = g_project->_->materials->buffer[0]->data;
 
 	for (i32 i = 0; i < m->_->shader->contexts->length; ++i) {
 		shader_context_t *c = m->_->shader->contexts->buffer[i];

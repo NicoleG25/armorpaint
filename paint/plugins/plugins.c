@@ -31,7 +31,7 @@ string_array_t        *path_texture_formats(void);
 extern any_map_t      *util_mesh_unwrappers;
 extern any_map_t      *data_cached_images;
 void                   import_texture_run(char *path, bool hdr_as_envmap);
-extern any_array_t    *project_assets;
+any_array_t           *project_get_assets(void);
 void                   tab_textures_delete_texture(asset_t *asset);
 
 int plugins_skinning_frame = -1;
@@ -54,6 +54,7 @@ static void *import_psd(char *path) {
 
 	// Delete existing layers so they can be re-imported
 	char *prefix = string("%s.", filename);
+	any_array_t *project_assets = project_get_assets();
 	for (int i = project_assets->length - 1; i >= 0; --i) {
 		asset_t *a = project_assets->buffer[i];
 		if (starts_with(a->name, prefix)) {

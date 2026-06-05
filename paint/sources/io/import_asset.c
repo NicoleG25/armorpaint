@@ -47,8 +47,8 @@ void import_asset_run(char *path, f32 drop_x, f32 drop_y, bool show_box, bool hd
 		i32 x1 = ui_nodes_wx + ui_nodes_ww;
 		if (ui_nodes_show && drop_x > x0 && drop_x < x1) {
 			i32 asset_index = 0;
-			for (i32 i = 0; i < project_assets->length; ++i) {
-				if (string_equals(project_assets->buffer[i]->file, path)) {
+			for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+				if (string_equals(g_project->_->assets->buffer[i]->file, path)) {
 					asset_index = i;
 					break;
 				}
@@ -58,7 +58,7 @@ void import_asset_run(char *path, f32 drop_x, f32 drop_y, bool show_box, bool hd
 			ui_nodes_hwnd->redraws           = 2;
 		}
 
-		if (g_context->tool == TOOL_TYPE_COLORID && project_assets->length == 1) {
+		if (g_context->tool == TOOL_TYPE_COLORID && g_project->_->assets->length == 1) {
 			ui_header_handle->redraws = 2;
 			g_context->ddirty         = 2;
 		}

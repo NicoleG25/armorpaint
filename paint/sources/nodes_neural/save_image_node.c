@@ -2,11 +2,11 @@
 #include "../global.h"
 
 void save_image_node_run(ui_node_t *node, gpu_texture_t *result) {
-	if (string_equals(project_filepath, "")) {
+	if (string_equals(g_project->_->filepath, "")) {
 		return;
 	}
 
-	char *dir = substring(project_filepath, 0, string_last_index_of(project_filepath, PATH_SEP) + 1);
+	char *dir = substring(g_project->_->filepath, 0, string_last_index_of(g_project->_->filepath, PATH_SEP) + 1);
 	i32   n   = 1;
 	char *file;
 	do {

@@ -116,13 +116,13 @@ void export_player_run(char *path) {
 
 	char *path_base = path_base_dir(path);
 
-	char *_project_filepath        = string_copy(project_filepath);
-	project_filepath               = string("%s/%s", path_base, "start.arm");
+	char *_project_filepath        = string_copy(g_project->_->filepath);
+	g_project->_->filepath               = string("%s/%s", path_base, "start.arm");
 	bool _pack_assets_on_save      = g_context->pack_assets_on_save;
 	g_context->pack_assets_on_save = true;
 	export_arm_run_project();
 	g_context->pack_assets_on_save = _pack_assets_on_save;
-	project_filepath               = _project_filepath;
+	g_project->_->filepath               = _project_filepath;
 
 	if (box_export_h_export_player_target->i == PLAYER_TARGET_WEB) {
 		char *start_js = string("%s/start.js", path_base);

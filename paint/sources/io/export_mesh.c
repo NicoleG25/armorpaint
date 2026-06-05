@@ -7,7 +7,7 @@ void export_glb_run(char *path, mesh_object_t_array_t *paint_objects);
 
 void export_mesh_run(char *path, mesh_object_t_array_t *paint_objects, bool apply_disp, bool merge_vertices) {
 	if (paint_objects == NULL) {
-		paint_objects = project_paint_objects;
+		paint_objects = g_project->_->paint_objects;
 	}
 	if (g_context->export_mesh_format == MESH_FORMAT_OBJ) {
 		if (merge_vertices) {

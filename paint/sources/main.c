@@ -366,25 +366,18 @@ void _kickstart() {
 	g_project = GC_ALLOC_INIT(project_t, {0});
 	gc_root(g_project);
 
-	project_assets = any_array_create_from_raw((void *[]){}, 0);
-	gc_root(project_assets);
+	g_project->_        = gc_alloc(sizeof(project_runtime_t));
+	g_project->_->filepath = "";
+	g_project->_->assets = any_array_create_from_raw((void *[]){}, 0);
 
 	g_project->mesh_assets = any_array_create_from_raw((void *[]){}, 0);
 
-	project_material_groups = any_array_create_from_raw((void *[]){}, 0);
-	gc_root(project_material_groups);
+	g_project->_->material_groups = any_array_create_from_raw((void *[]){}, 0);
 
-	project_materials = any_array_create_from_raw((void *[]){}, 0);
-	gc_root(project_materials);
-
-	project_brushes = any_array_create_from_raw((void *[]){}, 0);
-	gc_root(project_brushes);
-
-	project_layers = any_array_create_from_raw((void *[]){}, 0);
-	gc_root(project_layers);
-
-	project_fonts = any_array_create_from_raw((void *[]){}, 0);
-	gc_root(project_fonts);
+	g_project->_->materials = any_array_create_from_raw((void *[]){}, 0);
+	g_project->_->brushes   = any_array_create_from_raw((void *[]){}, 0);
+	g_project->_->layers    = any_array_create_from_raw((void *[]){}, 0);
+	g_project->_->fonts     = any_array_create_from_raw((void *[]){}, 0);
 
 	ui_view2d_hwnd = ui_handle_create();
 	gc_root(ui_view2d_hwnd);

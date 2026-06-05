@@ -24,9 +24,7 @@ void args_parse() {
 			char *current_arg = iron_get_arg(i);
 
 			if (path_is_project(current_arg)) {
-				gc_unroot(project_filepath);
-				project_filepath = string_copy(current_arg);
-				gc_root(project_filepath);
+				g_project->_->filepath = string_copy(current_arg);
 			}
 			else if (string_equals(current_arg, "--background")) {
 				args_background = true;
@@ -100,8 +98,8 @@ void args_run_export_queue(void *_) {
 }
 
 void args_run_on_next_frame(void *_) {
-	if (!string_equals(project_filepath, "")) {
-		import_arm_run_project(project_filepath);
+	if (!string_equals(g_project->_->filepath, "")) {
+		import_arm_run_project(g_project->_->filepath);
 	}
 	else if (!string_equals(args_asset_path, "")) {
 		import_asset_run(args_asset_path, -1, -1, false, true, NULL);

@@ -597,8 +597,8 @@ node_shader_context_t *make_paint_run(material_t *data, material_context_t *matc
 	{
 		slot_layer_t_array_t *sculpt_layers  = any_array_create_from_raw((void *[]){}, 0);
 		i32_array_t          *sculpt_indices = i32_array_create(0);
-		for (i32 i = 0; i < project_layers->length; ++i) {
-			slot_layer_t *l = project_layers->buffer[i];
+		for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+			slot_layer_t *l = g_project->_->layers->buffer[i];
 			if (l->texpaint_sculpt != NULL && slot_layer_is_visible(l)) {
 				any_array_push(sculpt_layers, l);
 				i32_array_push(sculpt_indices, i);

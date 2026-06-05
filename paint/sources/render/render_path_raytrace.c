@@ -160,8 +160,8 @@ void render_path_raytrace_raytrace_init(char *shader_name, bool build) {
 		_gpu_raytrace_as_init();
 
 		// if (g_context->tool == TOOL_TYPE_CURSOR) {
-		// 	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		// 		mesh_object_t *po = project_paint_objects->buffer[i];
+		// 	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		// 		mesh_object_t *po = g_project->_->paint_objects->buffer[i];
 		// 		if (!po->base->visible) {
 		// 			continue;
 		// 		}

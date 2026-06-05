@@ -119,8 +119,8 @@ node_shader_context_t *make_mesh_run(material_t *data, i32 layer_pass) {
 		kong->vert_n = true;
 		node_shader_write_vert(kong, "var height: float = 0.0;");
 		i32 num_layers = 0;
-		for (i32 i = 0; i < project_layers->length; ++i) {
-			slot_layer_t *l = project_layers->buffer[i];
+		for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+			slot_layer_t *l = g_project->_->layers->buffer[i];
 			if (!slot_layer_is_visible(l) || !l->paint_height || !slot_layer_is_layer(l)) {
 				continue;
 			}
@@ -165,8 +165,8 @@ node_shader_context_t *make_mesh_run(material_t *data, i32 layer_pass) {
 	{
 		slot_layer_t_array_t *sculpt_layers  = any_array_create_from_raw((void *[]){}, 0);
 		i32_array_t          *sculpt_indices = i32_array_create(0);
-		for (i32 i = 0; i < project_layers->length; ++i) {
-			slot_layer_t *l = project_layers->buffer[i];
+		for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+			slot_layer_t *l = g_project->_->layers->buffer[i];
 			if (l->texpaint_sculpt != NULL && slot_layer_is_visible(l)) {
 				any_array_push(sculpt_layers, l);
 				i32_array_push(sculpt_indices, i);
@@ -242,7 +242,7 @@ node_shader_context_t *make_mesh_run(material_t *data, i32 layer_pass) {
 					continue;
 				}
 				texture_count++;
-				i32 index = array_index_of(project_layers, m);
+				i32 index = array_index_of(g_project->_->layers, m);
 				node_shader_add_texture(kong, string("texpaint_view_mask%s", i32_to_string(m->id)), string("_texpaint%s", i32_to_string(index)));
 			}
 		}
@@ -262,8 +262,8 @@ node_shader_context_t *make_mesh_run(material_t *data, i32 layer_pass) {
 		slot_layer_t_array_t *layers           = any_array_create_from_raw((void *[]){}, 0);
 		i32                   start_count      = texture_count;
 		bool                  is_material_tool = g_context->tool == TOOL_TYPE_MATERIAL;
-		for (i32 i = 0; i < project_layers->length; ++i) {
-			slot_layer_t *l = project_layers->buffer[i];
+		for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+			slot_layer_t *l = g_project->_->layers->buffer[i];
 			if (is_material_tool && l != g_context->layer) {
 				continue;
 			}
@@ -301,7 +301,7 @@ node_shader_context_t *make_mesh_run(material_t *data, i32 layer_pass) {
 			slot_layer_t *l = layers->buffer[i];
 			if (slot_layer_get_object_mask(l) > 0) {
 				node_shader_add_constant(kong, "uid: int", "_uid");
-				if (slot_layer_get_object_mask(l) > project_paint_objects->length) { // Atlas
+				if (slot_layer_get_object_mask(l) > g_project->_->paint_objects->length) { // Atlas
 					mesh_object_t_array_t *visibles = project_get_atlas_objects(slot_layer_get_object_mask(l));
 					node_shader_write_frag(kong, "if (");
 					for (i32 i = 0; i < visibles->length; ++i) {
@@ -314,7 +314,7 @@ node_shader_context_t *make_mesh_run(material_t *data, i32 layer_pass) {
 					node_shader_write_frag(kong, ") {");
 				}
 				else { // Object mask
-					i32 uid = project_paint_objects->buffer[slot_layer_get_object_mask(l) - 1]->base->uid;
+					i32 uid = g_project->_->paint_objects->buffer[slot_layer_get_object_mask(l) - 1]->base->uid;
 					node_shader_write_frag(kong, string("if (%s == constants.uid) {", i32_to_string(uid)));
 				}
 			}
@@ -373,7 +373,7 @@ node_shader_context_t *make_mesh_run(material_t *data, i32 layer_pass) {
 			}
 
 			if (l->paint_base) {
-				if (l == project_layers->buffer[0]) {
+				if (l == g_project->_->layers->buffer[0]) {
 					node_shader_write_frag(kong, "basecol = texpaint_sample.rgb * texpaint_opac;");
 				}
 				else {

@@ -22,8 +22,8 @@ void import_texture_run(char *path, bool hdr_as_envmap) {
 		}
 	}
 
-	for (i32 i = 0; i < project_assets->length; ++i) {
-		asset_t *a = project_assets->buffer[i];
+	for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+		asset_t *a = g_project->_->assets->buffer[i];
 		// Already imported
 		if (string_equals(a->file, path)) {
 			// Set as envmap
@@ -56,8 +56,8 @@ void import_texture_run(char *path, bool hdr_as_envmap) {
 	any_map_set(data_cached_images, path, image);
 	string_array_t *ar    = string_split(path, PATH_SEP);
 	char           *name  = ar->buffer[ar->length - 1];
-	asset_t        *asset = GC_ALLOC_INIT(asset_t, {.name = name, .file = path, .id = project_asset_id++});
-	any_array_push(project_assets, asset);
+	asset_t        *asset = GC_ALLOC_INIT(asset_t, {.name = name, .file = path, .id = g_project->_->next_asset_id++});
+	any_array_push(g_project->_->assets, asset);
 	if (g_context->texture == NULL) {
 		g_context->texture = asset;
 	}

@@ -35,7 +35,7 @@ void tab_plugins_draw(ui_handle_t *htab) {
 void proc_uv_unwrap(void *mesh);
 
 void plugin_uv_unwrap_button() {
-	util_mesh_merge(project_paint_objects);
+	util_mesh_merge(g_project->_->paint_objects);
 	if (g_context->merged_object == NULL) {
 		return;
 	}
@@ -65,8 +65,8 @@ void plugin_uv_unwrap_button() {
 
 	i32 ioff      = 0;
 	f32 max_scale = mmd->scale_pos;
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		mesh_data_t *md      = project_paint_objects->buffer[i]->data;
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		mesh_data_t *md      = g_project->_->paint_objects->buffer[i]->data;
 		i32          ilen    = md->index_array->length;
 		f32          rescale = max_scale / md->scale_pos;
 

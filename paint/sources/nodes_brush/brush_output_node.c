@@ -44,14 +44,14 @@ void brush_output_node_parse_inputs() {
 		opac->_str                           = string_copy(substring(opac->_str, 0, string_last_index_of(opac->_str, ".")));
 		g_context->brush_nodes_opacity       = 1.0;
 		i32 index                            = -1;
-		for (i32 i = 0; i < project_assets->length; ++i) {
-			if (string_equals(project_assets->buffer[i]->name, opac->_str)) {
+		for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+			if (string_equals(g_project->_->assets->buffer[i]->name, opac->_str)) {
 				index = i;
 				break;
 			}
 		}
 		if (index != -1) {
-			asset_t *asset              = project_assets->buffer[index];
+			asset_t *asset              = g_project->_->assets->buffer[index];
 			g_context->brush_mask_image = project_get_image(asset);
 		}
 	}
@@ -70,14 +70,14 @@ void brush_output_node_parse_inputs() {
 		g_context->brush_stencil_image_is_alpha = ends_with(stencil->_str, ".a");
 		stencil->_str                           = string_copy(substring(stencil->_str, 0, string_last_index_of(stencil->_str, ".")));
 		i32 index                               = -1;
-		for (i32 i = 0; i < project_assets->length; ++i) {
-			if (string_equals(project_assets->buffer[i]->name, stencil->_str)) {
+		for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+			if (string_equals(g_project->_->assets->buffer[i]->name, stencil->_str)) {
 				index = i;
 				break;
 			}
 		}
 		if (index != -1) {
-			asset_t *asset                 = project_assets->buffer[index];
+			asset_t *asset                 = g_project->_->assets->buffer[index];
 			g_context->brush_stencil_image = project_get_image(asset);
 		}
 	}
@@ -154,7 +154,7 @@ void brush_output_node_run() {
 	bool started = mouse_started("left") || pen_started("tip");
 
 	// Set color pick
-	if (down && g_context->tool == TOOL_TYPE_COLORID && project_assets->length > 0) {
+	if (down && g_context->tool == TOOL_TYPE_COLORID && g_project->_->assets->length > 0) {
 		g_context->colorid_picked  = true;
 		ui_toolbar_handle->redraws = 1;
 	}

@@ -520,6 +520,18 @@ typedef struct node_group {
 	struct ui_node_canvas *canvas;
 } node_group_t;
 
+typedef struct {
+	struct asset_t_array         *assets;
+	struct slot_material_t_array *materials;
+	struct slot_brush_t_array    *brushes;
+	struct slot_layer_t_array    *layers;
+	struct slot_font_t_array     *fonts;
+	struct node_group_t_array    *material_groups;
+	char                         *filepath;
+	i32                           next_asset_id;
+	struct mesh_object_t_array   *paint_objects;
+} project_runtime_t;
+
 typedef struct project {
 	char                                        *version;
 	struct string_array                         *assets;  // texture_assets
@@ -553,6 +565,7 @@ typedef struct project {
 	i32                                          timeline_max_frames;
 	struct timeline_layer_keyframe_data_t_array *timeline_layers;
 	struct timeline_mesh_keyframe_data_t_array  *timeline_meshes;
+	project_runtime_t *_;
 } project_t;
 
 typedef struct asset {

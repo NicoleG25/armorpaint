@@ -643,16 +643,14 @@ void ui_files_show2(char *filters, bool is_save, bool open_multiple, void *files
 	ui_files_show(filters, is_save, open_multiple, _ui_files_show_done);
 }
 void                          project_save(bool save_and_quit);
-extern char                  *project_filepath;
 extern context_t             *g_context;
 extern config_t              *g_config;
 extern project_t             *g_project;
-extern mesh_object_t_array_t *project_paint_objects;
 char                         *project_filepath_get() {
-    return project_filepath;
+    return g_project->_->filepath;
 }
 void project_filepath_set(char *s) {
-	project_filepath = string_copy(s);
+	g_project->_->filepath = string_copy(s);
 }
 context_t *script_get_context() {
 	return g_context;
@@ -665,9 +663,9 @@ project_t *script_get_project() {
 }
 
 object_t *script_get_object(char *s) {
-	for (int i = 0; i < project_paint_objects->length; ++i) {
-		if (string_equals(project_paint_objects->buffer[i]->base->name, s)) {
-			return project_paint_objects->buffer[i]->base;
+	for (int i = 0; i < g_project->_->paint_objects->length; ++i) {
+		if (string_equals(g_project->_->paint_objects->buffer[i]->base->name, s)) {
+			return g_project->_->paint_objects->buffer[i]->base;
 		}
 	}
 	return NULL;

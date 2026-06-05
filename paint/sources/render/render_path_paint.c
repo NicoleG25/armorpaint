@@ -299,8 +299,8 @@ void render_path_paint_commands_paint(bool dilation) {
 					// matid % 3 == 0 - normal, 1 - emission, 2 - subsurface
 					i32 id    = buffer_get_u8(b, 3);
 					i32 matid = math_floor((id - (id % 3)) / 3.0);
-					for (i32 i = 0; i < project_materials->length; ++i) {
-						slot_material_t *m = project_materials->buffer[i];
+					for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+						slot_material_t *m = g_project->_->materials->buffer[i];
 						if (m->id == matid) {
 							context_set_material(m);
 							g_context->materialid_picked = matid;
@@ -312,8 +312,8 @@ void render_path_paint_commands_paint(bool dilation) {
 
 			// Update fill layers which are using materials containing a PICKER node
 			slot_material_t *_material = g_context->material;
-			for (i32 i = 0; i < project_materials->length; ++i) {
-				slot_material_t *m          = project_materials->buffer[i];
+			for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+				slot_material_t *m          = g_project->_->materials->buffer[i];
 				bool             has_picker = false;
 				for (i32 j = 0; j < m->canvas->nodes->length; ++j) {
 					ui_node_t *node = m->canvas->nodes->buffer[j];
@@ -357,8 +357,8 @@ void render_path_paint_commands_paint(bool dilation) {
 				i32 r_byte = buffer_get_u8(pixel, 0);
 #endif
 				i32 index = r_byte - 1;
-				if (index >= 0 && index < project_paint_objects->length) {
-					g_context->paint_object = project_paint_objects->buffer[index];
+				if (index >= 0 && index < g_project->_->paint_objects->length) {
+					g_context->paint_object = g_project->_->paint_objects->buffer[index];
 
 					// g_context->layer->object_mask = index + 1;
 					// context_set_layer(g_context->layer);
@@ -434,8 +434,8 @@ void render_path_paint_commands_paint(bool dilation) {
 				render_path_bind_target("gbuffer2", "gbuffer2");
 			}
 			i32 sculpt_layer_count = 0;
-			for (i32 i = 0; i < project_layers->length; ++i) {
-				slot_layer_t *sl = project_layers->buffer[i];
+			for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+				slot_layer_t *sl = g_project->_->layers->buffer[i];
 				if (sl->texpaint_sculpt != NULL && slot_layer_is_visible(sl)) {
 					render_path_bind_target(string("texpaint_sculpt%d", sl->id), string("texpaint_sculpt%d", sl->id));
 					sculpt_layer_count++;
@@ -762,7 +762,7 @@ bool render_path_paint_paint_enabled() {
 
 	// Skip paint if material references this layer and wants to paint into it at the same time
 	bool               self_in_material = false;
-	i32                layer_i          = array_index_of(project_layers, g_context->layer);
+	i32                layer_i          = array_index_of(g_project->_->layers, g_context->layer);
 	ui_node_t_array_t *nodes            = g_context->material->canvas->nodes;
 	for (i32 i = 0; i < nodes->length; ++i) {
 		ui_node_t *n = nodes->buffer[i];
@@ -902,7 +902,7 @@ void render_path_paint_draw() {
 					g_context->bake_type = g_context->bake_type == BAKE_TYPE_NORMAL ? BAKE_TYPE_NORMAL_OBJECT : BAKE_TYPE_POSITION; // Bake high poly data
 					make_material_parse_paint_material(false);
 					mesh_object_t *_paint_object = g_context->paint_object;
-					mesh_object_t *high_poly     = project_paint_objects->buffer[g_context->bake_high_poly];
+					mesh_object_t *high_poly     = g_project->_->paint_objects->buffer[g_context->bake_high_poly];
 					bool           _visible      = high_poly->base->visible;
 					high_poly->base->visible     = true;
 					context_select_paint_object(high_poly);
@@ -931,8 +931,8 @@ void render_path_paint_draw() {
 					g_context->merged_object->base->visible = false;
 				}
 
-				for (i32 i = 0; i < project_paint_objects->length; ++i) {
-					mesh_object_t *p = project_paint_objects->buffer[i];
+				for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+					mesh_object_t *p = g_project->_->paint_objects->buffer[i];
 					context_select_paint_object(p);
 					render_path_paint_commands_paint(true);
 				}
@@ -975,8 +975,8 @@ void render_path_paint_set_plane_mesh() {
 	gc_unroot(render_path_paint_visibles);
 	render_path_paint_visibles = u8_array_create_from_raw((u8[]){}, 0);
 	gc_root(render_path_paint_visibles);
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		mesh_object_t *p = project_paint_objects->buffer[i];
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		mesh_object_t *p = g_project->_->paint_objects->buffer[i];
 		u8_array_push(render_path_paint_visibles, p->base->visible);
 		p->base->visible = false;
 	}
@@ -1085,8 +1085,8 @@ void render_path_paint_restore_plane_mesh() {
 	g_context->paint2d_view                        = false;
 	render_path_paint_planeo->base->visible        = false;
 	render_path_paint_planeo->base->transform->loc = (vec4_t){0.0, 0.0, 0.0, 1.0};
-	for (i32 i = 0; i < project_paint_objects->length; ++i) {
-		project_paint_objects->buffer[i]->base->visible = render_path_paint_visibles->buffer[i];
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		g_project->_->paint_objects->buffer[i]->base->visible = render_path_paint_visibles->buffer[i];
 	}
 	if (g_context->merged_object != NULL) {
 		g_context->merged_object->base->visible = render_path_paint_merged_object_visible;
@@ -1108,8 +1108,8 @@ void render_path_paint_bind_layers() {
 		render_path_paint_use_live_layer(true);
 	}
 
-	for (i32 i = 0; i < project_layers->length; ++i) {
-		slot_layer_t *l = project_layers->buffer[i];
+	for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+		slot_layer_t *l = g_project->_->layers->buffer[i];
 		render_path_bind_target(string("texpaint%d", l->id), string("texpaint%d", l->id));
 
 		if (slot_layer_is_layer(l)) {

@@ -84,7 +84,7 @@ void ui_nodes_push_undo(ui_node_canvas_t *last_canvas) {
 	}
 	i32 canvas_group = -1;
 	if (ui_nodes_group_stack->length > 0) {
-		canvas_group = array_index_of(project_material_groups, ui_nodes_group_stack->buffer[ui_nodes_group_stack->length - 1]);
+		canvas_group = array_index_of(g_project->_->material_groups, ui_nodes_group_stack->buffer[ui_nodes_group_stack->length - 1]);
 	}
 	ui_base_hwnds->buffer[TAB_AREA_SIDEBAR0]->redraws = 2;
 	history_edit_nodes(last_canvas, ui_nodes_canvas_type, canvas_group);
@@ -876,8 +876,8 @@ void ui_nodes_draw_menubar() {
 	if (h->changed) { // Check whether renaming is possible and update group links
 		if (ui_nodes_group_stack->length > 0) {
 			bool can_rename = true;
-			for (i32 i = 0; i < project_material_groups->length; ++i) {
-				node_group_t *m = project_material_groups->buffer[i];
+			for (i32 i = 0; i < g_project->_->material_groups->length; ++i) {
+				node_group_t *m = g_project->_->material_groups->buffer[i];
 				if (string_equals(m->canvas->name, new_name)) {
 					can_rename = false; // Name already used
 				}
@@ -886,12 +886,12 @@ void ui_nodes_draw_menubar() {
 				char *old_name                     = c->name;
 				c->name                            = string_copy(new_name);
 				ui_node_canvas_t_array_t *canvases = any_array_create_from_raw((void *[]){}, 0);
-				for (i32 i = 0; i < project_materials->length; ++i) {
-					slot_material_t *m = project_materials->buffer[i];
+				for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+					slot_material_t *m = g_project->_->materials->buffer[i];
 					any_array_push(canvases, m->canvas);
 				}
-				for (i32 i = 0; i < project_material_groups->length; ++i) {
-					node_group_t *m = project_material_groups->buffer[i];
+				for (i32 i = 0; i < g_project->_->material_groups->length; ++i) {
+					node_group_t *m = g_project->_->material_groups->buffer[i];
 					any_array_push(canvases, m->canvas);
 				}
 				for (i32 i = 0; i < canvases->length; ++i) {
@@ -988,8 +988,8 @@ bool ui_nodes_can_place_group(char *group_name) {
 	}
 	// Group was deleted / renamed
 	bool group_exists = false;
-	for (i32 i = 0; i < project_material_groups->length; ++i) {
-		node_group_t *group = project_material_groups->buffer[i];
+	for (i32 i = 0; i < g_project->_->material_groups->length; ++i) {
+		node_group_t *group = g_project->_->material_groups->buffer[i];
 		if (string_equals(group_name, group->canvas->name)) {
 			group_exists = true;
 		}
@@ -1010,8 +1010,8 @@ ui_node_t *ui_nodes_make_group_node(ui_node_canvas_t *group_canvas, ui_nodes_t *
 	node->y                     = ui_nodes_get_node_y();
 	ui_node_t *group_input      = NULL;
 	ui_node_t *group_output     = NULL;
-	for (i32 i = 0; i < project_material_groups->length; ++i) {
-		node_group_t *g     = project_material_groups->buffer[i];
+	for (i32 i = 0; i < g_project->_->material_groups->length; ++i) {
+		node_group_t *g     = g_project->_->material_groups->buffer[i];
 		char         *cname = g->canvas->name;
 		if (string_equals(cname, node->name)) {
 			for (i32 i = 0; i < g->canvas->nodes->length; ++i) {
@@ -1385,7 +1385,7 @@ void ui_nodes_render(void *_) {
 		ui->ops->theme->ELEMENT_H      = g_config->touch_ui ? (28 + 2) : 28;
 		ui_menu_h                      = category->length * UI_ELEMENT_H();
 		if (is_group_category) {
-			ui_menu_h += project_material_groups->length * UI_ELEMENT_H();
+			ui_menu_h += g_project->_->material_groups->length * UI_ELEMENT_H();
 		}
 		ui_menu_begin();
 		for (i32 i = 0; i < category->length; ++i) {
@@ -1410,8 +1410,8 @@ void ui_nodes_render(void *_) {
 			}
 		}
 		if (is_group_category) {
-			for (i32 i = 0; i < project_material_groups->length; ++i) {
-				node_group_t *g  = project_material_groups->buffer[i];
+			for (i32 i = 0; i < g_project->_->material_groups->length; ++i) {
+				node_group_t *g  = g_project->_->material_groups->buffer[i];
 				ui->enabled      = ui_nodes_can_place_group(g->canvas->name);
 				f32_array_t *row = f32_array_create_from_raw(
 				    (f32[]){
@@ -1436,7 +1436,7 @@ void ui_nodes_render(void *_) {
 				ui->enabled = !project_is_material_group_in_use(g);
 				if (ui_button("x", UI_ALIGN_CENTER, "")) {
 					history_delete_material_group(g);
-					array_remove(project_material_groups, g);
+					array_remove(g_project->_->material_groups, g);
 				}
 				ui->enabled = true;
 			}
@@ -1467,14 +1467,14 @@ gpu_texture_t *ui_nodes_get_node_preview_image(ui_node_t *n) {
 	gpu_texture_t *img = NULL;
 	if (string_equals(n->type, "LAYER") || string_equals(n->type, "LAYER_MASK")) {
 		i32 id = n->buttons->buffer[0]->default_value->buffer[0];
-		if (id < project_layers->length) {
-			img = project_layers->buffer[id]->texpaint_preview;
+		if (id < g_project->_->layers->length) {
+			img = g_project->_->layers->buffer[id]->texpaint_preview;
 		}
 	}
 	else if (string_equals(n->type, "MATERIAL")) {
 		i32 id = n->buttons->buffer[0]->default_value->buffer[0];
-		if (id < project_materials->length) {
-			img = project_materials->buffer[id]->image;
+		if (id < g_project->_->materials->length) {
+			img = g_project->_->materials->buffer[id]->image;
 		}
 	}
 	else if (string_equals(n->type, "OUTPUT_MATERIAL_PBR")) {
@@ -1488,14 +1488,14 @@ gpu_texture_t *ui_nodes_get_node_preview_image(ui_node_t *n) {
 		if (i <= 9000) { // 9999 - Texture deleted
 			char *filepath    = parser_material_enum_data(base_combo_enum_texts(n->type)->buffer[i]);
 			i32   asset_index = -1;
-			for (i32 i = 0; i < project_assets->length; ++i) {
-				if (string_equals(project_assets->buffer[i]->file, filepath)) {
+			for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+				if (string_equals(g_project->_->assets->buffer[i]->file, filepath)) {
 					asset_index = i;
 					break;
 				}
 			}
 			if (asset_index > -1) {
-				img = project_get_image(project_assets->buffer[asset_index]);
+				img = project_get_image(g_project->_->assets->buffer[asset_index]);
 			}
 		}
 	}
@@ -1529,7 +1529,7 @@ void ui_nodes_accept_asset_drop(i32 index) {
 
 void ui_nodes_accept_layer_drop(i32 index) {
 	ui_nodes_push_undo(NULL);
-	if (slot_layer_is_group(project_layers->buffer[index])) {
+	if (slot_layer_is_group(g_project->_->layers->buffer[index])) {
 		return;
 	}
 	node_group_t *g                                 = ui_nodes_group_stack->length > 0 ? ui_nodes_group_stack->buffer[ui_nodes_group_stack->length - 1] : NULL;
@@ -1658,8 +1658,8 @@ void ui_nodes_traverse_group(ui_node_canvas_t_array_t *mgroups, ui_node_canvas_t
 		if (string_equals(n->type, "GROUP")) {
 			if (ui_nodes_get_group(mgroups, n->name) == NULL) {
 				ui_node_canvas_t_array_t *canvases = any_array_create_from_raw((void *[]){}, 0);
-				for (i32 i = 0; i < project_material_groups->length; ++i) {
-					node_group_t *g = project_material_groups->buffer[i];
+				for (i32 i = 0; i < g_project->_->material_groups->length; ++i) {
+					node_group_t *g = g_project->_->material_groups->buffer[i];
 					any_array_push(canvases, g->canvas);
 				}
 				ui_node_canvas_t *group = ui_nodes_get_group(canvases, n->name);
