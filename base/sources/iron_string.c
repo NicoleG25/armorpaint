@@ -291,3 +291,46 @@ int string_utf8_decode(const char *str, int *i) {
 		*i += l;
 	return u;
 }
+
+void string_buffer_init(buffer_t *sb) {
+	sb->capacity = 128;
+	sb->buffer   = malloc(sb->capacity);
+	string_buffer_reset(sb);
+}
+
+void string_buffer_reset(buffer_t *sb) {
+	sb->length    = 0;
+	sb->buffer[0] = '\0';
+}
+
+static void string_buffer_ensure(buffer_t *sb, int extra) {
+	uint32_t needed = sb->length + extra + 1;
+	if (needed <= sb->capacity) {
+		return;
+	}
+	uint32_t new_cap = sb->capacity * 2;
+	if (new_cap < needed) {
+		new_cap = needed;
+	}
+	sb->buffer   = realloc(sb->buffer, new_cap);
+	sb->capacity = new_cap;
+}
+
+void string_buffer_append(buffer_t *sb, char *s) {
+	int n = (int)strlen(s);
+	string_buffer_ensure(sb, n);
+	memcpy(sb->buffer + sb->length, s, n);
+	sb->length += n;
+	sb->buffer[sb->length] = '\0';
+}
+
+char *string_buffer_get(buffer_t *sb) {
+	return (char *)sb->buffer;
+}
+
+void string_buffer_free(buffer_t *sb) {
+	free(sb->buffer);
+	sb->buffer   = NULL;
+	sb->length   = 0;
+	sb->capacity = 0;
+}

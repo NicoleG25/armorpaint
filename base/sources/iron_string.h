@@ -34,3 +34,9 @@ char        *to_lower_case(char *s);
 char        *to_upper_case(char *s);
 char        *trim_end(char *str);
 int          string_utf8_decode(const char *str, int *i);
+
+void  string_buffer_init(buffer_t *sb);
+void  string_buffer_reset(buffer_t *sb);
+void  string_buffer_append(buffer_t *sb, char *s);
+char *string_buffer_get(buffer_t *sb);
+void  string_buffer_free(buffer_t *sb);
