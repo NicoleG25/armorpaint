@@ -8,6 +8,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+// #define UI_HANDLE(name)                                                                       \
+// 	ui_handle_t  _##name##_h = {.redraws = 2, .color = 0xffffffff, .text = "", .init = true}; \
+// 	ui_handle_t *name        = &_##name##_h
+
 typedef enum {
 	UI_LAYOUT_VERTICAL,
 	UI_LAYOUT_HORIZONTAL
