@@ -213,6 +213,8 @@ void import_mesh_make_mesh(raw_mesh_t *mesh) {
 		history_reset();
 	}
 
+	g_project->stages = NULL;
+
 	// Wait for add_mesh calls to finish
 	sys_notify_on_next_frame(&import_mesh_finish_import, NULL);
 }

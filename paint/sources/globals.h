@@ -158,6 +158,7 @@ i32                       history_redos       = 0;     // Redos available
 bool                      history_push_undo   = false; // Store undo on next paint
 slot_layer_t_array_t     *history_undo_layers = NULL;
 ui_handle_t              *tab_scripts_hscript;
+extern int                tab_stages_selected;
 any_map_t                *import_mesh_importers;
 i32                       ui_menubar_default_w = 406;
 ui_handle_t              *ui_menubar_hwnd;

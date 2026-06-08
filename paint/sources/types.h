@@ -522,6 +522,12 @@ typedef struct node_group {
 } node_group_t;
 
 typedef struct {
+	char           *name;
+	string_array_t *objects;
+	string_array_t *layers;
+} stage_t;
+
+typedef struct {
 	struct asset_t_array         *assets;
 	struct slot_material_t_array *materials;
 	struct slot_brush_t_array    *brushes;
@@ -566,6 +572,7 @@ typedef struct project {
 	i32                                          timeline_max_frames;
 	struct timeline_layer_keyframe_data_t_array *timeline_layers;
 	struct timeline_mesh_keyframe_data_t_array  *timeline_meshes;
+	struct stage_t_array                        *stages;
 	project_runtime_t                           *_;
 } project_t;
 
@@ -949,3 +956,9 @@ typedef struct swatch_color_t_array {
 	int              length;
 	int              capacity;
 } swatch_color_t_array_t;
+
+typedef struct stage_t_array {
+	stage_t **buffer;
+	int       length;
+	int       capacity;
+} stage_t_array_t;

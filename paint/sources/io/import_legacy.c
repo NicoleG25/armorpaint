@@ -271,11 +271,25 @@ project_t *import_arm_from_map_to_arm(any_map_t *old) {
 		}
 	}
 
+	any_array_t *stages = any_map_get(old, "stages");
+	if (stages != NULL) {
+		project->stages = any_array_create_from_raw((void *[]){}, 0);
+		for (i32 i = 0; i < stages->length; ++i) {
+			any_map_t *old = stages->buffer[i];
+			stage_t   *d   = GC_ALLOC_INIT(stage_t, {0});
+			d->name        = any_map_get(old, "name");
+			d->objects     = any_map_get(old, "objects");
+			d->layers      = any_map_get(old, "layers");
+			any_array_push(project->stages, d);
+		}
+	}
+
 	return project;
 }
 
 project_t *import_arm_from_version_8(any_map_t *old) {
 	any_map_set(old, "script_names", NULL);
+	any_map_set(old, "stages", NULL);
 	return import_arm_from_map_to_arm(old);
 }
 

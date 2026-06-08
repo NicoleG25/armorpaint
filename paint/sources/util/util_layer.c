@@ -594,6 +594,12 @@ slot_layer_t *layers_new_layer(bool clear, i32 position, slot_layer_t *parent) {
 	if (clear) {
 		sys_notify_on_next_frame(&layers_new_layer_clear, l);
 	}
+
+	stage_t *stage = tab_stages_get_stage();
+	if (stage != NULL && string_array_index_of(stage->layers, l->name) < 0) {
+		string_array_push(stage->layers, l->name);
+	}
+
 	g_context->layer_preview_dirty = true;
 	return l;
 }

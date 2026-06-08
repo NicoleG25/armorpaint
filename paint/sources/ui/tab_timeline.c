@@ -963,8 +963,36 @@ void tab_timeline_draw(ui_handle_t *htab) {
 		tab_timeline_init();
 
 		ui_begin_sticky();
-		f32_array_t *row = f32_array_create_from_raw((f32[]){-100, -100, -40, -40, -40, -40, -60}, 7);
+		f32_array_t *row = f32_array_create_from_raw((f32[]){-70, -110, -100, -100, -40, -40, -40, -40, -60}, 9);
 		ui_row(row);
+
+		// Stage
+		if (g_project->stages == NULL) {
+			g_project->stages = any_array_create_from_raw((void *[]){}, 0);
+			any_array_push(g_project->stages, tab_stages_create_stage("Stage 1"));
+		}
+
+		string_array_t *stage_names = string_array_create(0);
+		if (g_project->stages != NULL) {
+			for (i32 i = 0; i < g_project->stages->length; ++i) {
+				string_array_push(stage_names, g_project->stages->buffer[i]->name);
+			}
+		}
+
+		if (ui_icon_button(tr("Stage"), ICON_PLUS, UI_ALIGN_CENTER)) {
+			stage_t *s = tab_stages_create_stage(string("%s %s", tr("Stage"), i32_to_string(g_project->stages->length + 1)));
+			any_array_push(g_project->stages, s);
+			tab_stages_selected = g_project->stages->length - 1;
+			tab_stages_apply(s);
+		}
+
+		ui_handle_t *stage_handle = ui_handle(__ID__);
+		stage_handle->i           = tab_stages_selected;
+		tab_stages_selected       = ui_combo(stage_handle, stage_names, tr("Stage"), false, UI_ALIGN_LEFT, true);
+		if (stage_handle->changed && g_project->stages != NULL && tab_stages_selected < g_project->stages->length) {
+			tab_stages_apply(g_project->stages->buffer[tab_stages_selected]);
+		}
+
 		if (ui_icon_button(tr("Keyframe"), ICON_PLUS, UI_ALIGN_CENTER)) {
 			i32 li = tab_timeline_selected_row;
 			if (tab_timeline_selected_frame > 0 && li < g_project->_->layers->length && slot_layer_is_layer(g_project->_->layers->buffer[li])) {
@@ -1017,7 +1045,7 @@ void tab_timeline_draw(ui_handle_t *htab) {
 		g_ui->enabled = true;
 		ui_end_sticky();
 
-		f32 layer_name_w    = 100.0f * UI_SCALE();
+		f32 layer_name_w    = 120.0f * UI_SCALE();
 		f32 frame_w         = 16.0f * UI_SCALE();
 		f32 start_x         = g_ui->_x + layer_name_w;
 		f32 start_y         = g_ui->_y;
@@ -1061,19 +1089,39 @@ void tab_timeline_draw(ui_handle_t *htab) {
 		u32 sel_col    = g_theme->HIGHLIGHT_COL;
 		i32 row_count  = g_project->_->layers->length;
 
+		stage_t *stage = tab_stages_get_stage();
+
 		gpu_texture_t *icons     = resource_get("icons.k");
 		f32            icon_size = strip_h - 2;
+		f32            eye_size  = 18.0f * UI_SCALE();
 
+		i32 vis_row = 0;
 		for (i32 ri = 0; ri < row_count; ri++) {
-			slot_layer_t *layer  = g_project->_->layers->buffer[ri];
-			f32           row_y  = start_y + font_h + 2 + ri * strip_h;
-			f32           icon_y = row_y + (strip_h - icon_size) / 2.0f;
+			slot_layer_t *layer = g_project->_->layers->buffer[ri];
+			if (stage != NULL && string_array_index_of(stage->layers, layer->name) < 0) {
+				continue;
+			}
+			f32 row_y  = start_y + font_h + 2 + vis_row * strip_h;
+			f32 icon_y = row_y + (strip_h - icon_size) / 2.0f;
+
+			// Eye icon
+			rect_t *eye   = resource_tile18(icons, layer->visible ? ICON18_EYE_ON : ICON18_EYE_OFF);
+			f32     eye_y = row_y + (strip_h - eye_size) / 2.0f;
+			draw_set_color(g_theme->HOVER_COL + 0x00282828);
+			draw_scaled_sub_image(icons, eye->x, eye->y, eye->w, eye->h, g_ui->_x, eye_y, eye_size, eye_size);
+			bool eye_hover = !tab_timeline_scrolling && g_ui->input_x > g_ui->_window_x + g_ui->_x && g_ui->input_x < g_ui->_window_x + g_ui->_x + eye_size &&
+			                 g_ui->input_y > g_ui->_window_y + row_y && g_ui->input_y < g_ui->_window_y + row_y + strip_h;
+			if (eye_hover && g_ui->input_released) {
+				layer->visible = !layer->visible;
+				make_material_parse_mesh_material();
+				g_context->ddirty = 2;
+			}
 
 			rect_t *rect = resource_tile50(icons, ICON_LAYERS);
 			draw_set_color(g_theme->LABEL_COL);
-			draw_scaled_sub_image(icons, rect->x, rect->y, rect->w, rect->h, g_ui->_x, icon_y, icon_size, icon_size);
+			draw_scaled_sub_image(icons, rect->x, rect->y, rect->w, rect->h, g_ui->_x + eye_size + 4, icon_y, icon_size, icon_size);
 			draw_set_color(g_theme->LABEL_COL);
-			draw_string(layer->name, g_ui->_x + icon_size + 2, row_y + (strip_h - font_h) / 2.0f);
+			draw_string(layer->name, g_ui->_x + eye_size + icon_size + 6, row_y + (strip_h - font_h) / 2.0f);
 
 			for (i32 i = tab_timeline_scroll; i < tab_timeline_scroll + visible + 1 && i < tab_timeline_max_frames; i++) {
 				f32 x = start_x + (i - tab_timeline_scroll) * frame_w;
@@ -1119,20 +1167,45 @@ void tab_timeline_draw(ui_handle_t *htab) {
 					ui_menu_draw(&tab_timeline_draw_frame_context_menu, -1, -1);
 				}
 			}
+			vis_row++;
 		}
 
 		i32 mesh_count = g_project->_->paint_objects->length;
 		for (i32 mi = 0; mi < mesh_count; mi++) {
-			mesh_object_t *mesh   = g_project->_->paint_objects->buffer[mi];
-			i32            ri     = row_count + mi;
-			f32            row_y  = start_y + font_h + 2 + ri * strip_h;
-			f32            icon_y = row_y + (strip_h - icon_size) / 2.0f;
+			mesh_object_t *mesh = g_project->_->paint_objects->buffer[mi];
+			i32            ri   = row_count + mi;
+			if (stage != NULL && string_array_index_of(stage->objects, mesh->base->name) < 0) {
+				continue;
+			}
+			f32 row_y  = start_y + font_h + 2 + vis_row * strip_h;
+			f32 icon_y = row_y + (strip_h - icon_size) / 2.0f;
+
+			// Eye icon
+			rect_t *eye   = resource_tile18(icons, mesh->base->visible ? ICON18_EYE_ON : ICON18_EYE_OFF);
+			f32     eye_y = row_y + (strip_h - eye_size) / 2.0f;
+			draw_set_color(g_theme->HOVER_COL + 0x00282828);
+			draw_scaled_sub_image(icons, eye->x, eye->y, eye->w, eye->h, g_ui->_x, eye_y, eye_size, eye_size);
+			bool eye_hover = !tab_timeline_scrolling && g_ui->input_x > g_ui->_window_x + g_ui->_x && g_ui->input_x < g_ui->_window_x + g_ui->_x + eye_size &&
+			                 g_ui->input_y > g_ui->_window_y + row_y && g_ui->input_y < g_ui->_window_y + row_y + strip_h;
+			if (eye_hover && g_ui->input_released) {
+				mesh->base->visible = !mesh->base->visible;
+
+				mesh_object_t_array_t *visibles = any_array_create_from_raw((void *[]){}, 0);
+				for (i32 k = 0; k < g_project->_->paint_objects->length; k++) {
+					mesh_object_t *p = g_project->_->paint_objects->buffer[k];
+					if (p->base->visible) {
+						any_array_push(visibles, p);
+					}
+				}
+				util_mesh_merge(visibles);
+				g_context->ddirty = 2;
+			}
 
 			rect_t *rect = resource_tile50(icons, ICON_CUBE);
 			draw_set_color(g_theme->LABEL_COL);
-			draw_scaled_sub_image(icons, rect->x, rect->y, rect->w, rect->h, g_ui->_x, icon_y, icon_size, icon_size);
+			draw_scaled_sub_image(icons, rect->x, rect->y, rect->w, rect->h, g_ui->_x + eye_size + 4, icon_y, icon_size, icon_size);
 			draw_set_color(g_theme->LABEL_COL);
-			draw_string(mesh->base->name, g_ui->_x + icon_size + 2, row_y + (strip_h - font_h) / 2.0f);
+			draw_string(mesh->base->name, g_ui->_x + eye_size + icon_size + 6, row_y + (strip_h - font_h) / 2.0f);
 
 			for (i32 i = tab_timeline_scroll; i < tab_timeline_scroll + visible + 1 && i < tab_timeline_max_frames; i++) {
 				f32 x = start_x + (i - tab_timeline_scroll) * frame_w;
@@ -1178,11 +1251,12 @@ void tab_timeline_draw(ui_handle_t *htab) {
 					ui_menu_draw(&tab_timeline_draw_frame_context_menu, -1, -1);
 				}
 			}
+			vis_row++;
 		}
 
 		// Scrollbar
 		f32 scrollbar_h = 8.0f * UI_SCALE();
-		f32 scrollbar_y = start_y + font_h + 2 + (row_count + mesh_count) * strip_h;
+		f32 scrollbar_y = start_y + font_h + 2 + vis_row * strip_h;
 		f32 handle_w    = track_w * (f32)visible / tab_timeline_max_frames;
 		f32 handle_x    = start_x + (max_scroll > 0 ? tab_timeline_scroll * (track_w - handle_w) / max_scroll : 0);
 

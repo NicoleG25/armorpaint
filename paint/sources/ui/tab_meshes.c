@@ -9,6 +9,7 @@ any_map_t *tab_meshes_preview_map = NULL;
 void tab_meshes_draw_context_menu_delete_next_frame(mesh_object_t *o) {
 	data_delete_mesh(o->data->_->handle);
 	mesh_object_remove(o);
+	tab_stages_prune();
 	g_context->paint_object = context_main_object();
 	util_mesh_merge(NULL);
 	g_context->ddirty = 2;
@@ -572,7 +573,7 @@ void tab_meshes_draw(ui_handle_t *htab) {
 
 			g_ui->_x += 2;
 			if (row > 0) {
-				g_ui->_y += UI_ELEMENT_OFFSET() * 10.0;
+				g_ui->_y += slotw * 0.9 + 8 + UI_ELEMENT_OFFSET() * 2.0;
 			}
 
 			for (i32 j = 0; j < num; ++j) {
@@ -655,6 +656,17 @@ void tab_meshes_draw(ui_handle_t *htab) {
 				o->base->visible = ui_check(h, o->base->name, "");
 
 				if (h->changed) {
+					stage_t *stage = tab_stages_get_stage();
+					if (stage != NULL) {
+						i32 idx = string_array_index_of(stage->objects, o->base->name);
+						if (o->base->visible && idx < 0) {
+							string_array_push(stage->objects, o->base->name);
+						}
+						else if (!o->base->visible && idx >= 0) {
+							array_splice(stage->objects, idx, 1);
+						}
+					}
+
 					mesh_object_t_array_t *visibles = any_array_create_from_raw((void *[]){}, 0);
 					for (i32 k = 0; k < g_project->_->paint_objects->length; ++k) {
 						mesh_object_t *p = g_project->_->paint_objects->buffer[k];

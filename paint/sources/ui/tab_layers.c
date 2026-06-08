@@ -226,6 +226,7 @@ void tab_layers_delete_layer(slot_layer_t *l) {
 		slot_material_t *m = g_project->_->materials->buffer[i];
 		tab_layers_remap_layer_pointers(m->canvas->nodes, tab_layers_fill_layer_map(pointers));
 	}
+	tab_stages_prune();
 }
 
 void tab_layers_draw_layer_slot_full_delete_layer(void *_) {
@@ -902,6 +903,11 @@ void tab_layers_draw_layer_context_menu(slot_layer_t *l, bool mini) {
 }
 
 void tab_layers_draw_layer_slot(slot_layer_t *l, i32 i, bool mini) {
+	stage_t *stage = tab_stages_get_stage();
+	if (stage != NULL && string_array_index_of(stage->layers, l->name) < 0) {
+		return;
+	}
+
 	if (g_context->layer_filter > 0 && slot_layer_get_object_mask(l) > 0 && slot_layer_get_object_mask(l) != g_context->layer_filter) {
 		return;
 	}
