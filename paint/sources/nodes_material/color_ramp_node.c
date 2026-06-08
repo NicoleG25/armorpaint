@@ -146,10 +146,10 @@ void nodes_material_color_ramp_button(i32 node_id) {
 	ui_node_t        *node    = ui_get_node(ui_nodes_get_canvas(true)->nodes, node_id);
 	ui_node_button_t *but     = node->buttons->buffer[0];
 	ui_handle_t      *nhandle = ui_nest(ui_handle(__ID__), node->id);
-	f32               nx      = ui->_x;
-	f32               ny      = ui->_y;
+	f32               nx      = g_ui->_x;
+	f32               ny      = g_ui->_y;
 	f32_array_t      *vals    = but->default_value; // [r, g, b, a, pos, r, g, b, a, pos, ..]
-	f32               sw      = ui->_w / (float)UI_NODES_SCALE();
+	f32               sw      = g_ui->_w / (float)UI_NODES_SCALE();
 	i32               len     = (i32)(vals->length / 5);
 	i32               interp  = but->data->buffer[0];
 
@@ -169,7 +169,7 @@ void nodes_material_color_ramp_button(i32 node_id) {
 		f32 slice_w = sw / (f32)slices + 1.0f / UI_NODES_SCALE();
 		ui_fill(t * sw, 0, slice_w, UI_LINE_H() - 2 * UI_NODES_SCALE(), col);
 	}
-	ui->_y += UI_LINE_H();
+	g_ui->_y += UI_LINE_H();
 
 	// Edit controls
 	ui_handle_t *ihandle = ui_nest(ui_nest(nhandle, 0), 2);
@@ -228,9 +228,9 @@ void nodes_material_color_ramp_button(i32 node_id) {
 	ui_handle_t *chandle = ui_nest(ui_nest(nhandle, 0), 4);
 	chandle->color       = color_from_floats(vals->buffer[i * 5 + 0], vals->buffer[i * 5 + 1], vals->buffer[i * 5 + 2], 1.0);
 	if (ui_text("", UI_ALIGN_RIGHT, chandle->color) == UI_STATE_STARTED) {
-		f32 rx                = nx + ui->_w - ui_p(37);
+		f32 rx                = nx + g_ui->_w - ui_p(37);
 		f32 ry                = ny - ui_p(5);
-		nodes->_input_started = ui->input_started = false;
+		nodes->_input_started = g_ui->input_started = false;
 		ui_nodes_rgba_popup(chandle, vals->buffer + i * 5, math_floor(rx), math_floor(ry + UI_ELEMENT_H()));
 	}
 	vals->buffer[i * 5 + 0] = color_get_rb(chandle->color) / 255.0;

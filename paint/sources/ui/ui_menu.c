@@ -37,12 +37,12 @@ void ui_menu_fit_to_screen() {
 void ui_menu_render() {
 	i32 menu_w = ui_menu_commands != NULL ? math_floor(base_default_element_w * UI_SCALE() * 2.3) : math_floor(UI_ELEMENT_W() * 2.3);
 
-	i32 _FILL_BUTTON_BG            = ui->ops->theme->FILL_BUTTON_BG;
-	ui->ops->theme->FILL_BUTTON_BG = false;
-	i32 _ELEMENT_OFFSET            = ui->ops->theme->ELEMENT_OFFSET;
-	ui->ops->theme->ELEMENT_OFFSET = 0;
-	i32 _ELEMENT_H                 = ui->ops->theme->ELEMENT_H;
-	ui->ops->theme->ELEMENT_H      = g_config->touch_ui ? (28 + 2) : 28;
+	i32 _FILL_BUTTON_BG            = g_ui->ops->theme->FILL_BUTTON_BG;
+	g_ui->ops->theme->FILL_BUTTON_BG = false;
+	i32 _ELEMENT_OFFSET            = g_ui->ops->theme->ELEMENT_OFFSET;
+	g_ui->ops->theme->ELEMENT_OFFSET = 0;
+	i32 _ELEMENT_H                 = g_ui->ops->theme->ELEMENT_H;
+	g_ui->ops->theme->ELEMENT_H      = g_config->touch_ui ? (28 + 2) : 28;
 
 	if (ui_menu_nested) {
 		ui_menu_show_first = true;
@@ -56,30 +56,30 @@ void ui_menu_render() {
 	}
 
 	draw_begin(NULL, false, 0);
-	ui_begin_region(ui, ui_menu_x, ui_menu_y, menu_w);
-	ui->input_enabled = ui->combo_selected_handle == NULL;
+	ui_begin_region(g_ui, ui_menu_x, ui_menu_y, menu_w);
+	g_ui->input_enabled = g_ui->combo_selected_handle == NULL;
 	ui_menu_begin();
 
 	if (ui_menu_commands != NULL) {
 		ui_menu_commands();
 	}
 
-	ui_menu_hide_flag = ui->combo_selected_handle == NULL && !ui_menu_keep_open && !ui_menu_show_first &&
-	                    (ui->changed || ui->input_released || ui->input_released_r || ui->is_escape_down);
+	ui_menu_hide_flag = g_ui->combo_selected_handle == NULL && !ui_menu_keep_open && !ui_menu_show_first &&
+	                    (g_ui->changed || g_ui->input_released || g_ui->input_released_r || g_ui->is_escape_down);
 	ui_menu_keep_open = false;
 
-	ui->ops->theme->FILL_BUTTON_BG = _FILL_BUTTON_BG;
-	ui->ops->theme->ELEMENT_OFFSET = _ELEMENT_OFFSET;
-	ui->ops->theme->ELEMENT_H      = _ELEMENT_H;
+	g_ui->ops->theme->FILL_BUTTON_BG = _FILL_BUTTON_BG;
+	g_ui->ops->theme->ELEMENT_OFFSET = _ELEMENT_OFFSET;
+	g_ui->ops->theme->ELEMENT_H      = _ELEMENT_H;
 	ui_menu_end();
 	ui_end_region();
-	ui->input_enabled = true;
+	g_ui->input_enabled = true;
 	draw_end();
 
 	if (ui_menu_show_first) {
 		ui_menu_show_first = false;
 		ui_menu_keep_open  = true;
-		ui_menu_h          = ui->_y - ui_menu_y;
+		ui_menu_h          = g_ui->_y - ui_menu_y;
 		ui_menu_x += iron_window_width() * 2;
 		ui_menu_y += iron_window_height() * 2;
 		ui_menu_fit_to_screen();
@@ -110,35 +110,35 @@ void ui_menu_draw(void (*commands)(void), i32 x, i32 y) {
 }
 
 void ui_menu_separator() {
-	ui->_y++;
-	ui_fill(26, 0, ui->_w / (float)UI_SCALE() - 26, 1, ui->ops->theme->BUTTON_COL);
+	g_ui->_y++;
+	ui_fill(26, 0, g_ui->_w / (float)UI_SCALE() - 26, 1, g_ui->ops->theme->BUTTON_COL);
 }
 
 bool ui_menu_button(char *text, char *label, icon_t icon) {
 	if (g_config->touch_ui && !string_equals(label, ">")) {
 		label = "";
 	}
-	i32  _x_left = ui->_x;
-	i32  _y_top  = ui->_y;
+	i32  _x_left = g_ui->_x;
+	i32  _y_top  = g_ui->_y;
 	bool result  = ui_button(string("%s%s", config_button_spacing, text), config_button_align, label);
 	if (string_equals(label, ">") && result) {
 		ui_menu_keep_open = true;
 	}
 
 	if (icon != ICON_NONE) {
-		i32            _y_bottom = ui->_y;
+		i32            _y_bottom = g_ui->_y;
 		gpu_texture_t *icons     = resource_get("icons05x.k");
 		rect_t        *rect      = resource_tile50(icons, icon);
 		i32            icon_h    = 25 * UI_SCALE();
-		ui->_x                   = _x_left - 5 * UI_SCALE();
-		ui->_y                   = _y_top - 1;
+		g_ui->_x                   = _x_left - 5 * UI_SCALE();
+		g_ui->_y                   = _y_top - 1;
 		if (g_config->touch_ui) {
-			ui->_x = _x_left - 2 * UI_SCALE();
-			ui->_y = _y_top + 2 * UI_SCALE();
+			g_ui->_x = _x_left - 2 * UI_SCALE();
+			g_ui->_y = _y_top + 2 * UI_SCALE();
 		}
-		ui_sub_image(icons, base_darker(ui->ops->theme->LABEL_COL, 0x00222222), icon_h, rect->x / 2.0, rect->y / 2.0, rect->w / 2.0, rect->h / 2.0);
-		ui->_x = _x_left;
-		ui->_y = _y_bottom;
+		ui_sub_image(icons, base_darker(g_ui->ops->theme->LABEL_COL, 0x00222222), icon_h, rect->x / 2.0, rect->y / 2.0, rect->w / 2.0, rect->h / 2.0);
+		g_ui->_x = _x_left;
+		g_ui->_y = _y_bottom;
 	}
 
 	return result;
@@ -149,15 +149,15 @@ u32 ui_menu_color_sub(u32 c, u32 s) {
 }
 
 bool ui_icon_button(char *text, icon_t icon, ui_align_t align) {
-	i32 _x_left = ui->_x;
-	i32 _y_top  = ui->_y;
-	i32 _w      = ui->_w;
+	i32 _x_left = g_ui->_x;
+	i32 _y_top  = g_ui->_y;
+	i32 _w      = g_ui->_w;
 	if (!string_equals(text, "")) {
 		text = align == UI_ALIGN_LEFT ? string("        %s", text) : string("      %s", text);
 	}
 
 	char *tooltip = "";
-	i32   textw   = draw_string_width(ui->ops->font, ui->font_size, text);
+	i32   textw   = draw_string_width(g_ui->ops->font, g_ui->font_size, text);
 	f32   wmax    = g_config->touch_ui ? 0.9 : 0.8;
 	if (textw > _w * wmax) {
 		tooltip = string_copy(text);
@@ -167,50 +167,50 @@ bool ui_icon_button(char *text, icon_t icon, ui_align_t align) {
 
 	bool result = ui_button(text, align, "");
 
-	if (ui->is_hovered && !string_equals(tooltip, "")) {
+	if (g_ui->is_hovered && !string_equals(tooltip, "")) {
 		ui_tooltip(tooltip);
 	}
 
 	if (icon != ICON_NONE) {
-		i32            _x_right  = ui->_x;
-		i32            _y_bottom = ui->_y;
+		i32            _x_right  = g_ui->_x;
+		i32            _y_bottom = g_ui->_y;
 		gpu_texture_t *icons     = resource_get("icons05x.k");
 		rect_t        *rect      = resource_tile50(icons, icon);
 		i32            icon_h    = 25 * UI_SCALE();
-		ui->_x                   = align == UI_ALIGN_LEFT ? _x_left : _x_left + _w / 2.0 - textw / 2.0 - icon_h / 2.0;
-		ui->_y                   = _y_top;
+		g_ui->_x                   = align == UI_ALIGN_LEFT ? _x_left : _x_left + _w / 2.0 - textw / 2.0 - icon_h / 2.0;
+		g_ui->_y                   = _y_top;
 
 		if (g_config->touch_ui) {
-			ui->_x += 1 * UI_SCALE();
+			g_ui->_x += 1 * UI_SCALE();
 			if (!string_equals(text, "")) {
-				ui->_x += 5 * UI_SCALE();
+				g_ui->_x += 5 * UI_SCALE();
 			}
-			ui->_y = _y_top + 2 * UI_SCALE();
+			g_ui->_y = _y_top + 2 * UI_SCALE();
 		}
-		if (ui->current_ratio > -1) {
-			ui->current_ratio--;
+		if (g_ui->current_ratio > -1) {
+			g_ui->current_ratio--;
 		}
 
-		ui->image_scroll_align = false;
-		ui_sub_image(icons, ui->enabled ? ui_menu_color_sub(ui->ops->theme->LABEL_COL, 0x00333333) : 0xffffffff, icon_h, rect->x / 2.0, rect->y / 2.0,
+		g_ui->image_scroll_align = false;
+		ui_sub_image(icons, g_ui->enabled ? ui_menu_color_sub(g_ui->ops->theme->LABEL_COL, 0x00333333) : 0xffffffff, icon_h, rect->x / 2.0, rect->y / 2.0,
 		             rect->w / 2.0, rect->h / 2.0);
-		ui->image_scroll_align = true;
+		g_ui->image_scroll_align = true;
 
-		ui->_x = _x_right;
-		ui->_y = _y_bottom;
+		g_ui->_x = _x_right;
+		g_ui->_y = _y_bottom;
 	}
 	return result;
 }
 
 bool ui_menu_sub_button(ui_handle_t *handle, char *text) {
-	ui->is_hovered = false;
+	g_ui->is_hovered = false;
 	ui_menu_button(text, ">", ICON_NONE);
-	if (ui->is_hovered) {
+	if (g_ui->is_hovered) {
 		gc_unroot(ui_menu_sub_handle);
 		ui_menu_sub_handle = handle;
 		gc_root(ui_menu_sub_handle);
 	}
-	else if (math_abs(ui->input_dy) > ui->input_dx && ui->input_x < ui->_x + ui->_w) {
+	else if (math_abs(g_ui->input_dy) > g_ui->input_dx && g_ui->input_x < g_ui->_x + g_ui->_w) {
 		gc_unroot(ui_menu_sub_handle);
 		ui_menu_sub_handle = NULL;
 	}
@@ -218,15 +218,15 @@ bool ui_menu_sub_button(ui_handle_t *handle, char *text) {
 }
 
 void ui_menu_label(char *text, char *shortcut) {
-	i32 _y                   = ui->_y;
-	i32 _TEXT_COL            = ui->ops->theme->TEXT_COL;
-	ui->ops->theme->TEXT_COL = ui->ops->theme->LABEL_COL;
+	i32 _y                   = g_ui->_y;
+	i32 _TEXT_COL            = g_ui->ops->theme->TEXT_COL;
+	g_ui->ops->theme->TEXT_COL = g_ui->ops->theme->LABEL_COL;
 	ui_text(text, UI_ALIGN_LEFT, 0x00000000);
 	if (shortcut != NULL) {
-		ui->_y = _y;
+		g_ui->_y = _y;
 		ui_text(shortcut, UI_ALIGN_RIGHT, 0x00000000);
 	}
-	ui->ops->theme->TEXT_COL = _TEXT_COL;
+	g_ui->ops->theme->TEXT_COL = _TEXT_COL;
 }
 
 void ui_menu_align() {
@@ -243,26 +243,26 @@ void ui_menu_align() {
 }
 
 void ui_menu_begin() {
-	ui_draw_shadow(ui->_x, ui->_y, ui->_w, ui_menu_h);
-	draw_set_color(ui->ops->theme->SEPARATOR_COL);
-	ui_draw_rect(true, ui->_x, ui->_y, ui->_w, ui_menu_h);
+	ui_draw_shadow(g_ui->_x, g_ui->_y, g_ui->_w, ui_menu_h);
+	draw_set_color(g_ui->ops->theme->SEPARATOR_COL);
+	ui_draw_rect(true, g_ui->_x, g_ui->_y, g_ui->_w, ui_menu_h);
 	draw_set_color(0xffffffff);
 }
 
 void ui_menu_end() {}
 
 void ui_menu_sub_begin(i32 items) {
-	ui_menu_sub_x = ui->_x;
-	ui_menu_sub_y = ui->_y;
-	ui->_x += ui->_w + 2;
-	ui->_y -= UI_ELEMENT_H();
-	ui_draw_shadow(ui->_x, ui->_y, ui->_w, UI_ELEMENT_H() * items);
-	draw_set_color(ui->ops->theme->SEPARATOR_COL);
-	ui_draw_rect(true, ui->_x, ui->_y, ui->_w, UI_ELEMENT_H() * items);
+	ui_menu_sub_x = g_ui->_x;
+	ui_menu_sub_y = g_ui->_y;
+	g_ui->_x += g_ui->_w + 2;
+	g_ui->_y -= UI_ELEMENT_H();
+	ui_draw_shadow(g_ui->_x, g_ui->_y, g_ui->_w, UI_ELEMENT_H() * items);
+	draw_set_color(g_ui->ops->theme->SEPARATOR_COL);
+	ui_draw_rect(true, g_ui->_x, g_ui->_y, g_ui->_w, UI_ELEMENT_H() * items);
 	draw_set_color(0xffffffff);
 }
 
 void ui_menu_sub_end() {
-	ui->_x = ui_menu_sub_x;
-	ui->_y = ui_menu_sub_y;
+	g_ui->_x = ui_menu_sub_x;
+	g_ui->_y = ui_menu_sub_y;
 }

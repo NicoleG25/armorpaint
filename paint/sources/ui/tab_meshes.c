@@ -63,7 +63,7 @@ void tab_meshes_draw_context_menu() {
 	rot              = vec4_mult(rot, 180 / 3.141592);
 	f32  f           = 0.0;
 	bool changed     = false;
-	ui->changed      = false;
+	g_ui->changed      = false;
 
 	ui_row4();
 	ui_text("Loc", UI_ALIGN_LEFT, 0x00000000);
@@ -211,7 +211,7 @@ void tab_meshes_draw_context_menu() {
 	// 	}
 	// }
 
-	// ui_text("Script", UI_ALIGN_LEFT, ui->ops->theme->SEPARATOR_COL);
+	// ui_text("Script", UI_ALIGN_LEFT, g_ui->ops->theme->SEPARATOR_COL);
 
 	// char *script = any_map_get(sim_object_script_map, g_context->selected_object);
 	// if (script == NULL) {
@@ -221,19 +221,19 @@ void tab_meshes_draw_context_menu() {
 	// ui_handle_t *hscript = ui_handle(__ID__);
 	// hscript->text        = string_copy(script);
 
-	// draw_font_t *_font      = ui->ops->font;
-	// i32          _font_size = ui->font_size;
+	// draw_font_t *_font      = g_ui->ops->font;
+	// i32          _font_size = g_ui->font_size;
 	// draw_font_t *fmono      = data_get_font("font_mono.ttf");
-	// ui_set_font(ui, fmono);
-	// ui->font_size = math_floor(15 * UI_SCALE());
+	// ui_set_font(g_ui, fmono);
+	// g_ui->font_size = math_floor(15 * UI_SCALE());
 	// gc_unroot(ui_text_area_coloring);
 	// ui_text_area_coloring = tab_scripts_get_text_coloring();
 	// gc_root(ui_text_area_coloring);
 	// ui_text_area(hscript, UI_ALIGN_LEFT, true, "", false);
 	// gc_unroot(ui_text_area_coloring);
 	// ui_text_area_coloring = NULL;
-	// ui_set_font(ui, _font);
-	// ui->font_size = _font_size;
+	// ui_set_font(g_ui, _font);
+	// g_ui->font_size = _font_size;
 
 	// script = string_copy(hscript->text);
 	// any_map_set(sim_object_script_map, g_context->selected_object, script);
@@ -251,7 +251,7 @@ void tab_meshes_draw_context_menu() {
 	o->base->name = string_copy(ui_text_input(h, "", UI_ALIGN_LEFT, true, false));
 	o->data->name = string_copy(o->base->name);
 
-	if (ui->changed || ui->is_typing) {
+	if (g_ui->changed || g_ui->is_typing) {
 		ui_menu_keep_open = true;
 	}
 }
@@ -531,7 +531,7 @@ void tab_meshes_make_preview(mesh_object_t *o) {
 }
 
 void tab_meshes_draw(ui_handle_t *htab) {
-	if (ui_tab(htab, tr("Meshes"), false, -1, false) && ui->_window_h > ui_statusbar_default_h * UI_SCALE()) {
+	if (ui_tab(htab, tr("Meshes"), false, -1, false) && g_ui->_window_h > ui_statusbar_default_h * UI_SCALE()) {
 
 		ui_begin_sticky();
 		f32_array_t *row = f32_array_create_from_raw(
@@ -545,7 +545,7 @@ void tab_meshes_draw(ui_handle_t *htab) {
 		if (ui_icon_button(tr("Import"), ICON_IMPORT, UI_ALIGN_CENTER)) {
 			ui_menu_draw(&tab_meshes_draw_import, -1, -1);
 		}
-		if (ui->is_hovered)
+		if (g_ui->is_hovered)
 			ui_tooltip(tr("Import mesh file"));
 
 		if (ui_icon_button(tr("Edit"), ICON_EDIT, UI_ALIGN_CENTER)) {
@@ -555,7 +555,7 @@ void tab_meshes_draw(ui_handle_t *htab) {
 		ui_end_sticky();
 
 		i32 slotw = math_floor(78 * UI_SCALE());
-		i32 num   = math_floor(ui->_window_w / (float)slotw);
+		i32 num   = math_floor(g_ui->_window_w / (float)slotw);
 		if (num == 0) {
 			return;
 		}
@@ -570,9 +570,9 @@ void tab_meshes_draw(ui_handle_t *htab) {
 			}
 			ui_row(ar);
 
-			ui->_x += 2;
+			g_ui->_x += 2;
 			if (row > 0) {
-				ui->_y += UI_ELEMENT_OFFSET() * 10.0;
+				g_ui->_y += UI_ELEMENT_OFFSET() * 10.0;
 			}
 
 			for (i32 j = 0; j < num; ++j) {
@@ -585,8 +585,8 @@ void tab_meshes_draw(ui_handle_t *htab) {
 				}
 
 				mesh_object_t *o = g_project->_->paint_objects->buffer[i];
-				uix              = ui->_x;
-				uiy              = ui->_y;
+				uix              = g_ui->_x;
+				uiy              = g_ui->_y;
 
 				// Draw mesh preview
 				char          *uid_key = i32_to_string(o->base->uid);
@@ -598,32 +598,32 @@ void tab_meshes_draw(ui_handle_t *htab) {
 				else {
 					gpu_texture_t *icons = resource_get("icons.k");
 					rect_t        *rect  = resource_tile50(icons, ICON_CUBE);
-					state                = ui_sub_image(icons, ui->ops->theme->BUTTON_COL, slotw, rect->x, rect->y, rect->w, rect->h);
+					state                = ui_sub_image(icons, g_ui->ops->theme->BUTTON_COL, slotw, rect->x, rect->y, rect->w, rect->h);
 					sys_notify_on_next_frame(tab_meshes_make_preview, o);
 				}
 
 				// Selection highlight
 				if (g_context->paint_object == o) {
-					f32 _uix = ui->_x;
-					f32 _uiy = ui->_y;
-					ui->_x   = uix;
-					ui->_y   = uiy + 4;
+					f32 _uix = g_ui->_x;
+					f32 _uiy = g_ui->_y;
+					g_ui->_x   = uix;
+					g_ui->_y   = uiy + 4;
 					i32 hoff = i % 2 == 1 ? 1 : 0;
 					i32 w    = 75;
-					ui_fill(0, 0, w + 3, 2, ui->ops->theme->HIGHLIGHT_COL);
-					ui_fill(0, w - hoff + 2, w + 3, 2 + hoff, ui->ops->theme->HIGHLIGHT_COL);
-					ui_fill(0, 0, 2, w + 3, ui->ops->theme->HIGHLIGHT_COL);
-					ui_fill(w + 2, 0, 2, w + 4, ui->ops->theme->HIGHLIGHT_COL);
-					ui->_x = _uix;
-					ui->_y = _uiy;
+					ui_fill(0, 0, w + 3, 2, g_ui->ops->theme->HIGHLIGHT_COL);
+					ui_fill(0, w - hoff + 2, w + 3, 2 + hoff, g_ui->ops->theme->HIGHLIGHT_COL);
+					ui_fill(0, 0, 2, w + 3, g_ui->ops->theme->HIGHLIGHT_COL);
+					ui_fill(w + 2, 0, 2, w + 4, g_ui->ops->theme->HIGHLIGHT_COL);
+					g_ui->_x = _uix;
+					g_ui->_y = _uiy;
 				}
 
 				// Click to select
-				if (state == UI_STATE_STARTED && ui->input_y > ui->_window_y) {
+				if (state == UI_STATE_STARTED && g_ui->input_y > g_ui->_window_y) {
 					g_context->paint_object = o;
 				}
 				// Double click to show only this mesh
-				if (state == UI_STATE_RELEASED && ui->input_y > ui->_window_y) {
+				if (state == UI_STATE_RELEASED && g_ui->input_y > g_ui->_window_y) {
 					if (sys_time() - g_context->select_time < 0.2) {
 						tab_layers_apply_filter(i + 1);
 					}
@@ -633,22 +633,22 @@ void tab_meshes_draw(ui_handle_t *htab) {
 				}
 
 				// Context menu
-				if (ui->is_hovered && ui->input_released_r) {
+				if (g_ui->is_hovered && g_ui->input_released_r) {
 					g_context->paint_object = o;
 					_tab_meshes_draw_i      = i;
 					ui_menu_draw(&tab_meshes_draw_context_menu, -1, -1);
 				}
 
-				if (ui->is_hovered) {
+				if (g_ui->is_hovered) {
 					ui_tooltip(o->base->name);
 				}
 
 				// Label
 				i32 check_w  = UI_ELEMENT_H();
-				i32 text_w   = draw_string_width(ui->ops->font, ui->font_size, o->base->name);
+				i32 text_w   = draw_string_width(g_ui->ops->font, g_ui->font_size, o->base->name);
 				i32 center_x = (slotw - check_w - text_w) / 2;
-				ui->_x       = uix + (center_x > 0 ? center_x : 0);
-				ui->_y += slotw * 0.9 + 8;
+				g_ui->_x       = uix + (center_x > 0 ? center_x : 0);
+				g_ui->_y += slotw * 0.9 + 8;
 
 				ui_handle_t *h   = ui_handle(__ID__);
 				h->b             = o->base->visible;
@@ -666,9 +666,9 @@ void tab_meshes_draw(ui_handle_t *htab) {
 					g_context->ddirty = 2;
 				}
 
-				ui->_y -= slotw * 0.9 + 8;
+				g_ui->_y -= slotw * 0.9 + 8;
 				if (i == g_project->_->paint_objects->length - 1) {
-					ui->_y += j == num - 1 ? imgw : imgw + UI_ELEMENT_H() + UI_ELEMENT_OFFSET();
+					g_ui->_y += j == num - 1 ? imgw : imgw + UI_ELEMENT_H() + UI_ELEMENT_OFFSET();
 				}
 			}
 		}

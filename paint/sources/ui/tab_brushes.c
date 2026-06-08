@@ -76,7 +76,7 @@ void tab_brushes_draw(ui_handle_t *htab) {
 		ui_separator(3, false);
 
 		i32 slotw = math_floor(51 * UI_SCALE());
-		i32 num   = math_floor(ui->_window_w / (float)slotw);
+		i32 num   = math_floor(g_ui->_window_w / (float)slotw);
 		if (num == 0) {
 			return;
 		}
@@ -94,10 +94,10 @@ void tab_brushes_draw(ui_handle_t *htab) {
 			}
 			ui_row(ar);
 
-			ui->_x += 2;
+			g_ui->_x += 2;
 			f32 off = g_config->show_asset_names ? UI_ELEMENT_OFFSET() * 10.0 : 6;
 			if (row > 0) {
-				ui->_y += off;
+				g_ui->_y += off;
 			}
 
 			for (i32 j = 0; j < num; ++j) {
@@ -120,25 +120,25 @@ void tab_brushes_draw(ui_handle_t *htab) {
 					if (g_config->window_scale > 1) {
 						w += math_floor(g_config->window_scale * 2);
 					}
-					ui_fill(-1, -2, w + 3, 2, ui->ops->theme->HIGHLIGHT_COL);
-					ui_fill(-1, w - off, w + 3, 2 + off, ui->ops->theme->HIGHLIGHT_COL);
-					ui_fill(-1, -2, 2, w + 3, ui->ops->theme->HIGHLIGHT_COL);
-					ui_fill(w + 1, -2, 2, w + 4, ui->ops->theme->HIGHLIGHT_COL);
+					ui_fill(-1, -2, w + 3, 2, g_ui->ops->theme->HIGHLIGHT_COL);
+					ui_fill(-1, w - off, w + 3, 2 + off, g_ui->ops->theme->HIGHLIGHT_COL);
+					ui_fill(-1, -2, 2, w + 3, g_ui->ops->theme->HIGHLIGHT_COL);
+					ui_fill(w + 1, -2, 2, w + 4, g_ui->ops->theme->HIGHLIGHT_COL);
 				}
 
-				uix      = ui->_x;
-				uiy      = ui->_y;
+				uix      = g_ui->_x;
+				uiy      = g_ui->_y;
 				i32 tile = UI_SCALE() > 1 ? 100 : 50;
 
 				if (base_drag_brush != NULL && tab_brushes_drag_pos == i) {
-					ui_fill(-1, -2, 2, imgw_val + 4, ui->ops->theme->HIGHLIGHT_COL);
+					ui_fill(-1, -2, 2, imgw_val + 4, g_ui->ops->theme->HIGHLIGHT_COL);
 				}
 
 				ui_state_t state = g_project->_->brushes->buffer[i]->preview_ready ? ui_image(img, 0xffffffff, -1.0)
 				                                                             : ui_sub_image(resource_get("icons.k"), -1, -1.0, tile * 5, tile, tile, tile);
 
 				if (state == UI_STATE_HOVERED && base_drag_brush != NULL) {
-					tab_brushes_drag_pos = (mouse_x > uix + ui->_window_x + imgw_val / 2.0) ? i + 1 : i;
+					tab_brushes_drag_pos = (mouse_x > uix + g_ui->_window_x + imgw_val / 2.0) ? i + 1 : i;
 					drag_pos_set         = true;
 				}
 
@@ -146,8 +146,8 @@ void tab_brushes_draw(ui_handle_t *htab) {
 					if (g_context->brush != g_project->_->brushes->buffer[i]) {
 						context_select_brush(i);
 					}
-					base_drag_off_x = -(mouse_x - uix - ui->_window_x - 3);
-					base_drag_off_y = -(mouse_y - uiy - ui->_window_y + 1);
+					base_drag_off_x = -(mouse_x - uix - g_ui->_window_x - 3);
+					base_drag_off_y = -(mouse_y - uiy - g_ui->_window_y + 1);
 					gc_unroot(base_drag_brush);
 					base_drag_brush = g_context->brush;
 					gc_root(base_drag_brush);
@@ -159,7 +159,7 @@ void tab_brushes_draw(ui_handle_t *htab) {
 					}
 					g_context->select_time = sys_time();
 				}
-				if (ui->is_hovered && ui->input_released_r) {
+				if (g_ui->is_hovered && g_ui->input_released_r) {
 					context_select_brush(i);
 
 					_tab_brushes_draw_i = i;
@@ -167,7 +167,7 @@ void tab_brushes_draw(ui_handle_t *htab) {
 					ui_menu_draw(&tab_brushes_draw_context_menu, -1, -1);
 				}
 
-				if (ui->is_hovered) {
+				if (g_ui->is_hovered) {
 					if (img_full == NULL) {
 						_tab_brushes_draw_i = i;
 						sys_notify_on_next_frame(&tab_brushes_draw_make_brush_preview, NULL);
@@ -179,50 +179,50 @@ void tab_brushes_draw(ui_handle_t *htab) {
 				}
 
 				if (g_config->show_asset_names) {
-					ui->_x = uix;
-					ui->_y += slotw * 0.9;
+					g_ui->_x = uix;
+					g_ui->_y += slotw * 0.9;
 					ui_text(g_project->_->brushes->buffer[i]->canvas->name, UI_ALIGN_CENTER, 0x00000000);
-					if (ui->is_hovered) {
+					if (g_ui->is_hovered) {
 						ui_tooltip(g_project->_->brushes->buffer[i]->canvas->name);
 					}
-					ui->_y -= slotw * 0.9;
+					g_ui->_y -= slotw * 0.9;
 					if (i == g_project->_->brushes->length - 1) {
-						ui->_y += j == num - 1 ? imgw : imgw + UI_ELEMENT_H() + UI_ELEMENT_OFFSET();
+						g_ui->_y += j == num - 1 ? imgw : imgw + UI_ELEMENT_H() + UI_ELEMENT_OFFSET();
 					}
 				}
 			}
 
-			ui->_y += 6;
+			g_ui->_y += 6;
 		}
 
 		if (base_drag_brush != NULL && tab_brushes_drag_pos == g_project->_->brushes->length) {
-			ui->_x = uix;
-			ui->_y = uiy;
-			ui_fill(imgw_val + 1, -2, 2, imgw_val + 4, ui->ops->theme->HIGHLIGHT_COL);
+			g_ui->_x = uix;
+			g_ui->_y = uiy;
+			ui_fill(imgw_val + 1, -2, 2, imgw_val + 4, g_ui->ops->theme->HIGHLIGHT_COL);
 		}
 
 		if (!drag_pos_set) {
 			tab_brushes_drag_pos = -1;
 		}
 
-		bool in_focus = ui->input_x > ui->_window_x && ui->input_x < ui->_window_x + ui->_window_w && ui->input_y > ui->_window_y &&
-		                ui->input_y < ui->_window_y + ui->_window_h;
-		if (in_focus && ui->is_delete_down && g_project->_->brushes->length > 1) {
-			ui->is_delete_down = false;
+		bool in_focus = g_ui->input_x > g_ui->_window_x && g_ui->input_x < g_ui->_window_x + g_ui->_window_w && g_ui->input_y > g_ui->_window_y &&
+		                g_ui->input_y < g_ui->_window_y + g_ui->_window_h;
+		if (in_focus && g_ui->is_delete_down && g_project->_->brushes->length > 1) {
+			g_ui->is_delete_down = false;
 			tab_brushes_delete_brush(g_context->brush);
 		}
-		if (in_focus && ui->is_ctrl_down && ui->is_key_pressed && ui->key_code == KEY_CODE_D) {
+		if (in_focus && g_ui->is_ctrl_down && g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_D) {
 			_tab_brushes_draw_i = array_index_of(g_project->_->brushes, g_context->brush);
 			sys_notify_on_next_frame(&tab_brushes_draw_duplicate, NULL);
 		}
 		if (in_focus) {
 			i32 i = array_index_of(g_project->_->brushes, g_context->brush);
-			if (ui->is_key_pressed && ui->key_code == KEY_CODE_UP) {
+			if (g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_UP) {
 				if (i > 0) {
 					context_select_brush(i - 1);
 				}
 			}
-			if (ui->is_key_pressed && ui->key_code == KEY_CODE_DOWN) {
+			if (g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_DOWN) {
 				if (i < g_project->_->brushes->length - 1) {
 					context_select_brush(i + 1);
 				}

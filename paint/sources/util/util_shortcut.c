@@ -36,7 +36,7 @@ void util_shortcut_undo_redo() {
 }
 
 void util_shortcut_global() {
-	if (!ui->is_typing) {
+	if (!g_ui->is_typing) {
 		if (operator_shortcut(any_map_get(g_keymap, "toggle_node_editor"), SHORTCUT_TYPE_STARTED)) {
 			ui_nodes_canvas_type == CANVAS_TYPE_MATERIAL ? ui_base_show_material_nodes() : ui_base_show_brush_nodes();
 		}
@@ -160,7 +160,7 @@ void util_shortcut_brush() {
 void util_shortcut_viewport() {
 	bool decal_mask = context_is_decal_mask();
 
-	bool is_typing = ui->is_typing;
+	bool is_typing = g_ui->is_typing;
 	if (!is_typing) {
 		if (operator_shortcut(any_map_get(g_keymap, "select_material"), SHORTCUT_TYPE_DOWN)) {
 			ui_base_hwnds->buffer[TAB_AREA_SIDEBAR1]->redraws = 2;
@@ -320,7 +320,7 @@ void util_shortcut_viewport() {
 				viewport_zoom(-0.2);
 			}
 			else if (operator_shortcut(any_map_get(g_keymap, "viewport_mode"), SHORTCUT_TYPE_STARTED)) {
-				ui->is_key_pressed = false;
+				g_ui->is_key_pressed = false;
 				ui_menu_draw(&ui_base_menu_draw_viewport_mode, -1, -1);
 			}
 		}

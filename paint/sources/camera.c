@@ -317,7 +317,7 @@ void camera_update(void *_) {
 		camera_controls_down = false;
 	}
 
-	if (_input_occupied || !base_ui_enabled || base_is_dragging || ui->is_scrolling || ui->combo_selected_handle != NULL || !camera_controls_down) {
+	if (_input_occupied || !base_ui_enabled || base_is_dragging || g_ui->is_scrolling || g_ui->combo_selected_handle != NULL || !camera_controls_down) {
 		return;
 	}
 

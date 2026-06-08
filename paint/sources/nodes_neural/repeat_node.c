@@ -28,9 +28,9 @@ void repeat_node_button(i32 node_id) {
 	i32          count     = (i32)ui_slider(ui_nest(h, 0), tr("Count"), 1.0, 100.0, true, 1.0, true, UI_ALIGN_LEFT, true);
 
 	if (iron_exec_async_done == 0) {
-		ui->enabled = false;
+		g_ui->enabled = false;
 		ui_button(tr("Running..."), UI_ALIGN_CENTER, "");
-		ui->enabled = true;
+		g_ui->enabled = true;
 	}
 	else if (ui_button(tr("Run"), UI_ALIGN_CENTER, "")) {
 		ui_node_canvas_t *canvas = ui_nodes_get_canvas(true);

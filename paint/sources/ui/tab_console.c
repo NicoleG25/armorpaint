@@ -82,7 +82,7 @@ void tab_console_draw(ui_handle_t *htab) {
 	char *title = console_message_timer > 0 ? string("%s        ", console_message) : tr("Console");
 	i32   color = console_message_timer > 0 ? console_message_color : -1;
 
-	if (ui_tab(htab, title, false, color, false) && ui->_window_h > ui_statusbar_default_h * UI_SCALE()) {
+	if (ui_tab(htab, title, false, color, false) && g_ui->_window_h > ui_statusbar_default_h * UI_SCALE()) {
 
 		ui_begin_sticky();
 #if defined(IRON_WINDOWS) || defined(IRON_LINUX) || defined(IRON_MACOS) // Copy
@@ -124,19 +124,19 @@ void tab_console_draw(ui_handle_t *htab) {
 
 		ui_end_sticky();
 
-		draw_font_t *_font             = ui->ops->font;
-		i32          _font_size        = ui->font_size;
-		i32          _element_offset   = ui->ops->theme->ELEMENT_OFFSET;
-		ui->ops->theme->ELEMENT_OFFSET = 0;
+		draw_font_t *_font             = g_ui->ops->font;
+		i32          _font_size        = g_ui->font_size;
+		i32          _element_offset   = g_ui->ops->theme->ELEMENT_OFFSET;
+		g_ui->ops->theme->ELEMENT_OFFSET = 0;
 		draw_font_t *f                 = data_get_font("font_mono.ttf");
-		ui_set_font(ui, f);
-		ui->font_size = math_floor(15 * UI_SCALE());
+		ui_set_font(g_ui, f);
+		g_ui->font_size = math_floor(15 * UI_SCALE());
 		for (i32 i = 0; i < console_last_traces->length; ++i) {
 			char    *t     = console_last_traces->buffer[i];
 			i32      len   = string_length(t);
-			float    max_w = ui->_w;
+			float    max_w = g_ui->_w;
 			uint32_t bg    = starts_with(t, ">") ? 0x22000000 : 0x00000000;
-			if (draw_string_width(f, ui->font_size, t) <= max_w) {
+			if (draw_string_width(f, g_ui->font_size, t) <= max_w) {
 				ui_text(t, UI_ALIGN_LEFT, bg);
 				continue;
 			}
@@ -146,7 +146,7 @@ void tab_console_draw(ui_handle_t *htab) {
 			while (start < len) {
 				i32 end        = start;
 				i32 last_space = -1;
-				while (end < len && draw_sub_string_width(f, ui->font_size, t, start, end + 1) <= max_w) {
+				while (end < len && draw_sub_string_width(f, g_ui->font_size, t, start, end + 1) <= max_w) {
 					if (t[end] == ' ') {
 						last_space = end;
 					}
@@ -167,7 +167,7 @@ void tab_console_draw(ui_handle_t *htab) {
 			}
 		}
 
-		ui->ops->theme->ELEMENT_OFFSET = _element_offset;
+		g_ui->ops->theme->ELEMENT_OFFSET = _element_offset;
 
 		row = f32_array_create_from_raw(
 		    (f32[]){
@@ -178,10 +178,10 @@ void tab_console_draw(ui_handle_t *htab) {
 		ui_row(row);
 
 		ui_text_input(h_input, "", UI_ALIGN_LEFT, true, false);
-		bool press_run = h_input->changed && ui->is_return_down;
+		bool press_run = h_input->changed && g_ui->is_return_down;
 
-		ui_set_font(ui, _font);
-		ui->font_size = _font_size;
+		ui_set_font(g_ui, _font);
+		g_ui->font_size = _font_size;
 
 #if defined(IRON_WINDOWS) || defined(IRON_LINUX) || defined(IRON_MACOS)
 		tab_console_run_button(h_input, press_run);

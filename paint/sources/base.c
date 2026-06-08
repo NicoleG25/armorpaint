@@ -140,7 +140,7 @@ gpu_texture_t *base_get_drag_image() {
 		gc_unroot(base_drag_rect);
 		base_drag_rect = string_index_of(base_drag_file, ".") > 0 ? resource_tile50(icons, ICON_FILE) : resource_tile50(icons, ICON_FOLDER_FULL);
 		gc_root(base_drag_rect);
-		base_drag_tint = ui->ops->theme->HIGHLIGHT_COL;
+		base_drag_tint = g_ui->ops->theme->HIGHLIGHT_COL;
 		return icons;
 	}
 
@@ -160,7 +160,7 @@ gpu_texture_t *base_get_drag_image() {
 		gc_unroot(base_drag_rect);
 		base_drag_rect = base_drag_layer->show_panel ? folder_open : folder_closed;
 		gc_root(base_drag_rect);
-		base_drag_tint = base_darker(ui->ops->theme->LABEL_COL, 0x00202020);
+		base_drag_tint = base_darker(g_ui->ops->theme->LABEL_COL, 0x00202020);
 		return icons;
 	}
 	if (base_drag_layer != NULL && slot_layer_is_mask(base_drag_layer) && base_drag_layer->fill_material == NULL) {
@@ -447,7 +447,7 @@ void base_update(void *_) {
 	}
 
 	bool using_menu = ui_menu_show && mouse_y > ui_header_h;
-	base_ui_enabled = !ui_box_show && !using_menu && ui->combo_selected_handle == NULL;
+	base_ui_enabled = !ui_box_show && !using_menu && g_ui->combo_selected_handle == NULL;
 
 	if (ui_box_show) {
 		ui_box_render();

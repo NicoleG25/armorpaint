@@ -64,13 +64,13 @@ void tab_scripts_draw_edit() {
 	if (ui_menu_button(tr("Clear"), "", ICON_ERASE)) {
 		tab_scripts_set("");
 	}
-	ui->enabled = !string_equals(g_project->script_names->buffer[tab_scripts_selected], "main.c");
+	g_ui->enabled = !string_equals(g_project->script_names->buffer[tab_scripts_selected], "main.c");
 	if (ui_menu_button(tr("Delete"), "", ICON_DELETE)) {
 		array_splice((any_array_t *)g_project->script_datas, tab_scripts_selected, 1);
 		array_splice((any_array_t *)g_project->script_names, tab_scripts_selected, 1);
 		tab_scripts_selected = 0;
 	}
-	ui->enabled = true;
+	g_ui->enabled = true;
 	if (ui_menu_button(tr("Import"), "", ICON_IMPORT)) {
 		ui_files_show("c", false, false, &tab_scripts_draw_import);
 	}
@@ -145,11 +145,11 @@ void tab_scripts_draw(ui_handle_t *htab) {
 
 		ui_end_sticky();
 
-		draw_font_t *_font      = ui->ops->font;
-		i32          _font_size = ui->font_size;
+		draw_font_t *_font      = g_ui->ops->font;
+		i32          _font_size = g_ui->font_size;
 		draw_font_t *f          = data_get_font("font_mono.ttf");
-		ui_set_font(ui, f);
-		ui->font_size                = math_floor(15 * UI_SCALE());
+		ui_set_font(g_ui, f);
+		g_ui->font_size                = math_floor(15 * UI_SCALE());
 		ui_text_area_line_numbers    = true;
 		ui_text_area_scroll_past_end = true;
 		gc_unroot(ui_text_area_coloring);
@@ -166,8 +166,8 @@ void tab_scripts_draw(ui_handle_t *htab) {
 		ui_text_area_scroll_past_end = false;
 		gc_unroot(ui_text_area_coloring);
 		ui_text_area_coloring = NULL;
-		ui_set_font(ui, _font);
-		ui->font_size = _font_size;
+		ui_set_font(g_ui, _font);
+		g_ui->font_size = _font_size;
 	}
 }
 

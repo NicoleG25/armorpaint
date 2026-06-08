@@ -49,11 +49,11 @@ bool neural_node_button(ui_node_t *node, char *model) {
 	bool  found     = box_preferences_model_exists(file_name);
 	if (iron_exec_async_done == 0) {
 		if (node != neural_node_current) {
-			ui->enabled = false;
+			g_ui->enabled = false;
 		}
 		ui_button(tr("Running..."), UI_ALIGN_CENTER, "");
 		if (node != neural_node_current) {
-			ui->enabled = true;
+			g_ui->enabled = true;
 		}
 	}
 	else if (!found && ui_button(tr("Setup"), UI_ALIGN_CENTER, "")) {

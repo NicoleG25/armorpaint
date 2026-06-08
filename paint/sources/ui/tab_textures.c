@@ -158,7 +158,7 @@ void tab_textures_draw_import(char *path) {
 
 void tab_textures_draw(ui_handle_t *htab) {
 
-	if (ui_tab(htab, tr("Textures"), false, -1, false) && ui->_window_h > ui_statusbar_default_h * UI_SCALE()) {
+	if (ui_tab(htab, tr("Textures"), false, -1, false) && g_ui->_window_h > ui_statusbar_default_h * UI_SCALE()) {
 
 		ui_begin_sticky();
 
@@ -173,7 +173,7 @@ void tab_textures_draw(ui_handle_t *htab) {
 		if (ui_icon_button(tr("Import"), ICON_IMPORT, UI_ALIGN_CENTER)) {
 			ui_files_show(string_array_join(path_texture_formats(), ","), false, true, &tab_textures_draw_import);
 		}
-		if (ui->is_hovered) {
+		if (g_ui->is_hovered) {
 			ui_tooltip(string("%s (%s)", tr("Import texture file"), (char *)any_map_get(g_keymap, "file_import_assets")));
 		}
 		if (ui_icon_button(tr("2D View"), ICON_WINDOW, UI_ALIGN_CENTER)) {
@@ -185,7 +185,7 @@ void tab_textures_draw(ui_handle_t *htab) {
 		if (g_project->_->assets->length > 0) {
 
 			i32 slotw = math_floor(52 * UI_SCALE());
-			i32 num   = math_floor(ui->_window_w / (float)slotw);
+			i32 num   = math_floor(g_ui->_window_w / (float)slotw);
 			if (num == 0) {
 				return;
 			}
@@ -203,10 +203,10 @@ void tab_textures_draw(ui_handle_t *htab) {
 				}
 				ui_row(ar);
 
-				ui->_x += 2;
+				g_ui->_x += 2;
 				f32 off = g_config->show_asset_names ? UI_ELEMENT_OFFSET() * 10.0 : 6;
 				if (row > 0) {
-					ui->_y += off;
+					g_ui->_y += off;
 				}
 
 				for (i32 j = 0; j < num; ++j) {
@@ -226,24 +226,24 @@ void tab_textures_draw(ui_handle_t *htab) {
 						render_target_t *empty_rt = any_map_get(render_path_render_targets, "empty_black");
 						img                       = empty_rt->_image;
 					}
-					uix    = ui->_x;
-					uiy    = ui->_y;
+					uix    = g_ui->_x;
+					uiy    = g_ui->_y;
 					i32 sw = img->height < img->width ? img->height : 0;
 
 					if (base_drag_asset != NULL && tab_textures_drag_pos == i) {
-						ui_fill(-1, -2, 2, imgw_val + 4, ui->ops->theme->HIGHLIGHT_COL);
+						ui_fill(-1, -2, 2, imgw_val + 4, g_ui->ops->theme->HIGHLIGHT_COL);
 					}
 
 					ui_state_t _state = ui_sub_image(img, 0xffffffff, slotw, 0, 0, sw, sw);
 
 					if (_state == UI_STATE_HOVERED && base_drag_asset != NULL) {
-						tab_textures_drag_pos = (mouse_x > uix + ui->_window_x + imgw_val / 2.0) ? i + 1 : i;
+						tab_textures_drag_pos = (mouse_x > uix + g_ui->_window_x + imgw_val / 2.0) ? i + 1 : i;
 						drag_pos_set          = true;
 					}
 
-					if (_state == UI_STATE_STARTED && ui->input_y > ui->_window_y) {
-						base_drag_off_x = -(mouse_x - uix - ui->_window_x - 3);
-						base_drag_off_y = -(mouse_y - uiy - ui->_window_y + 1);
+					if (_state == UI_STATE_STARTED && g_ui->input_y > g_ui->_window_y) {
+						base_drag_off_x = -(mouse_x - uix - g_ui->_window_x - 3);
+						base_drag_off_y = -(mouse_y - uiy - g_ui->_window_y + 1);
 						gc_unroot(base_drag_asset);
 						base_drag_asset = asset;
 						gc_root(base_drag_asset);
@@ -256,23 +256,23 @@ void tab_textures_draw(ui_handle_t *htab) {
 					}
 
 					if (asset == g_context->texture) {
-						f32 _uix = ui->_x;
-						f32 _uiy = ui->_y;
-						ui->_x   = uix;
-						ui->_y   = uiy;
+						f32 _uix = g_ui->_x;
+						f32 _uiy = g_ui->_y;
+						g_ui->_x   = uix;
+						g_ui->_y   = uiy;
 						i32 off  = i % 2 == 1 ? 1 : 0;
 						i32 w    = 50;
-						ui_fill(0, 0, w + 3, 2, ui->ops->theme->HIGHLIGHT_COL);
-						ui_fill(0, w - off + 2, w + 3, 2 + off, ui->ops->theme->HIGHLIGHT_COL);
-						ui_fill(0, 0, 2, w + 3, ui->ops->theme->HIGHLIGHT_COL);
-						ui_fill(w + 2, 0, 2, w + 4, ui->ops->theme->HIGHLIGHT_COL);
-						ui->_x = _uix;
-						ui->_y = _uiy;
+						ui_fill(0, 0, w + 3, 2, g_ui->ops->theme->HIGHLIGHT_COL);
+						ui_fill(0, w - off + 2, w + 3, 2 + off, g_ui->ops->theme->HIGHLIGHT_COL);
+						ui_fill(0, 0, 2, w + 3, g_ui->ops->theme->HIGHLIGHT_COL);
+						ui_fill(w + 2, 0, 2, w + 4, g_ui->ops->theme->HIGHLIGHT_COL);
+						g_ui->_x = _uix;
+						g_ui->_y = _uiy;
 					}
 
 					bool is_packed = g_project->packed_assets != NULL && project_packed_asset_exists(g_project->packed_assets, asset->file);
 
-					if (ui->is_hovered) {
+					if (g_ui->is_hovered) {
 						ui_tooltip_image(img, 256);
 						char *tooltip = asset->name;
 						if (is_packed) {
@@ -286,7 +286,7 @@ void tab_textures_draw(ui_handle_t *htab) {
 						ui_tooltip(tooltip);
 					}
 
-					if (ui->is_hovered && ui->input_released_r) {
+					if (g_ui->is_hovered && g_ui->input_released_r) {
 						g_context->texture = asset;
 
 						gc_unroot(_tab_textures_draw_img);
@@ -301,24 +301,24 @@ void tab_textures_draw(ui_handle_t *htab) {
 					}
 
 					if (g_config->show_asset_names) {
-						ui->_x = uix;
-						ui->_y += slotw * 0.9;
+						g_ui->_x = uix;
+						g_ui->_y += slotw * 0.9;
 						ui_text(g_project->_->assets->buffer[i]->name, UI_ALIGN_CENTER, 0x00000000);
-						if (ui->is_hovered) {
+						if (g_ui->is_hovered) {
 							ui_tooltip(g_project->_->assets->buffer[i]->name);
 						}
-						ui->_y -= slotw * 0.9;
+						g_ui->_y -= slotw * 0.9;
 						if (i == g_project->_->assets->length - 1) {
-							ui->_y += j == num - 1 ? imgw : imgw + UI_ELEMENT_H() + UI_ELEMENT_OFFSET();
+							g_ui->_y += j == num - 1 ? imgw : imgw + UI_ELEMENT_H() + UI_ELEMENT_OFFSET();
 						}
 					}
 				}
 			}
 
 			if (base_drag_asset != NULL && tab_textures_drag_pos == g_project->_->assets->length) {
-				ui->_x = uix;
-				ui->_y = uiy;
-				ui_fill(imgw_val + 1, -2, 2, imgw_val + 4, ui->ops->theme->HIGHLIGHT_COL);
+				g_ui->_x = uix;
+				g_ui->_y = uiy;
+				ui_fill(imgw_val + 1, -2, 2, imgw_val + 4, g_ui->ops->theme->HIGHLIGHT_COL);
 			}
 
 			if (!drag_pos_set) {
@@ -328,26 +328,26 @@ void tab_textures_draw(ui_handle_t *htab) {
 		else {
 			gpu_texture_t *img = resource_get("icons.k");
 			rect_t        *r   = resource_tile50(img, ICON_DROP);
-			ui_sub_image(img, ui->ops->theme->BUTTON_COL, r->h, r->x, r->y, r->w, r->h);
-			if (ui->is_hovered) {
+			ui_sub_image(img, g_ui->ops->theme->BUTTON_COL, r->h, r->x, r->y, r->w, r->h);
+			if (g_ui->is_hovered) {
 				ui_tooltip(tr("Drag and drop files here"));
 			}
 		}
 
-		bool in_focus = ui->input_x > ui->_window_x && ui->input_x < ui->_window_x + ui->_window_w && ui->input_y > ui->_window_y &&
-		                ui->input_y < ui->_window_y + ui->_window_h;
-		if (in_focus && ui->is_delete_down && g_project->_->assets->length > 0 && array_index_of(g_project->_->assets, g_context->texture) >= 0) {
-			ui->is_delete_down = false;
+		bool in_focus = g_ui->input_x > g_ui->_window_x && g_ui->input_x < g_ui->_window_x + g_ui->_window_w && g_ui->input_y > g_ui->_window_y &&
+		                g_ui->input_y < g_ui->_window_y + g_ui->_window_h;
+		if (in_focus && g_ui->is_delete_down && g_project->_->assets->length > 0 && array_index_of(g_project->_->assets, g_context->texture) >= 0) {
+			g_ui->is_delete_down = false;
 			tab_textures_delete_texture(g_context->texture);
 		}
 		if (in_focus && g_project->_->assets->length > 0) {
 			i32 i = array_index_of(g_project->_->assets, g_context->texture);
-			if (ui->is_key_pressed && ui->key_code == KEY_CODE_UP) {
+			if (g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_UP) {
 				if (i > 0) {
 					g_context->texture = g_project->_->assets->buffer[i - 1];
 				}
 			}
-			if (ui->is_key_pressed && ui->key_code == KEY_CODE_DOWN) {
+			if (g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_DOWN) {
 				if (i < g_project->_->assets->length - 1) {
 					g_context->texture = g_project->_->assets->buffer[i + 1];
 				}

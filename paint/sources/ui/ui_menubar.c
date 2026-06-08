@@ -94,7 +94,7 @@ void ui_menubar_draw_tab_header() {
 
 	if (ui_window(ui_menubar_hwnd, panel_x, 0, ww, ui_header_h, false)) {
 		if (g_config->touch_ui) {
-			ui_fill(0, 0, ui->_window_w, ui->_window_h + 4, ui->ops->theme->SEPARATOR_COL);
+			ui_fill(0, 0, g_ui->_window_w, g_ui->_window_h + 4, g_ui->ops->theme->SEPARATOR_COL);
 		}
 		else {
 			bool a = ui_tab(ui_menubar_tab, tr("3D View"), false, -1, false);
@@ -269,11 +269,11 @@ void ui_menubar_draw_category_items() {
 			project_save_as(false);
 		}
 
-		ui->changed                    = false;
+		g_ui->changed                    = false;
 		ui_handle_t *h_pack_assets     = ui_handle(__ID__);
 		h_pack_assets->b               = g_context->pack_assets_on_save;
 		g_context->pack_assets_on_save = ui_check(h_pack_assets, tr("Pack Assets"), "");
-		if (ui->changed) {
+		if (g_ui->changed) {
 			ui_menu_keep_open = true;
 		}
 
@@ -346,7 +346,7 @@ void ui_menubar_draw_category_items() {
 			step_redo = string_copy(history_steps->buffer[history_steps->length - history_redos]->name);
 		}
 
-		ui->enabled          = history_undos > 0;
+		g_ui->enabled          = history_undos > 0;
 		any_map_t *vars_undo = any_map_create();
 		any_map_set(vars_undo, "step", step_undo);
 		if (ui_menu_button(vtr("Undo {step}", vars_undo), any_map_get(g_keymap, "edit_undo"), ICON_UNDO)) {
@@ -354,7 +354,7 @@ void ui_menubar_draw_category_items() {
 			ui_menu_keep_open = true;
 		}
 
-		ui->enabled          = history_redos > 0;
+		g_ui->enabled          = history_redos > 0;
 		any_map_t *vars_redo = any_map_create();
 		any_map_set(vars_redo, "step", step_redo);
 		if (ui_menu_button(vtr("Redo {step}", vars_redo), any_map_get(g_keymap, "edit_redo"), ICON_REDO)) {
@@ -362,7 +362,7 @@ void ui_menubar_draw_category_items() {
 			ui_menu_keep_open = true;
 		}
 
-		ui->enabled = true;
+		g_ui->enabled = true;
 		ui_menu_separator();
 
 		// History steps
@@ -374,9 +374,9 @@ void ui_menubar_draw_category_items() {
 				ui_radio(history_handle, i, history_steps->buffer[i]->name, "");
 			}
 			else {
-				ui->enabled = false;
+				g_ui->enabled = false;
 				ui_radio(history_handle, i, tr("History"), "");
-				ui->enabled = true;
+				g_ui->enabled = true;
 			}
 		}
 		if (history_handle->changed) {
@@ -401,7 +401,7 @@ void ui_menubar_draw_category_items() {
 	else if (ui_menubar_category == MENUBAR_CATEGORY_VIEWPORT) {
 		if (ui_menu_button(tr("Distract Free"), any_map_get(g_keymap, "view_distract_free"), ICON_NONE)) {
 			ui_base_toggle_distract_free();
-			ui->is_hovered = false;
+			g_ui->is_hovered = false;
 		}
 
 #if defined(IRON_WINDOWS) || defined(IRON_LINUX) || defined(IRON_MACOS) || defined(IRON_WASM)
@@ -410,7 +410,7 @@ void ui_menubar_draw_category_items() {
 		}
 #endif
 
-		ui->changed = false;
+		g_ui->changed = false;
 
 		world_data_t *p          = scene_world;
 		ui_handle_t  *env_handle = ui_handle(__ID__);
@@ -431,7 +431,7 @@ void ui_menubar_draw_category_items() {
 		}
 		ui_menu_align();
 		g_context->envmap_angle = ui_slider(enva_handle, tr("Environment Angle"), 0.0, 360.0, true, 1, true, UI_ALIGN_RIGHT, true) / 180.0 * math_pi();
-		if (ui->is_hovered) {
+		if (g_ui->is_hovered) {
 			any_map_t *vars = any_map_create();
 			any_map_set(vars, "shortcut", any_map_get(g_keymap, "rotate_envmap"));
 			ui_tooltip(vtr("{shortcut} and move mouse", vars));
@@ -518,7 +518,7 @@ void ui_menubar_draw_category_items() {
 			g_context->capturing_screenshot     = true;
 			ui_menubar_capture_screenshot_frame = 0;
 			sys_notify_on_update(&ui_menubar_capture_screenshot, NULL);
-			ui->changed = false; // Close menu
+			g_ui->changed = false; // Close menu
 		}
 
 		// if (g_config->experimental) {
@@ -529,21 +529,21 @@ void ui_menubar_draw_category_items() {
 
 		if (g_config->experimental && !viewport_recording && ui_menu_button(tr("Capture Video"), "", ICON_MOVIE)) {
 			viewport_capture_video_begin();
-			ui->changed = false; // Close menu
+			g_ui->changed = false; // Close menu
 		}
 		if (g_config->experimental && viewport_recording && ui_menu_button(tr("Stop Capture"), "", ICON_STOP)) {
 			viewport_capture_video_end();
-			ui->changed = false; // Close menu
+			g_ui->changed = false; // Close menu
 		}
 
 		if (g_config->experimental && ui_menu_button(tr("Run in Player"), "f5", ICON_PLAY)) {
 			base_run_in_player();
-			ui->changed = false; // Close menu
+			g_ui->changed = false; // Close menu
 		}
 
 		context_update_envmap();
 
-		if (ui->changed) {
+		if (g_ui->changed) {
 			ui_menu_keep_open = true;
 		}
 	}
@@ -622,7 +622,7 @@ void ui_menubar_draw_category_items() {
 				ui_menu_sub_end();
 			}
 
-			ui->changed = false;
+			g_ui->changed = false;
 
 			if (ui_menu_sub_button(ui_handle(__ID__), tr("Orbit"))) {
 				ui_menu_sub_begin(5);
@@ -699,7 +699,7 @@ void ui_menubar_draw_category_items() {
 		char *fly_tooltip = tr("Fly mode:\nHold the right mouse button and one of the following commands:\nmove mouse to rotate.\nw, up or scroll up to "
 		                       "move forward.\ns, down or scroll down to move backward.\na or left to move left.\nd or right to move right.\ne to move "
 		                       "up.\nq to move down.\nHold shift to move faster or alt to move slower.");
-		if (ui->is_hovered) {
+		if (g_ui->is_hovered) {
 			ui_tooltip(string("%s\n\n%s", orbit_and_rotate_tooltip, fly_tooltip));
 		}
 
@@ -720,7 +720,7 @@ void ui_menubar_draw_category_items() {
 			viewport_update_camera_type(g_context->camera_type);
 		}
 
-		if (ui->changed) {
+		if (g_ui->changed) {
 			ui_menu_keep_open = true;
 		}
 	}
@@ -851,11 +851,11 @@ void ui_menubar_show_menu(i32 category) {
 
 	i32 panel_x = ui_menu_panel_x();
 	i32 panel_y = ui_menu_panel_y();
-	ui_menu_x   = math_floor(ui->_x - ui->_w) + panel_x;
-	ui_menu_y   = math_floor(ui_MENUBAR_H(ui)) + panel_y + 2;
+	ui_menu_x   = math_floor(g_ui->_x - g_ui->_w) + panel_x;
+	ui_menu_y   = math_floor(ui_MENUBAR_H(g_ui)) + panel_y + 2;
 	if (g_config->touch_ui) {
 		i32 menu_w = math_floor(base_default_element_w * UI_SCALE() * 2.0);
-		ui_menu_x -= math_floor((menu_w - ui->_w) / 2.0) + math_floor(ui_header_h / 2.0);
+		ui_menu_x -= math_floor((menu_w - g_ui->_w) / 2.0) + math_floor(ui_header_h / 2.0);
 		ui_menu_x += math_floor(2 * UI_SCALE());
 		ui_menu_y -= math_floor(2 * UI_SCALE());
 		ui_menu_keep_open = true;
@@ -874,13 +874,13 @@ void ui_menubar_render_ui() {
 	if (ui_window(ui_menubar_menu_handle, panel_x, panel_y, ui_menubar_w, ui_header_h, false)) {
 
 		if (!base_view3d_show) {
-			ui->_x += 1;
+			g_ui->_x += 1;
 		}
 
 		ui_begin_menu();
 
 		if (g_config->touch_ui) {
-			ui->_w = item_w;
+			g_ui->_w = item_w;
 
 			if (ui_menubar_icon_button(ICON_MENU)) {
 				box_preferences_show();
@@ -897,21 +897,21 @@ void ui_menubar_render_ui() {
 			if (ui_menubar_icon_button(ICON_EXPORT)) {
 				box_export_show_textures();
 			}
-			i32 size = math_floor(ui->_w / (float)UI_SCALE());
+			i32 size = math_floor(g_ui->_w / (float)UI_SCALE());
 			if (ui_menu_show && ui_menubar_category == MENUBAR_CATEGORY_VIEWPORT) {
-				ui_fill(0, -6, size, size - 4, ui->ops->theme->HIGHLIGHT_COL);
+				ui_fill(0, -6, size, size - 4, g_ui->ops->theme->HIGHLIGHT_COL);
 			}
 			if (ui_menubar_icon_button(ICON_IMAGE)) {
 				ui_menubar_show_menu(MENUBAR_CATEGORY_VIEWPORT);
 			}
 			if (ui_menu_show && ui_menubar_category == MENUBAR_CATEGORY_MODE) {
-				ui_fill(0, -6, size, size - 4, ui->ops->theme->HIGHLIGHT_COL);
+				ui_fill(0, -6, size, size - 4, g_ui->ops->theme->HIGHLIGHT_COL);
 			}
 			if (ui_menubar_icon_button(ICON_SUN)) {
 				ui_menubar_show_menu(MENUBAR_CATEGORY_MODE);
 			}
 			if (ui_menu_show && ui_menubar_category == MENUBAR_CATEGORY_CAMERA) {
-				ui_fill(0, -6, size, size - 4, ui->ops->theme->HIGHLIGHT_COL);
+				ui_fill(0, -6, size, size - 4, g_ui->ops->theme->HIGHLIGHT_COL);
 			}
 			if (ui_menubar_icon_button(ICON_CAMERA)) {
 				ui_menubar_show_menu(MENUBAR_CATEGORY_CAMERA);
@@ -920,7 +920,7 @@ void ui_menubar_render_ui() {
 			// ui_menubar_show_menu(MENUBAR_CATEGORY_WORKSPACE);
 			// }
 			if (ui_menu_show && ui_menubar_category == MENUBAR_CATEGORY_HELP) {
-				ui_fill(0, -6, size, size - 4, ui->ops->theme->HIGHLIGHT_COL);
+				ui_fill(0, -6, size, size - 4, g_ui->ops->theme->HIGHLIGHT_COL);
 			}
 
 			bool full = true;
@@ -934,15 +934,15 @@ void ui_menubar_render_ui() {
 				ui_menubar_show_menu(MENUBAR_CATEGORY_HELP);
 			}
 
-			ui->enabled = history_undos > 0;
+			g_ui->enabled = history_undos > 0;
 			if (ui_menubar_icon_button(ICON_UNDO)) {
 				history_undo();
 			}
-			ui->enabled = history_redos > 0;
+			g_ui->enabled = history_redos > 0;
 			if (full && ui_menubar_icon_button(ICON_REDO)) {
 				history_redo();
 			}
-			ui->enabled = true;
+			g_ui->enabled = true;
 		}
 		else {
 			string_array_t *categories = any_array_create_from_raw(
@@ -958,15 +958,15 @@ void ui_menubar_render_ui() {
 			    7);
 
 			for (i32 i = 0; i < categories->length; ++i) {
-				if (ui_menubar_button(categories->buffer[i]) || (ui_menu_show && ui_menu_commands == ui_menubar_draw_category_items && ui->is_hovered)) {
+				if (ui_menubar_button(categories->buffer[i]) || (ui_menu_show && ui_menu_commands == ui_menubar_draw_category_items && g_ui->is_hovered)) {
 					ui_menubar_show_menu(i);
 				}
 			}
 		}
 
 		// Store real menubar w
-		if (ui_menubar_w < ui->_x + 10) {
-			ui_menubar_w               = math_floor(ui->_x + 10);
+		if (ui_menubar_w < g_ui->_x + 10) {
+			ui_menubar_w               = math_floor(g_ui->_x + 10);
 			ui_toolbar_handle->redraws = 2;
 		}
 		// Crop menubar if sidebar + nodes are overlapping
@@ -986,7 +986,7 @@ void ui_menubar_render_ui() {
 }
 
 bool ui_menubar_icon_button(i32 i) {
-	u32            col         = ui->ops->theme->WINDOW_BG_COL;
+	u32            col         = g_ui->ops->theme->WINDOW_BG_COL;
 	bool           light       = col > 0xff666666;
 	i32            icon_accent = light ? 0xff666666 : 0xffaaaaaa;
 	gpu_texture_t *img         = resource_get("icons.k");

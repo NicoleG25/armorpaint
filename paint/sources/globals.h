@@ -17,7 +17,7 @@ context_t *g_context;
 project_t *g_project;
 config_t  *g_config;
 any_map_t *g_keymap;
-ui_t      *ui;
+ui_t      *g_ui;
 
 any_map_t       *ui_children;
 any_map_t       *ui_nodes_custom_buttons;

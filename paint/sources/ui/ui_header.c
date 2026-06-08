@@ -27,12 +27,12 @@ void ui_header_render_ui() {
 	i32 nodesw = (ui_nodes_show || ui_view2d_show) ? g_config->layout->buffer[LAYOUT_SIZE_NODES_W] : 0;
 	i32 ww     = iron_window_width() - ui_toolbar_w(true) - g_config->layout->buffer[LAYOUT_SIZE_SIDEBAR_W] - nodesw;
 
-	if (ui->is_typing) {
+	if (g_ui->is_typing) {
 		ui_header_handle->redraws = 2;
 	}
 
 	if (ui_window(ui_header_handle, base_x(), ui_header_h, ww, ui_header_h, false)) {
-		ui->_y += 2;
+		g_ui->_y += 2;
 		ui_header_draw_tool_properties();
 	}
 }
@@ -89,7 +89,7 @@ void ui_header_particle_menu_draw() {
 		asim_set_gravity(g_context->particle_gravity_x, g_context->particle_gravity_y, g_context->particle_gravity_z);
 	}
 
-	if (ui->changed || ui->is_typing) {
+	if (g_ui->changed || g_ui->is_typing) {
 		ui_menu_keep_open = true;
 	}
 }
@@ -99,10 +99,10 @@ void ui_header_draw_tool_properties_layer_preview_dirty(void *_) {
 }
 
 void ui_header_draw_tool_properties_color_picker_normal() {
-	ui_fill(0, 0, ui->_w / (float)UI_SCALE(), ui->ops->theme->ELEMENT_H * 9, ui->ops->theme->SEPARATOR_COL);
-	ui->changed = false;
-	ui_color_wheel(_ui_header_draw_tool_properties_h, false, -1, 10 * ui->ops->theme->ELEMENT_H * UI_SCALE(), false, NULL, NULL);
-	if (ui->changed) {
+	ui_fill(0, 0, g_ui->_w / (float)UI_SCALE(), g_ui->ops->theme->ELEMENT_H * 9, g_ui->ops->theme->SEPARATOR_COL);
+	g_ui->changed = false;
+	ui_color_wheel(_ui_header_draw_tool_properties_h, false, -1, 10 * g_ui->ops->theme->ELEMENT_H * UI_SCALE(), false, NULL, NULL);
+	if (g_ui->changed) {
 		g_context->picked_color->normal = _ui_header_draw_tool_properties_h->color;
 		ui_header_handle->redraws       = 2;
 		ui_menu_keep_open               = true;
@@ -110,10 +110,10 @@ void ui_header_draw_tool_properties_color_picker_normal() {
 }
 
 void ui_header_draw_tool_properties_color_picker_base() {
-	ui_fill(0, 0, ui->_w / (float)UI_SCALE(), ui->ops->theme->ELEMENT_H * 9, ui->ops->theme->SEPARATOR_COL);
-	ui->changed = false;
-	ui_color_wheel(_ui_header_draw_tool_properties_h, false, -1, 10 * ui->ops->theme->ELEMENT_H * UI_SCALE(), false, NULL, NULL);
-	if (ui->changed) {
+	ui_fill(0, 0, g_ui->_w / (float)UI_SCALE(), g_ui->ops->theme->ELEMENT_H * 9, g_ui->ops->theme->SEPARATOR_COL);
+	g_ui->changed = false;
+	ui_color_wheel(_ui_header_draw_tool_properties_h, false, -1, 10 * g_ui->ops->theme->ELEMENT_H * UI_SCALE(), false, NULL, NULL);
+	if (g_ui->changed) {
 		g_context->picked_color->base = _ui_header_draw_tool_properties_h->color;
 		ui_header_handle->redraws     = 2;
 		ui_menu_keep_open             = true;
@@ -160,19 +160,19 @@ void ui_header_draw_tool_properties() {
 			render_target_t *rt = any_map_get(render_path_render_targets, "texpaint_colorid");
 			ui_image(rt->_image, 0xffffffff, 64);
 		}
-		ui->enabled = g_context->colorid_picked;
+		g_ui->enabled = g_context->colorid_picked;
 		if (ui_icon_button(tr("Clear"), ICON_ERASE, UI_ALIGN_CENTER)) {
 			g_context->colorid_picked  = false;
 			ui_toolbar_handle->redraws = 1;
 		}
-		ui->enabled = true;
+		g_ui->enabled = true;
 		ui_text(tr("Color ID Map"), UI_ALIGN_LEFT, 0x00000000);
 		if (g_project->_->assets->length > 0) {
 			ui_handle_t *colorid_handle = ui_handle(__ID__);
 			colorid_handle->i           = g_context->colorid;
 			g_context->colorid          = ui_combo(colorid_handle, base_combo_enum_texts("TEX_IMAGE"), tr("Color ID"), false, UI_ALIGN_LEFT, true);
-			if (colorid_handle == ui->combo_selected_handle) {
-				ui->combo_selected_images = base_combo_enum_images("TEX_IMAGE");
+			if (colorid_handle == g_ui->combo_selected_handle) {
+				g_ui->combo_selected_images = base_combo_enum_images("TEX_IMAGE");
 			}
 			if (colorid_handle->changed) {
 				g_context->ddirty          = 2;
@@ -180,14 +180,14 @@ void ui_header_draw_tool_properties() {
 				ui_toolbar_handle->redraws = 1;
 			}
 			ui_image(project_get_image(g_project->_->assets->buffer[g_context->colorid]), 0xffffffff, -1.0);
-			if (ui->is_hovered) {
+			if (g_ui->is_hovered) {
 				ui_tooltip_image(project_get_image(g_project->_->assets->buffer[g_context->colorid]), 256);
 			}
 		}
 		if (ui_icon_button(tr("Import"), ICON_FOLDER_OPEN, UI_ALIGN_CENTER)) {
 			ui_files_show(string_array_join(path_texture_formats(), ","), false, true, &ui_header_draw_tool_properties_import);
 		}
-		ui->enabled = g_context->colorid_picked;
+		g_ui->enabled = g_context->colorid_picked;
 		if (ui_icon_button(tr("To Mask"), ICON_MASK, UI_ALIGN_CENTER)) {
 			if (slot_layer_is_mask(g_context->layer)) {
 				context_set_layer(g_context->layer->parent);
@@ -196,7 +196,7 @@ void ui_header_draw_tool_properties() {
 			sys_notify_on_next_frame(&ui_header_draw_tool_properties_to_mask, m);
 			history_new_white_mask();
 		}
-		ui->enabled = true;
+		g_ui->enabled = true;
 
 		ui_handle_t *h_viewport_mask     = ui_handle(__ID__);
 		g_context->colorid_viewport_mask = ui_check(h_viewport_mask, tr("Viewport Mask"), "");
@@ -211,16 +211,16 @@ void ui_header_draw_tool_properties() {
 		h_color->color       = color_set_ab(h_color->color, 255);
 		ui_state_t state     = ui_text("", 0, h_color->color);
 		if (state == UI_STATE_STARTED) {
-			base_drag_off_x = -(mouse_x - ui->_x - ui->_window_x - 3);
-			base_drag_off_y = -(mouse_y - ui->_y - ui->_window_y + 1);
+			base_drag_off_x = -(mouse_x - g_ui->_x - g_ui->_window_x - 3);
+			base_drag_off_y = -(mouse_y - g_ui->_y - g_ui->_window_y + 1);
 			gc_unroot(base_drag_swatch);
 			base_drag_swatch = project_clone_swatch(g_context->picked_color);
 			gc_root(base_drag_swatch);
 		}
-		if (ui->is_hovered) {
+		if (g_ui->is_hovered) {
 			ui_tooltip(tr("Drag and drop picked color to swatches, materials, layers or to the node editor"));
 		}
-		if (ui->is_hovered && ui->input_released) {
+		if (g_ui->is_hovered && g_ui->input_released) {
 			gc_unroot(_ui_header_draw_tool_properties_h);
 			_ui_header_draw_tool_properties_h = h_color;
 			gc_root(_ui_header_draw_tool_properties_h);
@@ -232,26 +232,26 @@ void ui_header_draw_tool_properties() {
 			any_array_push(g_project->swatches, new_swatch);
 			ui_base_hwnds->buffer[2]->redraws = 1;
 		}
-		if (ui->is_hovered) {
+		if (g_ui->is_hovered) {
 			ui_tooltip(tr("Add picked color to swatches"));
 		}
 
 		if (g_config->workflow == WORKFLOW_PBR) {
 
-			i32 _w = ui->_w;
-			ui->_w /= 2;
+			i32 _w = g_ui->_w;
+			g_ui->_w /= 2;
 
 			ui_handle_t *h_normal = ui_handle(__ID__);
 			h_normal->color       = g_context->picked_color->normal;
 			ui_text("", 0, h_normal->color);
-			if (ui->is_hovered && ui->input_released) {
+			if (g_ui->is_hovered && g_ui->input_released) {
 				gc_unroot(_ui_header_draw_tool_properties_h);
 				_ui_header_draw_tool_properties_h = h_normal;
 				gc_root(_ui_header_draw_tool_properties_h);
 				ui_menu_draw(&ui_header_draw_tool_properties_color_picker_normal, -1, -1);
 			}
 			ui_text(tr("Normal"), UI_ALIGN_LEFT, 0x00000000);
-			ui->_w = _w;
+			g_ui->_w = _w;
 
 			ui_handle_t *hocc                  = ui_handle(__ID__);
 			hocc->f                            = g_context->picked_color->occlusion;
@@ -302,7 +302,7 @@ void ui_header_draw_tool_properties() {
 				brush_decal_mask_radius_handle->f           = g_context->brush_decal_mask_radius;
 				g_context->brush_decal_mask_radius =
 				    ui_slider(brush_decal_mask_radius_handle, tr("Radius"), 0.01, 2.0, true, 100.0, true, UI_ALIGN_RIGHT, true);
-				if (ui->is_hovered) {
+				if (g_ui->is_hovered) {
 					any_map_t *vars = any_map_create();
 					any_map_set(vars, "brush_radius", any_map_get(g_keymap, "brush_radius"));
 					any_map_set(vars, "brush_radius_decrease", any_map_get(g_keymap, "brush_radius_decrease"));
@@ -317,7 +317,7 @@ void ui_header_draw_tool_properties() {
 				ui_handle_t *brush_radius_handle = ui_handle(__ID__);
 				brush_radius_handle->f           = g_context->brush_radius;
 				g_context->brush_radius          = ui_slider(brush_radius_handle, tr("Radius"), 0.01, 2.0, true, 100.0, true, UI_ALIGN_RIGHT, true);
-				if (ui->is_hovered) {
+				if (g_ui->is_hovered) {
 					any_map_t *vars = any_map_create();
 					any_map_set(vars, "brush_radius", any_map_get(g_keymap, "brush_radius"));
 					any_map_set(vars, "brush_radius_decrease", any_map_get(g_keymap, "brush_radius_decrease"));
@@ -353,7 +353,7 @@ void ui_header_draw_tool_properties() {
 			ui_handle_t *brush_angle_handle = ui_handle(__ID__);
 			brush_angle_handle->f           = g_context->brush_angle;
 			g_context->brush_angle          = ui_slider(brush_angle_handle, tr("Angle"), 0.0, 360.0, true, 1, true, UI_ALIGN_RIGHT, true);
-			if (ui->is_hovered) {
+			if (g_ui->is_hovered) {
 				any_map_t *vars = any_map_create();
 				any_map_set(vars, "brush_angle", any_map_get(g_keymap, "brush_angle"));
 				ui_tooltip(vtr(
@@ -369,7 +369,7 @@ void ui_header_draw_tool_properties() {
 		ui_handle_t *brush_opacity_handle = ui_handle(__ID__);
 		brush_opacity_handle->f           = g_context->brush_opacity;
 		g_context->brush_opacity          = ui_slider(brush_opacity_handle, tr("Opacity"), 0.0, 1.0, true, 100.0, true, UI_ALIGN_RIGHT, true);
-		if (ui->is_hovered) {
+		if (g_ui->is_hovered) {
 			any_map_t *vars = any_map_create();
 			any_map_set(vars, "brush_opacity", any_map_get(g_keymap, "brush_opacity"));
 			ui_tooltip(vtr("Hold {brush_opacity} and move mouse to the left to decrease the opacity\nHold {brush_opacity} and move mouse to the right to "
@@ -433,12 +433,12 @@ void ui_header_draw_tool_properties() {
 		if (g_context->tool == TOOL_TYPE_TEXT) {
 			ui_handle_t *h = ui_handle(__ID__);
 			h->text        = string_copy(g_context->text_tool_text);
-			i32 w          = ui->_w;
-			if (ui->text_selected_handle == h || ui->submit_text_handle == h) {
-				ui->_w *= 3;
+			i32 w          = g_ui->_w;
+			if (g_ui->text_selected_handle == h || g_ui->submit_text_handle == h) {
+				g_ui->_w *= 3;
 			}
 			g_context->text_tool_text = string_copy(ui_text_input(h, "", UI_ALIGN_LEFT, true, true));
-			ui->_w                    = w;
+			g_ui->_w                    = w;
 			if (h->changed) {
 				gpu_texture_t *current = _draw_current;
 				draw_end();
@@ -495,13 +495,13 @@ void ui_header_draw_tool_properties() {
 			}
 		}
 		else {
-			i32  _w           = ui->_w;
+			i32  _w           = g_ui->_w;
 			f32  sc           = UI_SCALE();
 			bool touch_header = (g_config->touch_ui && g_config->layout->buffer[LAYOUT_SIZE_HEADER] == 1);
 			if (touch_header) {
-				ui->_x -= 4 * sc;
+				g_ui->_x -= 4 * sc;
 			}
-			ui->_w = math_floor((touch_header ? 54 : 60) * sc);
+			g_ui->_w = math_floor((touch_header ? 54 : 60) * sc);
 
 			ui_handle_t *xray_handle = ui_handle(__ID__);
 			xray_handle->b           = g_context->xray;
@@ -516,32 +516,32 @@ void ui_header_draw_tool_properties() {
 
 			if (g_config->layout->buffer[LAYOUT_SIZE_HEADER] == 1) {
 				if (g_config->touch_ui) {
-					ui->_w           = math_floor(19 * sc);
+					g_ui->_w           = math_floor(19 * sc);
 					g_context->sym_x = ui_check(sym_x_handle, "", "");
-					ui->_x -= 4 * sc;
+					g_ui->_x -= 4 * sc;
 					g_context->sym_y = ui_check(sym_y_handle, "", "");
-					ui->_x -= 4 * sc;
+					g_ui->_x -= 4 * sc;
 					g_context->sym_z = ui_check(sym_z_handle, "", "");
-					ui->_x -= 4 * sc;
-					ui->_w  = math_floor(40 * sc);
+					g_ui->_x -= 4 * sc;
+					g_ui->_w  = math_floor(40 * sc);
 					char *x = tr("X");
 					char *y = tr("Y");
 					char *z = tr("Z");
 					ui_text(string("%s%s%s", x, y, z), UI_ALIGN_LEFT, 0x00000000);
 				}
 				else {
-					ui->_w = math_floor(56 * sc);
+					g_ui->_w = math_floor(56 * sc);
 					ui_text(tr("Symmetry"), UI_ALIGN_LEFT, 0x00000000);
-					ui->_w           = math_floor(25 * sc);
+					g_ui->_w           = math_floor(25 * sc);
 					g_context->sym_x = ui_check(sym_x_handle, tr("X"), "");
 					g_context->sym_y = ui_check(sym_y_handle, tr("Y"), "");
 					g_context->sym_z = ui_check(sym_z_handle, tr("Z"), "");
 				}
-				ui->_w = _w;
+				g_ui->_w = _w;
 			}
 			else {
 				// Popup
-				ui->_w           = _w;
+				g_ui->_w           = _w;
 				g_context->sym_x = ui_check(sym_x_handle, string("%s %s", tr("Symmetry"), tr("X")), "");
 				g_context->sym_y = ui_check(sym_y_handle, string("%s %s", tr("Symmetry"), tr("Y")), "");
 				g_context->sym_z = ui_check(sym_z_handle, string("%s %s", tr("Symmetry"), tr("Z")), "");

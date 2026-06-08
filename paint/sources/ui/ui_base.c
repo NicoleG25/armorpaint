@@ -9,7 +9,7 @@ void ui_base_init_on_next_frame(void *_) {
 }
 
 void ui_base_view_top() {
-	bool is_typing = ui->is_typing;
+	bool is_typing = g_ui->is_typing;
 
 	if (context_in_paint_area() && !is_typing) {
 		if (mouse_view_x() < sys_w()) {
@@ -49,7 +49,7 @@ void ui_base_on_border_hover(ui_handle_t *handle, i32 side) {
 
 	side == BORDER_SIDE_LEFT || side == BORDER_SIDE_RIGHT ? iron_mouse_set_cursor(IRON_CURSOR_SIZEWE) : iron_mouse_set_cursor(IRON_CURSOR_SIZENS);
 
-	if (ui->input_started) {
+	if (g_ui->input_started) {
 		ui_base_border_started = side;
 		gc_unroot(ui_base_border_handle);
 		ui_base_border_handle = handle;
@@ -135,8 +135,8 @@ void ui_base_init() {
         ui_options_t,
         {.theme = base_theme, .font = base_font, .scale_factor = scale, .color_wheel = base_color_wheel, .black_white_gradient = base_color_wheel_gradient});
 
-	ui = ui_create(ops);
-	gc_root(ui);
+	g_ui = ui_create(ops);
+	gc_root(g_ui);
 
 	ui_on_border_hover = ui_base_on_border_hover;
 	gc_root(ui_on_border_hover);
@@ -184,15 +184,15 @@ void ui_base_menu_draw_viewport_mode() {
 		ui_radio(mode_handle, i, modes->buffer[i], shortcuts->buffer[i]);
 	}
 
-	i32 index = string_array_index_of(shortcuts, keyboard_key_code(ui->key_code));
-	if (ui->is_key_pressed && index != -1) {
+	i32 index = string_array_index_of(shortcuts, keyboard_key_code(g_ui->key_code));
+	if (g_ui->is_key_pressed && index != -1) {
 		mode_handle->i = index;
-		ui->changed    = true;
+		g_ui->changed    = true;
 		context_set_viewport_mode(mode_handle->i);
 	}
 	else if (mode_handle->changed) {
 		context_set_viewport_mode(mode_handle->i);
-		ui->changed = true;
+		g_ui->changed = true;
 	}
 }
 
@@ -268,8 +268,8 @@ void ui_base_update(void *_) {
 	util_cursor_render(_);
 
 	if (!ui_base_show && g_config->touch_ui) {
-		ui->input_enabled = true;
-		ui_begin(ui);
+		g_ui->input_enabled = true;
+		ui_begin(g_ui);
 		if (ui_window(ui_handle(__ID__), 0, 0, 150, math_floor(UI_ELEMENT_H() + UI_ELEMENT_OFFSET() + 1), false)) {
 			if (ui_button(tr("Close"), UI_ALIGN_CENTER, "")) {
 				ui_base_toggle_distract_free();
@@ -282,7 +282,7 @@ void ui_base_update(void *_) {
 		return;
 	}
 
-	ui->input_enabled = base_ui_enabled;
+	g_ui->input_enabled = base_ui_enabled;
 
 	// Remember last tab positions
 	for (i32 i = 0; i < ui_base_htabs->length; ++i) {
@@ -306,14 +306,14 @@ void ui_base_update(void *_) {
 		draw_end();
 	}
 
-	ui_begin(ui);
+	ui_begin(g_ui);
 	ui_toolbar_render_ui();
 	ui_menubar_render_ui();
 	ui_header_render_ui();
 	ui_statusbar_render_ui();
 	ui_sidebar_render_ui();
 	ui_end();
-	ui->input_enabled = true;
+	g_ui->input_enabled = true;
 }
 
 ui_handle_t_array_t *ui_base_init_hwnds() {

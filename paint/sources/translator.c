@@ -70,7 +70,7 @@ void translator_init_font_on_next_frame(void *_) {
 	base_theme->FONT_SIZE = math_floor(base_default_font_size * font_scale);
 	base_theme->ELEMENT_W = math_floor(base_default_element_w * (!string_equals(g_config->locale, "en") ? 1.4 : 1.0));
 
-	ui_set_font(ui, f);
+	ui_set_font(g_ui, f);
 	ui_set_scale(UI_SCALE());
 }
 

@@ -146,7 +146,7 @@ void brush_output_node_run() {
 		return;
 	}
 
-	if (ui->is_hovered || base_is_dragging || base_is_resizing || ui->is_scrolling || ui->combo_selected_handle != NULL) {
+	if (g_ui->is_hovered || base_is_dragging || base_is_resizing || g_ui->is_scrolling || g_ui->combo_selected_handle != NULL) {
 		return;
 	}
 

@@ -34,7 +34,7 @@ void box_preferences_interface_tab_reset_layout_menu() {
 }
 
 void box_preferences_interface_tab_restore_menu_import_on_next_frame(config_t *raw) {
-	ui->ops->theme->ELEMENT_H = base_default_element_h;
+	g_ui->ops->theme->ELEMENT_H = base_default_element_h;
 	config_import_from(raw);
 	box_preferences_set_scale();
 	make_material_parse_mesh_material();
@@ -48,7 +48,7 @@ void box_preferences_interface_tab_restore_menu_import(char *path) {
 }
 
 void box_preferences_interface_tab_restore_menu_confirm(void *_) {
-	ui->ops->theme->ELEMENT_H = base_default_element_h;
+	g_ui->ops->theme->ELEMENT_H = base_default_element_h;
 	config_restore();
 	box_preferences_set_scale();
 	if (g_config->plugins != NULL) {
@@ -63,7 +63,7 @@ void box_preferences_interface_tab_restore_menu_confirm(void *_) {
 	box_preferences_files_keymap = NULL;
 	make_material_parse_mesh_material();
 	make_material_parse_paint_material(true);
-	ui_base_set_viewport_col(ui->ops->theme->VIEWPORT_COL);
+	ui_base_set_viewport_col(g_ui->ops->theme->VIEWPORT_COL);
 }
 
 void box_preferences_interface_tab_restore_menu() {
@@ -97,7 +97,7 @@ void box_preferences_interface_tab() {
 		h_scale->f = g_config->window_scale;
 	}
 	ui_slider(h_scale, tr("UI Scale"), 1.0, 4.0, true, 10, true, UI_ALIGN_RIGHT, true);
-	if (g_context->hscale_was_changed && !ui->input_down) {
+	if (g_context->hscale_was_changed && !g_ui->input_down) {
 		g_context->hscale_was_changed = false;
 		if (h_scale->f == 0.0) {
 			h_scale->f = 1.0;
@@ -127,30 +127,30 @@ void box_preferences_interface_tab() {
 		}
 		ui_nodes_hwnd->redraws = 2;
 	}
-	if (ui->is_hovered) {
+	if (g_ui->is_hovered) {
 		ui_tooltip(tr("Show node preview on each node by default"));
 	}
 
 	ui_handle_t *h_wrap_mouse = ui_handle(__ID__);
 	h_wrap_mouse->b           = g_config->wrap_mouse;
 	g_config->wrap_mouse      = ui_check(h_wrap_mouse, tr("Wrap Mouse"), "");
-	if (ui->is_hovered) {
+	if (g_ui->is_hovered) {
 		ui_tooltip(tr("Wrap mouse around view boundaries during camera control"));
 	}
 
-	ui->changed                     = false;
+	g_ui->changed                     = false;
 	ui_handle_t *h_show_asset_names = ui_handle(__ID__);
 	h_show_asset_names->b           = g_config->show_asset_names;
 	g_config->show_asset_names      = ui_check(h_show_asset_names, tr("Show Asset Names"), "");
-	if (ui->changed) {
+	if (g_ui->changed) {
 		base_redraw_ui();
 	}
 
-	ui->changed             = false;
+	g_ui->changed             = false;
 	ui_handle_t *h_touch_ui = ui_handle(__ID__);
 	h_touch_ui->b           = g_config->touch_ui;
 	g_config->touch_ui      = ui_check(h_touch_ui, tr("Touch UI"), "");
-	if (ui->changed) {
+	if (g_ui->changed) {
 		ui_touch_control = g_config->touch_ui;
 		config_load_theme(g_config->theme, true);
 		box_preferences_set_scale();
@@ -190,11 +190,11 @@ void box_preferences_interface_tab() {
 //    ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚══════╝
 
 void box_preferences_theme_tab_theme_field_menu() {
-	ui->changed                       = false;
-	i32  color                        = ui_color_wheel(_box_preferences_h, false, -1, 11 * ui->ops->theme->ELEMENT_H * UI_SCALE(), true, NULL, NULL);
+	g_ui->changed                       = false;
+	i32  color                        = ui_color_wheel(_box_preferences_h, false, -1, 11 * g_ui->ops->theme->ELEMENT_H * UI_SCALE(), true, NULL, NULL);
 	u32 *u32_theme                    = base_theme;
 	*(u32_theme + _box_preferences_i) = color;
-	if (ui->changed) {
+	if (g_ui->changed) {
 		ui_menu_keep_open = true;
 	}
 }
@@ -229,7 +229,7 @@ void box_preferences_theme_tab_new_box() {
 		h->text = "new_theme";
 	}
 	char *theme_name = ui_text_input(h, tr("Name"), UI_ALIGN_LEFT, true, false);
-	if (ui_icon_button(tr("OK"), ICON_CHECK, UI_ALIGN_CENTER) || ui->is_return_down) {
+	if (ui_icon_button(tr("OK"), ICON_CHECK, UI_ALIGN_CENTER) || g_ui->is_return_down) {
 		char *template = box_preferences_theme_to_json(base_theme);
 		if (!ends_with(theme_name, ".json")) {
 			theme_name = string("%s.json", theme_name);
@@ -280,7 +280,7 @@ void box_preferences_theme_tab() {
 		ui_row(f32_array_create_from_raw((f32[]){0.85, 0.15}, 2));
 	}
 	box_preferences_theme_hsearch->text = string_copy(ui_text_input(box_preferences_theme_hsearch, tr("Search"), UI_ALIGN_LEFT, true, true));
-	if (!string_equals(box_preferences_theme_hsearch->text, "") && (ui_button(tr("X"), UI_ALIGN_CENTER, "") || ui->is_escape_down)) {
+	if (!string_equals(box_preferences_theme_hsearch->text, "") && (ui_button(tr("X"), UI_ALIGN_CENTER, "") || g_ui->is_escape_down)) {
 		box_preferences_theme_hsearch->text = "";
 	}
 
@@ -290,7 +290,7 @@ void box_preferences_theme_tab() {
 	char        *theme_search = to_lower_case(box_preferences_theme_hsearch->text);
 	ui_handle_t *h_list       = ui_handle(__ID__);
 	u32         *u32_theme    = base_theme;
-	ui->input_enabled         = !ui_menu_show;
+	g_ui->input_enabled         = !ui_menu_show;
 	for (i32 i = 0; i < ui_theme_keys_count; ++i) {
 		char *key = ui_theme_keys[i];
 		if (!string_equals(theme_search, "") && string_index_of(to_lower_case(key), theme_search) == -1) {
@@ -309,7 +309,7 @@ void box_preferences_theme_tab() {
 			    2);
 			ui_row(row);
 			ui_text("", 0, val);
-			if (ui->is_hovered && ui->input_released) {
+			if (g_ui->is_hovered && g_ui->input_released) {
 				h->color = val;
 				gc_unroot(_box_preferences_h);
 				_box_preferences_h = h;
@@ -323,7 +323,7 @@ void box_preferences_theme_tab() {
 			}
 		}
 
-		ui->changed = false;
+		g_ui->changed = false;
 
 		if (string_equals(key, "FILL_WINDOW_BG") || string_equals(key, "FILL_BUTTON_BG") || string_equals(key, "FULL_TABS") ||
 		    string_equals(key, "ROUND_CORNERS") || string_equals(key, "SHADOWS")) {
@@ -352,12 +352,12 @@ void box_preferences_theme_tab() {
 				*(u32_theme + i) = parse_int(h->text);
 			}
 		}
-		if (ui->changed) {
-			ui->elements_baked = false;
-			ui->font_size      = ui->ops->theme->FONT_SIZE;
+		if (g_ui->changed) {
+			g_ui->elements_baked = false;
+			g_ui->font_size      = g_ui->ops->theme->FONT_SIZE;
 		}
 	}
-	ui->input_enabled = true;
+	g_ui->input_enabled = true;
 }
 
 // ██╗   ██╗███████╗ █████╗  ██████╗ ███████╗
@@ -397,7 +397,7 @@ void box_preferences_usage_tab() {
 	ui_handle_t *h_dilate_radius = ui_handle(__ID__);
 	h_dilate_radius->f           = g_config->dilate_radius;
 	g_config->dilate_radius      = ui_slider(h_dilate_radius, tr("Dilate Radius"), 0.0, 16.0, true, 1, true, UI_ALIGN_RIGHT, true);
-	if (ui->is_hovered) {
+	if (g_ui->is_hovered) {
 		ui_tooltip(tr("Dilate painted textures to prevent seams"));
 	}
 
@@ -425,14 +425,14 @@ void box_preferences_usage_tab() {
 	ui_handle_t *h_material_live = ui_handle(__ID__);
 	h_material_live->b           = g_config->material_live;
 	g_config->material_live      = ui_check(h_material_live, tr("Live Material Preview"), "");
-	if (ui->is_hovered) {
+	if (g_ui->is_hovered) {
 		ui_tooltip(tr("Instantly update material preview on node change"));
 	}
 
 	ui_handle_t *h_brush_live = ui_handle(__ID__);
 	h_brush_live->b           = g_config->brush_live;
 	g_config->brush_live      = ui_check(h_brush_live, tr("Live Brush Preview"), "");
-	if (ui->is_hovered) {
+	if (g_ui->is_hovered) {
 		ui_tooltip(tr("Draw live brush preview in viewport"));
 	}
 	if (h_brush_live->changed) {
@@ -456,7 +456,7 @@ void box_preferences_usage_tab() {
 	}
 
 	if (!g_config->brush_angle_reject) {
-		ui->enabled = false;
+		g_ui->enabled = false;
 	}
 
 	ui_handle_t *h_angle_dot          = ui_handle(__ID__);
@@ -466,7 +466,7 @@ void box_preferences_usage_tab() {
 		make_material_parse_paint_material(true);
 	}
 
-	ui->enabled = true;
+	g_ui->enabled = true;
 
 	ui_handle_t *h_alpha_discard  = ui_handle(__ID__);
 	h_alpha_discard->f            = g_config->brush_alpha_discard;
@@ -487,7 +487,7 @@ void box_preferences_usage_tab() {
 	ui_handle_t *h_view2d_grid_cell = ui_handle(__ID__);
 	h_view2d_grid_cell->f           = g_config->view2d_grid_cell;
 	g_config->view2d_grid_cell      = ui_slider(h_view2d_grid_cell, tr("Grid Cell"), 1.0, 256.0, true, 1, true, UI_ALIGN_RIGHT, true);
-	if (ui->is_hovered) {
+	if (g_ui->is_hovered) {
 		ui_tooltip(tr("Cell size in pixels"));
 	}
 	if (h_view2d_grid_cell->changed) {
@@ -782,7 +782,7 @@ void box_preferences_keymap_tab_new_box() {
 		h->text = "new_keymap";
 	}
 	char *keymap_name = ui_text_input(h, tr("Name"), UI_ALIGN_LEFT, true, false);
-	if (ui_icon_button(tr("OK"), ICON_CHECK, UI_ALIGN_CENTER) || ui->is_return_down) {
+	if (ui_icon_button(tr("OK"), ICON_CHECK, UI_ALIGN_CENTER) || g_ui->is_return_down) {
 		char *template = keymap_to_json(keymap_get_default());
 		if (!ends_with(keymap_name, ".json")) {
 			keymap_name = string("%s.json", keymap_name);
@@ -839,7 +839,7 @@ void box_preferences_model_panel(neural_node_model_t *m) {
 		bool  found     = box_preferences_model_exists(file_name);
 
 		if (neural_node_downloading > 0) {
-			ui->enabled = false;
+			g_ui->enabled = false;
 
 			u64   u                       = iron_net_bytes_downloaded;
 			i32   i                       = (u / 1000000000.0) * 100;
@@ -849,16 +849,16 @@ void box_preferences_model_panel(neural_node_model_t *m) {
 			box_preferences_htab->redraws = 2;
 			iron_delay_idle_sleep();
 
-			i32 _BUTTON_COL            = ui->ops->theme->BUTTON_COL;
-			ui->ops->theme->BUTTON_COL = ui->ops->theme->HIGHLIGHT_COL;
+			i32 _BUTTON_COL            = g_ui->ops->theme->BUTTON_COL;
+			g_ui->ops->theme->BUTTON_COL = g_ui->ops->theme->HIGHLIGHT_COL;
 
 			ui_handle_t *h = ui_handle(__ID__);
 			h->f           = f / (float)parse_float(m->size);
 			ui_slider(h, string("%s / %s", downloaded, m->size), 0.0, 1.0, true, 100, false, UI_ALIGN_CENTER, true);
 
-			ui->ops->theme->BUTTON_COL = _BUTTON_COL;
+			g_ui->ops->theme->BUTTON_COL = _BUTTON_COL;
 
-			ui->enabled = true;
+			g_ui->enabled = true;
 		}
 		else if (!found && ui_icon_button(string("%s (%s)", tr("Download"), m->size), ICON_ARROW_DOWN, UI_ALIGN_CENTER)) {
 			neural_node_download_models(m->urls);
@@ -895,7 +895,7 @@ void box_preferences_neural_tab() {
 	    2);
 #endif
 	g_config->neural_backend = ui_combo(h_inference, inference_combo, tr("Inference Backend"), true, UI_ALIGN_LEFT, true);
-	if (ui->is_hovered) {
+	if (g_ui->is_hovered) {
 		ui_tooltip(tr("Backend for neural node processing"));
 	}
 
@@ -975,7 +975,7 @@ void box_preferences_keymap_tab() {
 	ui_separator(8, false);
 
 	i32 index            = 0;
-	ui->changed          = false;
+	g_ui->changed          = false;
 	string_array_t *keys = map_keys(g_keymap);
 	array_sort(keys, NULL);
 	char *search = to_lower_case(box_preferences_keymap_hsearch->text);
@@ -990,7 +990,7 @@ void box_preferences_keymap_tab() {
 		char *text     = ui_text_input(h, key, UI_ALIGN_LEFT, true, false);
 		any_map_set(g_keymap, key, text);
 	}
-	if (ui->changed) {
+	if (g_ui->changed) {
 		config_apply();
 		keymap_save();
 	}
@@ -1048,7 +1048,7 @@ void box_preferences_plugins_tab_new_box() {
 		h->text = "new_plugin";
 	}
 	char *plugin_name = ui_text_input(h, tr("Name"), UI_ALIGN_LEFT, true, false);
-	if (ui_icon_button(tr("OK"), ICON_CHECK, UI_ALIGN_CENTER) || ui->is_return_down) {
+	if (ui_icon_button(tr("OK"), ICON_CHECK, UI_ALIGN_CENTER) || g_ui->is_return_down) {
 		char *template = "\
 ui_handle_t *h1;\n\
 void on_ui() {\n\
@@ -1099,7 +1099,7 @@ void box_preferences_plugins_tab() {
 		ui_row(f32_array_create_from_raw((f32[]){0.85, 0.15}, 2));
 	}
 	box_preferences_plugins_hsearch->text = string_copy(ui_text_input(box_preferences_plugins_hsearch, tr("Search"), UI_ALIGN_LEFT, true, true));
-	if (!string_equals(box_preferences_plugins_hsearch->text, "") && (ui_button(tr("X"), UI_ALIGN_CENTER, "") || ui->is_escape_down)) {
+	if (!string_equals(box_preferences_plugins_hsearch->text, "") && (ui_button(tr("X"), UI_ALIGN_CENTER, "") || g_ui->is_escape_down)) {
 		box_preferences_plugins_hsearch->text = "";
 	}
 
@@ -1131,7 +1131,7 @@ void box_preferences_plugins_tab() {
 			h->b ? config_enable_plugin(f) : config_disable_plugin(f);
 			base_redraw_ui();
 		}
-		if (ui->is_hovered && ui->input_released_r) {
+		if (g_ui->is_hovered && g_ui->input_released_r) {
 			gc_unroot(_box_preferences_f);
 			_box_preferences_f = string_copy(f);
 			gc_root(_box_preferences_f);

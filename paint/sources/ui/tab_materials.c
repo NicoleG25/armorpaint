@@ -8,7 +8,7 @@ void tab_materials_button_nodes() {
 	if (ui_button(tr("Nodes"), UI_ALIGN_CENTER, "")) {
 		ui_base_show_material_nodes();
 	}
-	else if (ui->is_hovered) {
+	else if (g_ui->is_hovered) {
 		ui_tooltip(string("%s (%s)", tr("Show Node Editor"), (char *)any_map_get(g_keymap, "toggle_node_editor")));
 	}
 }
@@ -176,7 +176,7 @@ void tab_materials_draw_slots_menu() {
 
 void tab_materials_draw_slots(bool mini) {
 	i32 slotw = math_floor(51 * UI_SCALE() + g_config->window_scale * 2);
-	i32 num   = math_floor(ui->_window_w / (float)slotw);
+	i32 num   = math_floor(g_ui->_window_w / (float)slotw);
 	if (num == 0) {
 		return;
 	}
@@ -194,10 +194,10 @@ void tab_materials_draw_slots(bool mini) {
 		}
 		ui_row(ar);
 
-		ui->_x += 2;
+		g_ui->_x += 2;
 		f32 off = g_config->show_asset_names ? UI_ELEMENT_OFFSET() * 10.0 : 6;
 		if (row > 0) {
-			ui->_y += off;
+			g_ui->_y += off;
 		}
 
 		for (i32 j = 0; j < num; ++j) {
@@ -216,61 +216,61 @@ void tab_materials_draw_slots(bool mini) {
 			// Highligh selected
 			if (g_context->material == g_project->_->materials->buffer[i]) {
 				if (mini) {
-					f32 w = ui->_w / (float)UI_SCALE();
-					ui_rect(0, -2, w - 2, w - 4, ui->ops->theme->HIGHLIGHT_COL, 3);
+					f32 w = g_ui->_w / (float)UI_SCALE();
+					ui_rect(0, -2, w - 2, w - 4, g_ui->ops->theme->HIGHLIGHT_COL, 3);
 				}
 				else {
 					i32 off = row % 2 == 1 ? 1 : 0;
 					i32 w   = 50 + math_floor(g_config->window_scale * 2);
-					ui_fill(-1, -2, w + 3, 2, ui->ops->theme->HIGHLIGHT_COL);
-					ui_fill(-1, w - off, w + 3, 2 + off, ui->ops->theme->HIGHLIGHT_COL);
-					ui_fill(-1, -2, 2, w + 3, ui->ops->theme->HIGHLIGHT_COL);
-					ui_fill(w + 1, -2, 2, w + 4, ui->ops->theme->HIGHLIGHT_COL);
+					ui_fill(-1, -2, w + 3, 2, g_ui->ops->theme->HIGHLIGHT_COL);
+					ui_fill(-1, w - off, w + 3, 2 + off, g_ui->ops->theme->HIGHLIGHT_COL);
+					ui_fill(-1, -2, 2, w + 3, g_ui->ops->theme->HIGHLIGHT_COL);
+					ui_fill(w + 1, -2, 2, w + 4, g_ui->ops->theme->HIGHLIGHT_COL);
 				}
 			}
 
 			// Draw material icon
-			uix      = ui->_x;
-			uiy      = ui->_y;
+			uix      = g_ui->_x;
+			uiy      = g_ui->_y;
 			i32 tile = UI_SCALE() > 1 ? 100 : 50;
 			f32 imgh = mini ? ui_sidebar_default_w_mini * 0.85 * UI_SCALE() : 50 * UI_SCALE();
 
 			if (base_drag_material != NULL && tab_materials_drag_pos == i) {
-				ui_fill(-1, -2, 2, imgw_val + 4, ui->ops->theme->HIGHLIGHT_COL);
+				ui_fill(-1, -2, 2, imgw_val + 4, g_ui->ops->theme->HIGHLIGHT_COL);
 			}
 
 			ui_state_t state = g_project->_->materials->buffer[i]->preview_ready ? ui_image(img, 0xffffffff, imgh)
 			                                                               : ui_sub_image(resource_get("icons.k"), 0xffffffff, -1.0, tile, tile, tile, tile);
 
 			if (state == UI_STATE_HOVERED && base_drag_material != NULL) {
-				tab_materials_drag_pos = (mouse_x > uix + ui->_window_x + imgw_val / 2.0) ? i + 1 : i;
+				tab_materials_drag_pos = (mouse_x > uix + g_ui->_window_x + imgw_val / 2.0) ? i + 1 : i;
 				drag_pos_set           = true;
 			}
 
 			// Draw material numbers when selecting a material via keyboard shortcut
-			bool is_typing = ui->is_typing;
+			bool is_typing = g_ui->is_typing;
 			if (!is_typing) {
 				if (i < 9 && operator_shortcut(any_map_get(g_keymap, "select_material"), SHORTCUT_TYPE_DOWN)) {
 					char *number = i32_to_string(i + 1);
-					i32   width  = draw_string_width(ui->ops->font, ui->font_size, number) + 10;
-					i32   height = draw_font_height(ui->ops->font, ui->font_size);
-					draw_set_color(ui->ops->theme->TEXT_COL);
+					i32   width  = draw_string_width(g_ui->ops->font, g_ui->font_size, number) + 10;
+					i32   height = draw_font_height(g_ui->ops->font, g_ui->font_size);
+					draw_set_color(g_ui->ops->theme->TEXT_COL);
 					draw_filled_rect(uix, uiy, width, height);
-					draw_set_color(ui->ops->theme->BUTTON_COL);
+					draw_set_color(g_ui->ops->theme->BUTTON_COL);
 					draw_string(number, uix + 5, uiy);
 				}
 			}
 
 			// Select material
-			if (state == UI_STATE_STARTED && ui->input_y > ui->_window_y) {
+			if (state == UI_STATE_STARTED && g_ui->input_y > g_ui->_window_y) {
 				if (g_context->material != g_project->_->materials->buffer[i]) {
 					context_select_material(i);
 					if (g_context->tool == TOOL_TYPE_MATERIAL) {
 						sys_notify_on_next_frame(&tab_materials_draw_slots_update_fill_layers, NULL);
 					}
 				}
-				base_drag_off_x = -(mouse_x - uix - ui->_window_x - 3);
-				base_drag_off_y = -(mouse_y - uiy - ui->_window_y + 1);
+				base_drag_off_x = -(mouse_x - uix - g_ui->_window_x - 3);
+				base_drag_off_y = -(mouse_y - uiy - g_ui->_window_y + 1);
 				gc_unroot(base_drag_material);
 				base_drag_material = g_context->material;
 				gc_root(base_drag_material);
@@ -285,12 +285,12 @@ void tab_materials_draw_slots(bool mini) {
 			}
 
 			// Context menu
-			if (ui->is_hovered && ui->input_released_r) {
+			if (g_ui->is_hovered && g_ui->input_released_r) {
 				context_select_material(i);
 				_tab_materials_draw_slots = i;
 				ui_menu_draw(&tab_materials_draw_slots_menu, -1, -1);
 			}
-			if (ui->is_hovered) {
+			if (g_ui->is_hovered) {
 				ui_tooltip_image(img_full, 0);
 				if (i < 9) {
 					i32 i1 = i + 1;
@@ -301,10 +301,10 @@ void tab_materials_draw_slots(bool mini) {
 				}
 			}
 			if (g_config->show_asset_names) {
-				ui->_x = uix;
-				ui->_y += slotw * 0.9;
+				g_ui->_x = uix;
+				g_ui->_y += slotw * 0.9;
 				ui_text(g_project->_->materials->buffer[i]->canvas->name, UI_ALIGN_CENTER, 0x00000000);
-				if (ui->is_hovered) {
+				if (g_ui->is_hovered) {
 					if (i < 9) {
 						i32 i1 = i + 1;
 						ui_tooltip(
@@ -314,44 +314,44 @@ void tab_materials_draw_slots(bool mini) {
 						ui_tooltip(g_project->_->materials->buffer[i]->canvas->name);
 					}
 				}
-				ui->_y -= slotw * 0.9;
+				g_ui->_y -= slotw * 0.9;
 				if (i == g_project->_->materials->length - 1) {
-					ui->_y += j == num - 1 ? imgw : imgw + UI_ELEMENT_H() + UI_ELEMENT_OFFSET();
+					g_ui->_y += j == num - 1 ? imgw : imgw + UI_ELEMENT_H() + UI_ELEMENT_OFFSET();
 				}
 			}
 		}
 
-		ui->_y += mini ? 0 : 6;
+		g_ui->_y += mini ? 0 : 6;
 	}
 
 	if (base_drag_material != NULL && tab_materials_drag_pos == g_project->_->materials->length) {
-		ui->_x = uix;
-		ui->_y = uiy;
-		ui_fill(imgw_val + 1, -2, 2, imgw_val + 4, ui->ops->theme->HIGHLIGHT_COL);
+		g_ui->_x = uix;
+		g_ui->_y = uiy;
+		ui_fill(imgw_val + 1, -2, 2, imgw_val + 4, g_ui->ops->theme->HIGHLIGHT_COL);
 	}
 
 	if (!drag_pos_set) {
 		tab_materials_drag_pos = -1;
 	}
 
-	bool in_focus = ui->input_x > ui->_window_x && ui->input_x < ui->_window_x + ui->_window_w && ui->input_y > ui->_window_y &&
-	                ui->input_y < ui->_window_y + ui->_window_h;
-	if (in_focus && ui->is_delete_down && g_project->_->materials->length > 1) {
-		ui->is_delete_down = false;
+	bool in_focus = g_ui->input_x > g_ui->_window_x && g_ui->input_x < g_ui->_window_x + g_ui->_window_w && g_ui->input_y > g_ui->_window_y &&
+	                g_ui->input_y < g_ui->_window_y + g_ui->_window_h;
+	if (in_focus && g_ui->is_delete_down && g_project->_->materials->length > 1) {
+		g_ui->is_delete_down = false;
 		tab_materials_delete_material(g_context->material);
 	}
-	if (in_focus && ui->is_ctrl_down && ui->is_key_pressed && ui->key_code == KEY_CODE_D) {
+	if (in_focus && g_ui->is_ctrl_down && g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_D) {
 		_tab_materials_draw_slots = array_index_of(g_project->_->materials, g_context->material);
 		sys_notify_on_next_frame(&tab_materials_draw_slots_duplicate, NULL);
 	}
 	if (in_focus) {
 		i32 i = array_index_of(g_project->_->materials, g_context->material);
-		if (ui->is_key_pressed && ui->key_code == KEY_CODE_UP) {
+		if (g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_UP) {
 			if (i > 0) {
 				context_select_material(i - 1);
 			}
 		}
-		if (ui->is_key_pressed && ui->key_code == KEY_CODE_DOWN) {
+		if (g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_DOWN) {
 			if (i < g_project->_->materials->length - 1) {
 				context_select_material(i + 1);
 			}
@@ -411,7 +411,7 @@ void tab_materials_draw_full(ui_handle_t *htab) {
 }
 
 void tab_materials_draw(ui_handle_t *htab) {
-	bool mini = ui->_window_w <= ui_sidebar_w_mini;
+	bool mini = g_ui->_window_w <= ui_sidebar_w_mini;
 	mini ? tab_materials_draw_mini(htab) : tab_materials_draw_full(htab);
 }
 

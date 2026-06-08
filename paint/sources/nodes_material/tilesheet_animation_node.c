@@ -27,7 +27,7 @@ static void tilesheet_animation_node_add_box() {
 		if (ui_icon_button(tr("Cancel"), ICON_CLOSE, UI_ALIGN_CENTER)) {
 			ui_box_hide();
 		}
-		if (ui_icon_button(tr("OK"), ICON_CHECK, UI_ALIGN_CENTER) || ui->is_return_down) {
+		if (ui_icon_button(tr("OK"), ICON_CHECK, UI_ALIGN_CENTER) || g_ui->is_return_down) {
 			ui_node_t *node = ui_get_node(ui_nodes_get_canvas(true)->nodes, _ts_anim_node_id);
 			if (node != NULL) {
 				ui_node_button_t *data_but   = node->buttons->buffer[3];

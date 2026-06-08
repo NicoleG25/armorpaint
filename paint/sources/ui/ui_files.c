@@ -275,13 +275,13 @@ char *ui_files_file_browser(ui_handle_t *handle, bool drag_files, char *search, 
 	}
 
 	i32 slotw = math_floor(70 * UI_SCALE());
-	i32 num   = math_floor(ui->_w / (float)slotw);
+	i32 num   = math_floor(g_ui->_w / (float)slotw);
 	if (num == 0) {
 		return handle->text;
 	}
 	ui_files_num_cols = num;
 
-	ui->_y += 4; // Don't cut off the border around selected materials
+	g_ui->_y += 4; // Don't cut off the border around selected materials
 	// Directory contents
 	for (i32 row = 0; row < math_floor(math_ceil(ui_files_files->length / (float)num)); ++row) {
 		f32_array_t *ar = f32_array_create_from_raw((f32[]){}, 0);
@@ -290,7 +290,7 @@ char *ui_files_file_browser(ui_handle_t *handle, bool drag_files, char *search, 
 		}
 		ui_row(ar);
 		if (row > 0) {
-			ui->_y += UI_ELEMENT_OFFSET() * 14.0;
+			g_ui->_y += UI_ELEMENT_OFFSET() * 14.0;
 		}
 
 		for (i32 j = 0; j < num; ++j) {
@@ -302,7 +302,7 @@ char *ui_files_file_browser(ui_handle_t *handle, bool drag_files, char *search, 
 			}
 
 			char *f  = ui_files_files->buffer[i];
-			f32   _x = ui->_x;
+			f32   _x = g_ui->_x;
 			bool  is_folder;
 			if (is_cloud) {
 				is_folder = string_index_of(f, ".") == -1;
@@ -319,15 +319,15 @@ char *ui_files_file_browser(ui_handle_t *handle, bool drag_files, char *search, 
 				rect = cube;
 			}
 
-			i32 col = rect == file ? ui->ops->theme->LABEL_COL : base_darker(ui->ops->theme->LABEL_COL, 0x00202020);
+			i32 col = rect == file ? g_ui->ops->theme->LABEL_COL : base_darker(g_ui->ops->theme->LABEL_COL, 0x00202020);
 			if (ui_files_selected == i)
-				col = ui->ops->theme->HIGHLIGHT_COL;
+				col = g_ui->ops->theme->HIGHLIGHT_COL;
 
-			f32 off = ui->_w / 2.0 - 25 * UI_SCALE();
-			ui->_x += off;
+			f32 off = g_ui->_w / 2.0 - 25 * UI_SCALE();
+			g_ui->_x += off;
 
-			f32            uix     = ui->_x;
-			f32            uiy     = ui->_y;
+			f32            uix     = g_ui->_x;
+			f32            uiy     = g_ui->_y;
 			ui_state_t     state   = UI_STATE_IDLE;
 			bool           generic = true;
 			gpu_texture_t *icon    = NULL;
@@ -362,13 +362,13 @@ char *ui_files_file_browser(ui_handle_t *handle, bool drag_files, char *search, 
 				if (icon != NULL && icon != icons) {
 					i32 w = 50;
 					if (i == ui_files_selected) {
-						ui_fill(-2, -2, w + 4, 2, ui->ops->theme->HIGHLIGHT_COL);
-						ui_fill(-2, w + 2, w + 4, 2, ui->ops->theme->HIGHLIGHT_COL);
-						ui_fill(-2, 0, 2, w + 4, ui->ops->theme->HIGHLIGHT_COL);
-						ui_fill(w + 2, -2, 2, w + 6, ui->ops->theme->HIGHLIGHT_COL);
+						ui_fill(-2, -2, w + 4, 2, g_ui->ops->theme->HIGHLIGHT_COL);
+						ui_fill(-2, w + 2, w + 4, 2, g_ui->ops->theme->HIGHLIGHT_COL);
+						ui_fill(-2, 0, 2, w + 4, g_ui->ops->theme->HIGHLIGHT_COL);
+						ui_fill(w + 2, -2, 2, w + 6, g_ui->ops->theme->HIGHLIGHT_COL);
 					}
 					state = ui_image(icon, 0xffffffff, w * UI_SCALE());
-					if (ui->is_hovered) {
+					if (g_ui->is_hovered) {
 						ui_tooltip_image(icon, 0);
 						ui_tooltip(f);
 					}
@@ -433,13 +433,13 @@ char *ui_files_file_browser(ui_handle_t *handle, bool drag_files, char *search, 
 				if (icon != NULL) {
 					i32 w = 50;
 					if (i == ui_files_selected) {
-						ui_fill(-2, -2, w + 4, 2, ui->ops->theme->HIGHLIGHT_COL);
-						ui_fill(-2, w + 2, w + 4, 2, ui->ops->theme->HIGHLIGHT_COL);
-						ui_fill(-2, 0, 2, w + 4, ui->ops->theme->HIGHLIGHT_COL);
-						ui_fill(w + 2, -2, 2, w + 6, ui->ops->theme->HIGHLIGHT_COL);
+						ui_fill(-2, -2, w + 4, 2, g_ui->ops->theme->HIGHLIGHT_COL);
+						ui_fill(-2, w + 2, w + 4, 2, g_ui->ops->theme->HIGHLIGHT_COL);
+						ui_fill(-2, 0, 2, w + 4, g_ui->ops->theme->HIGHLIGHT_COL);
+						ui_fill(w + 2, -2, 2, w + 6, g_ui->ops->theme->HIGHLIGHT_COL);
 					}
 					state = ui_image(icon, 0xffffffff, w * UI_SCALE());
-					if (ui->is_hovered) {
+					if (g_ui->is_hovered) {
 						ui_tooltip_image(icon, 0);
 						ui_tooltip(f);
 					}
@@ -472,10 +472,10 @@ char *ui_files_file_browser(ui_handle_t *handle, bool drag_files, char *search, 
 				}
 				if (icon != NULL) {
 					if (i == ui_files_selected) {
-						ui_fill(-2, -2, w + 4, 2, ui->ops->theme->HIGHLIGHT_COL);
-						ui_fill(-2, w + 2, w + 4, 2, ui->ops->theme->HIGHLIGHT_COL);
-						ui_fill(-2, 0, 2, w + 4, ui->ops->theme->HIGHLIGHT_COL);
-						ui_fill(w + 2, -2, 2, w + 6, ui->ops->theme->HIGHLIGHT_COL);
+						ui_fill(-2, -2, w + 4, 2, g_ui->ops->theme->HIGHLIGHT_COL);
+						ui_fill(-2, w + 2, w + 4, 2, g_ui->ops->theme->HIGHLIGHT_COL);
+						ui_fill(-2, 0, 2, w + 4, g_ui->ops->theme->HIGHLIGHT_COL);
+						ui_fill(w + 2, -2, 2, w + 6, g_ui->ops->theme->HIGHLIGHT_COL);
 					}
 					state   = ui_image(icon, 0xffffffff, icon->height * UI_SCALE());
 					generic = false;
@@ -486,14 +486,14 @@ char *ui_files_file_browser(ui_handle_t *handle, bool drag_files, char *search, 
 				state = ui_sub_image(icons, col, 50 * UI_SCALE(), rect->x, rect->y, rect->w, rect->h);
 			}
 
-			if (ui->is_hovered && ui->input_released_r && context_menu != NULL) {
+			if (g_ui->is_hovered && g_ui->input_released_r && context_menu != NULL) {
 				context_menu(string("%s%s%s", handle->text, PATH_SEP, f));
 			}
 
 			if (state == UI_STATE_STARTED) {
 				if (drag_files) {
-					base_drag_off_x = -(mouse_x - uix - ui->_window_x - 3);
-					base_drag_off_y = -(mouse_y - uiy - ui->_window_y + 1);
+					base_drag_off_x = -(mouse_x - uix - g_ui->_window_x - 3);
+					base_drag_off_y = -(mouse_y - uiy - g_ui->_window_y + 1);
 					gc_unroot(base_drag_file);
 					base_drag_file = string_copy(handle->text);
 					gc_root(base_drag_file);
@@ -524,7 +524,7 @@ char *ui_files_file_browser(ui_handle_t *handle, bool drag_files, char *search, 
 					gc_unroot(base_drag_file_icon);
 					base_drag_file_icon = NULL;
 					base_is_dragging    = false;
-					handle->changed = ui->changed = true;
+					handle->changed = g_ui->changed = true;
 					if (!string_equals(char_at(handle->text, string_length(handle->text) - 1), PATH_SEP)) {
 						handle->text = string("%s%s", handle->text, PATH_SEP);
 					}
@@ -535,32 +535,32 @@ char *ui_files_file_browser(ui_handle_t *handle, bool drag_files, char *search, 
 			}
 
 			// Label
-			ui->_x = _x;
-			ui->_y += slotw * 0.75;
+			g_ui->_x = _x;
+			g_ui->_y += slotw * 0.75;
 			char *label0 = (is_folder || ui_files_show_extensions || string_index_of(f, ".") <= 0) ? f : substring(f, 0, string_last_index_of(f, "."));
 			char *label1 = "";
-			while (string_length(label0) > 0 && draw_string_width(ui->ops->font, ui->font_size, label0) > ui->_w - 6) { // 2 line split
+			while (string_length(label0) > 0 && draw_string_width(g_ui->ops->font, g_ui->font_size, label0) > g_ui->_w - 6) { // 2 line split
 				label1 = string("%s%s", char_at(label0, string_length(label0) - 1), label1);
 				label0 = string_copy(substring(label0, 0, string_length(label0) - 1));
 			}
 			if (!string_equals(label1, "")) {
-				ui->current_ratio--;
+				g_ui->current_ratio--;
 			}
 			ui_text(label0, UI_ALIGN_CENTER, 0x00000000);
-			if (ui->is_hovered) {
+			if (g_ui->is_hovered) {
 				ui_tooltip(string("%s%s", label0, label1));
 			}
 			if (!string_equals(label1, "")) { // Second line
-				ui->_x = _x;
-				ui->_y += draw_font_height(ui->ops->font, ui->font_size);
+				g_ui->_x = _x;
+				g_ui->_y += draw_font_height(g_ui->ops->font, g_ui->font_size);
 				ui_text(label1, UI_ALIGN_CENTER, 0x00000000);
-				if (ui->is_hovered) {
+				if (g_ui->is_hovered) {
 					ui_tooltip(string("%s%s", label0, label1));
 				}
-				ui->_y -= draw_font_height(ui->ops->font, ui->font_size);
+				g_ui->_y -= draw_font_height(g_ui->ops->font, g_ui->font_size);
 			}
 
-			ui->_y -= slotw * 0.75;
+			g_ui->_y -= slotw * 0.75;
 
 			if (handle->changed) {
 				break;
@@ -570,7 +570,7 @@ char *ui_files_file_browser(ui_handle_t *handle, bool drag_files, char *search, 
 			break;
 		}
 	}
-	ui->_y += slotw * 0.8;
+	g_ui->_y += slotw * 0.8;
 	return handle->text;
 }
 

@@ -27,7 +27,7 @@ void project_import_mesh_box_draw() {
 		    3);
 		ui_text(tr("Split By"), UI_ALIGN_LEFT, 0);
 		g_context->split_by = plugins_split_by = ui_inline_radio(ui_handle(__ID__), split_by_combo, UI_ALIGN_LEFT);
-		if (ui->is_hovered) {
+		if (g_ui->is_hovered) {
 			ui_tooltip(tr("Split mesh into objects"));
 		}
 	}
@@ -39,9 +39,9 @@ void project_import_mesh_box_draw() {
 	if (ends_with(to_lower_case(path), ".fbx") || ends_with(to_lower_case(path), ".gltf") || ends_with(to_lower_case(path), ".glb")) {
 		ui_row2();
 		bool b                 = ui_check(ui_handle(__ID__), tr("Apply Skinning"), "");
-		ui->enabled            = b;
+		g_ui->enabled            = b;
 		plugins_skinning_frame = ui_slider(ui_handle(__ID__), tr("Frame"), 1, 99, false, 1, true, UI_ALIGN_RIGHT, true);
-		ui->enabled            = true;
+		g_ui->enabled            = true;
 		if (!b) {
 			plugins_skinning_frame = -1;
 		}
@@ -60,7 +60,7 @@ void project_import_mesh_box_draw() {
 	if (ui_icon_button(tr("Cancel"), ICON_CLOSE, UI_ALIGN_CENTER)) {
 		ui_box_hide();
 	}
-	if (ui_icon_button(tr("Import"), ICON_CHECK, UI_ALIGN_CENTER) || ui->is_return_down) {
+	if (ui_icon_button(tr("Import"), ICON_CHECK, UI_ALIGN_CENTER) || g_ui->is_return_down) {
 		ui_box_hide();
 
 #if defined(IRON_ANDROID) || defined(IRON_IOS)

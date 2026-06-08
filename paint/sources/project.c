@@ -382,7 +382,7 @@ void project_unwrap_mesh_box_draw() {
 	if (ui_icon_button(tr("Cancel"), ICON_CLOSE, UI_ALIGN_CENTER)) {
 		ui_box_hide();
 	}
-	if (ui_icon_button(tr("Unwrap"), ICON_CHECK, UI_ALIGN_CENTER) || ui->is_return_down) {
+	if (ui_icon_button(tr("Unwrap"), ICON_CHECK, UI_ALIGN_CENTER) || g_ui->is_return_down) {
 		ui_box_hide();
 
 #if defined(IRON_ANDROID) || defined(IRON_IOS)

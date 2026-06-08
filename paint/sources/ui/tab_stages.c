@@ -18,11 +18,11 @@ void tab_stages_context_menu_delete(void *_) {
 }
 
 void tab_stages_context_menu_draw() {
-	ui->enabled = project_stages->length > 1;
+	g_ui->enabled = project_stages->length > 1;
 	if (ui_menu_button(tr("Delete"), "delete", ICON_DELETE)) {
 		sys_notify_on_next_frame(&tab_stages_context_menu_delete, NULL);
 	}
-	ui->enabled = true;
+	g_ui->enabled = true;
 }
 
 void tab_stages_draw(ui_handle_t *htab) {
@@ -55,19 +55,19 @@ void tab_stages_draw(ui_handle_t *htab) {
 			slot_stage_t *s              = project_stages->buffer[i];
 			tab_stages_show_context_menu = false;
 			if (i == selected_stage) {
-				ui_fill(0, 0, ui->_window_w, ui->ops->theme->ELEMENT_H, ui->ops->theme->HIGHLIGHT_COL);
+				ui_fill(0, 0, g_ui->_window_w, g_ui->ops->theme->ELEMENT_H, g_ui->ops->theme->HIGHLIGHT_COL);
 			}
 			ui_text(s->name, UI_ALIGN_LEFT, 0x00000000);
-			if (ui->is_released) {
+			if (g_ui->is_released) {
 				selected_stage = i;
 			}
-			if (ui->is_hovered && ui->input_released_r) {
+			if (g_ui->is_hovered && g_ui->input_released_r) {
 				gc_unroot(tab_stages_context_stage);
 				tab_stages_context_stage = s;
 				gc_root(tab_stages_context_stage);
 				tab_stages_show_context_menu = true;
 			}
-			ui_fill(0, 0, (ui->_window_w / (float)UI_SCALE() - 2), 1 * UI_SCALE(), ui->ops->theme->SEPARATOR_COL);
+			ui_fill(0, 0, (g_ui->_window_w / (float)UI_SCALE() - 2), 1 * UI_SCALE(), g_ui->ops->theme->SEPARATOR_COL);
 			if (tab_stages_show_context_menu) {
 				ui_menu_draw(&tab_stages_context_menu_draw, -1, -1);
 			}

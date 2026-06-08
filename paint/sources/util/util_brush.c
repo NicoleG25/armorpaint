@@ -47,7 +47,7 @@ void util_brush_update() {
 				g_context->clone_start_y = my;
 			}
 			else {
-				if (g_context->brush_time == 0 && !base_is_dragging && !base_is_resizing && ui->combo_selected_handle == NULL) { // Paint started
+				if (g_context->brush_time == 0 && !base_is_dragging && !base_is_resizing && g_ui->combo_selected_handle == NULL) { // Paint started
 
 					// Draw line
 					if (operator_shortcut(string("%s+%s", any_map_get(g_keymap, "brush_ruler"), any_map_get(g_keymap, "action_paint")),

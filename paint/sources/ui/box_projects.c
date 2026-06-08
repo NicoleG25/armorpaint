@@ -79,10 +79,10 @@ void box_projects_tab() {
 			}
 			ui_row(ar);
 
-			ui->_x += 2;
+			g_ui->_x += 2;
 			f32 off = show_asset_names ? 96 * UI_SCALE() : 16 * UI_SCALE();
 			if (row > 0) {
-				ui->_y += off;
+				g_ui->_y += off;
 			}
 
 			for (i32 j = 0; j < num; ++j) {
@@ -117,16 +117,16 @@ void box_projects_tab() {
 					any_map_set(box_projects_icon_map, icon_path, icon);
 				}
 
-				i32 uix = ui->_x;
+				i32 uix = g_ui->_x;
 				if (icon != NULL) {
-					ui_fill(0, 0, 128, 128, ui->ops->theme->SEPARATOR_COL);
+					ui_fill(0, 0, 128, 128, g_ui->ops->theme->SEPARATOR_COL);
 
 					i32 state = ui_image(icon, 0xffffffff, 128 * UI_SCALE());
 					if (state == UI_STATE_RELEASED) {
-						i32 _uix = ui->_x;
-						ui->_x   = uix;
+						i32 _uix = g_ui->_x;
+						g_ui->_x   = uix;
 						ui_fill(0, 0, 128, 128, 0x66000000);
-						ui->_x = _uix;
+						g_ui->_x = _uix;
 #if defined(IRON_ANDROID) || defined(IRON_IOS)
 						console_toast(tr("Opening project"));
 #endif
@@ -134,7 +134,7 @@ void box_projects_tab() {
 					}
 
 					char *name = substring(path, string_last_index_of(path, PATH_SEP) + 1, string_last_index_of(path, "."));
-					if (ui->is_hovered && ui->input_released_r) {
+					if (g_ui->is_hovered && g_ui->input_released_r) {
 						gc_unroot(_box_projects_path);
 						_box_projects_path = string_copy(path);
 						gc_root(_box_projects_path);
@@ -146,15 +146,15 @@ void box_projects_tab() {
 					}
 
 					if (show_asset_names) {
-						ui->_x = uix - (150 - 128) / 2.0;
-						ui->_y += slotw * 0.9;
+						g_ui->_x = uix - (150 - 128) / 2.0;
+						g_ui->_y += slotw * 0.9;
 						ui_text(name, UI_ALIGN_CENTER, 0x00000000);
-						if (ui->is_hovered) {
+						if (g_ui->is_hovered) {
 							ui_tooltip(name);
 						}
-						ui->_y -= slotw * 0.9;
+						g_ui->_y -= slotw * 0.9;
 						if (i == recent_projects->length - 1) {
-							ui->_y += j == num - 1 ? imgw : imgw + UI_ELEMENT_H() + UI_ELEMENT_OFFSET();
+							g_ui->_y += j == num - 1 ? imgw : imgw + UI_ELEMENT_H() + UI_ELEMENT_OFFSET();
 						}
 					}
 				}
@@ -163,11 +163,11 @@ void box_projects_tab() {
 					if (show_asset_names) {
 						ui_end_element_of_size(0);
 					}
-					ui->_x = uix;
+					g_ui->_x = uix;
 				}
 			}
 
-			ui->_y += 150;
+			g_ui->_y += 150;
 		}
 	}
 }
@@ -239,9 +239,9 @@ void box_projects_recent_tab() {
 
 		box_projects_draw_badge();
 
-		ui->enabled                = g_config->recent_projects->length > 0;
+		g_ui->enabled                = g_config->recent_projects->length > 0;
 		box_projects_hsearch->text = string_copy(ui_text_input(box_projects_hsearch, tr("Search"), UI_ALIGN_LEFT, true, true));
-		ui->enabled                = true;
+		g_ui->enabled                = true;
 		for (i32 i = 0; i < g_config->recent_projects->length; ++i) {
 			char *path = g_config->recent_projects->buffer[i];
 #ifdef IRON_WINDOWS
@@ -266,17 +266,17 @@ void box_projects_recent_tab() {
 					draw_begin(current, false, 0);
 				ui_box_hide();
 			}
-			if (ui->is_hovered) {
+			if (g_ui->is_hovered) {
 				ui_tooltip(path);
 			}
 		}
 
-		ui->enabled = g_config->recent_projects->length > 0;
+		g_ui->enabled = g_config->recent_projects->length > 0;
 		if (ui_icon_button(tr("Clear"), ICON_ERASE, UI_ALIGN_LEFT)) {
 			g_config->recent_projects = any_array_create_from_raw((void *[]){}, 0);
 			config_save();
 		}
-		ui->enabled = true;
+		g_ui->enabled = true;
 
 		ui_end_element();
 		if (ui_icon_button(tr("New Project..."), ICON_FILE_NEW, UI_ALIGN_LEFT)) {

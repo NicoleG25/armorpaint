@@ -67,11 +67,11 @@ void tab_swatches_draw_color_picker() {
 }
 
 void tab_swatches_draw_edit_menu() {
-	ui->changed    = false;
+	g_ui->changed    = false;
 	ui_handle_t *h = ui_handle(__ID__);
 	h->color       = g_context->swatch->base;
 
-	g_context->swatch->base = ui_color_wheel(h, false, -1, 11 * ui->ops->theme->ELEMENT_H * UI_SCALE(), true, &tab_swatches_draw_color_picker, NULL);
+	g_context->swatch->base = ui_color_wheel(h, false, -1, 11 * g_ui->ops->theme->ELEMENT_H * UI_SCALE(), true, &tab_swatches_draw_color_picker, NULL);
 
 	ui_handle_t *hopacity      = ui_handle(__ID__);
 	hopacity->f                = g_context->swatch->opacity;
@@ -92,10 +92,10 @@ void tab_swatches_draw_edit_menu() {
 		g_context->swatch->height    = ui_slider(hheight, "Height", 0, 1, true, 100.0, true, UI_ALIGN_RIGHT, true);
 	}
 
-	if (ui->changed || ui->is_typing) {
+	if (g_ui->changed || g_ui->is_typing) {
 		ui_menu_keep_open = true;
 	}
-	if (ui->input_released) {
+	if (g_ui->input_released) {
 		g_context->swatch = g_context->swatch; // Trigger material preview update
 		g_context->picked_color   = util_clone_swatch_color(g_context->swatch);
 		ui_header_handle->redraws = 2;
@@ -113,7 +113,7 @@ void tab_swatches_draw_import() {
 }
 
 void tab_swatches_draw(ui_handle_t *htab) {
-	if (ui_tab(htab, tr("Swatches"), false, -1, false) && ui->_window_h > ui_statusbar_default_h * UI_SCALE()) {
+	if (ui_tab(htab, tr("Swatches"), false, -1, false) && g_ui->_window_h > ui_statusbar_default_h * UI_SCALE()) {
 
 		ui_begin_sticky();
 		f32_array_t *row = f32_array_create_from_raw(
@@ -131,21 +131,21 @@ void tab_swatches_draw(ui_handle_t *htab) {
 			g_context->swatch = project_make_swatch(0xffffffff);
 			any_array_push(g_project->swatches, g_context->swatch);
 		}
-		if (ui->is_hovered) {
+		if (g_ui->is_hovered) {
 			ui_tooltip(tr("Add new swatch"));
 		}
 
 		if (ui_icon_button(tr("Import"), ICON_IMPORT, UI_ALIGN_CENTER)) {
 			ui_menu_draw(&tab_swatches_draw_import, -1, -1);
 		}
-		if (ui->is_hovered) {
+		if (g_ui->is_hovered) {
 			ui_tooltip(tr("Import swatches"));
 		}
 
 		if (ui_icon_button(tr("Export"), ICON_EXPORT, UI_ALIGN_CENTER)) {
 			project_export_swatches();
 		}
-		if (ui->is_hovered) {
+		if (g_ui->is_hovered) {
 			ui_tooltip(tr("Export swatches"));
 		}
 
@@ -162,7 +162,7 @@ void tab_swatches_draw(ui_handle_t *htab) {
 			project_set_default_swatches();
 			g_context->swatch = g_project->swatches->buffer[0];
 		}
-		if (ui->is_hovered) {
+		if (g_ui->is_hovered) {
 			ui_tooltip(tr("Restore default swatches"));
 		}
 
@@ -170,7 +170,7 @@ void tab_swatches_draw(ui_handle_t *htab) {
 		ui_separator(3, false);
 
 		i32 slotw = math_floor(26 * UI_SCALE());
-		i32 num   = math_floor(ui->_w / (float)(slotw + 3));
+		i32 num   = math_floor(g_ui->_w / (float)(slotw + 3));
 		if (num == 0) {
 			return;
 		}
@@ -185,9 +185,9 @@ void tab_swatches_draw(ui_handle_t *htab) {
 			}
 			ui_row(ar);
 
-			ui->_x += 2;
+			g_ui->_x += 2;
 			if (row > 0) {
-				ui->_y += 6;
+				g_ui->_y += 6;
 			}
 
 			for (i32 j = 0; j < num; ++j) {
@@ -199,23 +199,23 @@ void tab_swatches_draw(ui_handle_t *htab) {
 
 				if (g_context->swatch == g_project->swatches->buffer[i]) {
 					i32 w = 32;
-					ui_fill(-2, -2, w, w, ui->ops->theme->HIGHLIGHT_COL);
+					ui_fill(-2, -2, w, w, g_ui->ops->theme->HIGHLIGHT_COL);
 				}
 
-				uix = ui->_x;
-				uiy = ui->_y;
+				uix = g_ui->_x;
+				uiy = g_ui->_y;
 
 				// Draw the drag position indicator
 				if (base_drag_swatch != NULL && tab_swatches_drag_pos == i) {
-					ui_fill(-1, -2, 2, 32, ui->ops->theme->HIGHLIGHT_COL);
+					ui_fill(-1, -2, 2, 32, g_ui->ops->theme->HIGHLIGHT_COL);
 				}
 
 				ui_state_t state = ui_image(tab_swatches_empty_get(), g_project->swatches->buffer[i]->base, slotw);
 
 				if (state == UI_STATE_STARTED) {
 					g_context->swatch = g_project->swatches->buffer[i];
-					base_drag_off_x = -(mouse_x - uix - ui->_window_x);
-					base_drag_off_y = -(mouse_y - uiy - ui->_window_y + 1);
+					base_drag_off_x = -(mouse_x - uix - g_ui->_window_x);
+					base_drag_off_y = -(mouse_y - uiy - g_ui->_window_y + 1);
 					gc_unroot(base_drag_swatch);
 					base_drag_swatch = g_context->swatch;
 					gc_root(base_drag_swatch);
@@ -223,7 +223,7 @@ void tab_swatches_draw(ui_handle_t *htab) {
 					ui_header_handle->redraws = 2;
 				}
 				else if (state == UI_STATE_HOVERED) {
-					tab_swatches_drag_pos = (mouse_x > uix + ui->_window_x + slotw / 2.0)
+					tab_swatches_drag_pos = (mouse_x > uix + g_ui->_window_x + slotw / 2.0)
 					                            ? i + 1
 					                            : i; // Switch to the next position if the mouse crosses the swatch rectangle center
 					drag_pos_set          = true;
@@ -236,14 +236,14 @@ void tab_swatches_draw(ui_handle_t *htab) {
 
 					g_context->select_time = sys_time();
 				}
-				if (ui->is_hovered && ui->input_released_r) {
+				if (g_ui->is_hovered && g_ui->input_released_r) {
 					g_context->swatch = g_project->swatches->buffer[i];
 
 					_tab_swatches_draw_i = i;
 
 					ui_menu_draw(&tab_swatches_draw_menu, -1, -1);
 				}
-				if (ui->is_hovered) {
+				if (g_ui->is_hovered) {
 					i32 color = g_project->swatches->buffer[i]->base;
 					color     = color_set_ab(color, g_project->swatches->buffer[i]->opacity * 255);
 					u32 val   = color;
@@ -254,9 +254,9 @@ void tab_swatches_draw(ui_handle_t *htab) {
 
 		// Draw the rightmost line next to the last swatch
 		if (base_drag_swatch != NULL && tab_swatches_drag_pos == g_project->swatches->length) {
-			ui->_x = uix; // Reset the position because otherwise it would start in the row below
-			ui->_y = uiy;
-			ui_fill(28, -2, 2, 32, ui->ops->theme->HIGHLIGHT_COL);
+			g_ui->_x = uix; // Reset the position because otherwise it would start in the row below
+			g_ui->_y = uiy;
+			ui_fill(28, -2, 2, 32, g_ui->ops->theme->HIGHLIGHT_COL);
 		}
 
 		// Currently there is no valid drag_position so reset it
@@ -264,24 +264,24 @@ void tab_swatches_draw(ui_handle_t *htab) {
 			tab_swatches_drag_pos = -1;
 		}
 
-		bool in_focus = ui->input_x > ui->_window_x && ui->input_x < ui->_window_x + ui->_window_w && ui->input_y > ui->_window_y &&
-		                ui->input_y < ui->_window_y + ui->_window_h;
-		if (in_focus && ui->is_delete_down && g_project->swatches->length > 1) {
-			ui->is_delete_down = false;
+		bool in_focus = g_ui->input_x > g_ui->_window_x && g_ui->input_x < g_ui->_window_x + g_ui->_window_w && g_ui->input_y > g_ui->_window_y &&
+		                g_ui->input_y < g_ui->_window_y + g_ui->_window_h;
+		if (in_focus && g_ui->is_delete_down && g_project->swatches->length > 1) {
+			g_ui->is_delete_down = false;
 			tab_swatches_delete_swatch(g_context->swatch);
 		}
-		if (in_focus && ui->is_ctrl_down && ui->is_key_pressed && ui->key_code == KEY_CODE_D) {
+		if (in_focus && g_ui->is_ctrl_down && g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_D) {
 			g_context->swatch = project_clone_swatch(g_context->swatch);
 			any_array_push(g_project->swatches, g_context->swatch);
 		}
 		if (in_focus) {
 			i32 i = array_index_of(g_project->swatches, g_context->swatch);
-			if (ui->is_key_pressed && ui->key_code == KEY_CODE_UP) {
+			if (g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_UP) {
 				if (i > 0) {
 					g_context->swatch = g_project->swatches->buffer[i - 1];
 				}
 			}
-			if (ui->is_key_pressed && ui->key_code == KEY_CODE_DOWN) {
+			if (g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_DOWN) {
 				if (i < g_project->swatches->length - 1) {
 					g_context->swatch = g_project->swatches->buffer[i + 1];
 				}

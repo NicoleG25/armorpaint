@@ -147,17 +147,17 @@ static void bake_texture_node_button(i32 node_id) {
 			progress = 1.0;
 		}
 
-		i32 _BUTTON_COL            = ui->ops->theme->BUTTON_COL;
-		ui->ops->theme->BUTTON_COL = ui->ops->theme->HIGHLIGHT_COL;
+		i32 _BUTTON_COL              = g_ui->ops->theme->BUTTON_COL;
+		g_ui->ops->theme->BUTTON_COL = g_ui->ops->theme->HIGHLIGHT_COL;
 
 		ui_handle_t *bake_h = ui_nest(h, 12);
 		bake_h->f           = progress;
 		char *label         = string("%d%%", (i32)(progress * 100));
 		ui_slider(bake_h, label, 0.0, 1.0, true, 100, false, UI_ALIGN_CENTER, true);
 
-		ui->ops->theme->BUTTON_COL = _BUTTON_COL;
+		g_ui->ops->theme->BUTTON_COL = _BUTTON_COL;
 
-		if (ui->is_hovered && ui->input_released) {
+		if (g_ui->is_hovered && g_ui->input_released) {
 			g_context->pdirty = 0; // Stop baking
 		}
 	}

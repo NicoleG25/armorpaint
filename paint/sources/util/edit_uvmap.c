@@ -95,8 +95,8 @@ void edit_uvmap_update() {
 	}
 
 	if (_is_dragging && mouse_down("left")) {
-		f32 duv_x = ui->input_dx / tw * 32767.0f;
-		f32 duv_y = ui->input_dy / th * 32767.0f;
+		f32 duv_x = g_ui->input_dx / tw * 32767.0f;
+		f32 duv_y = g_ui->input_dy / th * 32767.0f;
 		for (i32 i = 0; i < _selected_verts->length; i++) {
 			i32 vi                   = _selected_verts->buffer[i];
 			i32 new_x                = (i32)texa->buffer[vi * 2] + (i32)duv_x;

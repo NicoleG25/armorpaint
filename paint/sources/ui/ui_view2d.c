@@ -76,15 +76,15 @@ void ui_view2d_draw_edit() {
 		ui_view2d_hwnd->redraws = 2;
 	}
 
-	ui->enabled = ui_view2d_tex != NULL;
+	g_ui->enabled = ui_view2d_tex != NULL;
 	if (ui_menu_button(tr("Capture Output"), "", ICON_PHOTO)) {
 		sys_notify_on_next_frame(&ui_view2d_capture_output, NULL);
 	}
-	ui->enabled = true;
+	g_ui->enabled = true;
 
 	if (ui_view2d_tex != NULL) {
 		ui_menu_separator();
-		ui->enabled = false;
+		g_ui->enabled = false;
 		ui_text(string("%dx%d", ui_view2d_tex->width, ui_view2d_tex->height), UI_ALIGN_LEFT, 0x00000000);
 		if (ui_view2d_type == VIEW_2D_TYPE_ASSET) {
 			asset_t *asset     = g_context->texture;
@@ -93,7 +93,7 @@ void ui_view2d_draw_edit() {
 				ui_text(tr("packed"), UI_ALIGN_LEFT, 0x00000000);
 			}
 		}
-		ui->enabled = true;
+		g_ui->enabled = true;
 	}
 }
 
@@ -164,8 +164,8 @@ void ui_view2d_update(void *_) {
 
 		if (ui_touch_control) {
 			// Zoom to finger location
-			ui_view2d_pan_x -= (ui->input_x - ui->_window_x - ui->_window_w / 2.0) * control->zoom;
-			ui_view2d_pan_y -= (ui->input_y - ui->_window_y - ui->_window_h / 2.0) * control->zoom;
+			ui_view2d_pan_x -= (g_ui->input_x - g_ui->_window_x - g_ui->_window_w / 2.0) * control->zoom;
+			ui_view2d_pan_y -= (g_ui->input_y - g_ui->_window_y - g_ui->_window_h / 2.0) * control->zoom;
 		}
 		ui_view2d_grid_redraw = true;
 	}
@@ -175,7 +175,7 @@ void ui_view2d_update(void *_) {
 	    g_context->tool == TOOL_TYPE_CLONE &&
 	    operator_shortcut(string("%s+%s", any_map_get(g_keymap, "set_clone_source"), any_map_get(g_keymap, "action_paint")), SHORTCUT_TYPE_DOWN);
 
-	if (!ui->input_down) {
+	if (!g_ui->input_down) {
 		ui_view2d_layer_touched = false;
 	}
 
@@ -210,7 +210,7 @@ void ui_view2d_update(void *_) {
 		}
 	}
 
-	if (ui->is_typing) {
+	if (g_ui->is_typing) {
 		return;
 	}
 
@@ -227,9 +227,9 @@ void ui_view2d_update(void *_) {
 		ui_view2d_pan_y += 5;
 	}
 
-	if (!g_context->paint2d && g_config->touch_ui && ui->input_down && ui_view2d_type != VIEW_2D_TYPE_UVMAP) {
-		ui_view2d_pan_x += ui->input_dx;
-		ui_view2d_pan_y += ui->input_dy;
+	if (!g_context->paint2d && g_config->touch_ui && g_ui->input_down && ui_view2d_type != VIEW_2D_TYPE_UVMAP) {
+		ui_view2d_pan_x += g_ui->input_dx;
+		ui_view2d_pan_y += g_ui->input_dy;
 	}
 
 	// Limit panning to keep texture in viewport
@@ -301,9 +301,9 @@ void ui_view2d_update(void *_) {
 		util_render_make_font_preview();
 	}
 
-	ui->input_enabled = base_ui_enabled;
+	g_ui->input_enabled = base_ui_enabled;
 
-	ui_begin(ui);
+	ui_begin(g_ui);
 
 	headerh = g_config->layout->buffer[LAYOUT_SIZE_HEADER] == 1 ? ui_header_h * 2 : ui_header_h;
 	i32 apph    = iron_window_height() - g_config->layout->buffer[LAYOUT_SIZE_STATUS_H] + headerh;
@@ -341,7 +341,7 @@ void ui_view2d_update(void *_) {
 		// let x: f32    = math_fmod(ui_view2d_pan_x, step) - step;
 		// let y: f32    = math_fmod(ui_view2d_pan_y, step) - step;
 		// draw_image(ui_view2d_grid, x, y);
-		draw_set_color(ui->ops->theme->SEPARATOR_COL + 0x00020202);
+		draw_set_color(g_ui->ops->theme->SEPARATOR_COL + 0x00020202);
 		draw_filled_rect(0, 0, ui_view2d_ww, ui_view2d_wh);
 		draw_set_color(0xffffffff);
 
@@ -446,13 +446,13 @@ void ui_view2d_update(void *_) {
 			draw_set_color(0xffffffff);
 
 			// Texture and node preview color picking
-			if ((context_in_2d_view(VIEW_2D_TYPE_ASSET) || context_in_2d_view(VIEW_2D_TYPE_NODE)) && g_context->tool == TOOL_TYPE_PICKER && ui->input_down) {
+			if ((context_in_2d_view(VIEW_2D_TYPE_ASSET) || context_in_2d_view(VIEW_2D_TYPE_NODE)) && g_context->tool == TOOL_TYPE_PICKER && g_ui->input_down) {
 				gc_unroot(_ui_view2d_render_tex);
 				_ui_view2d_render_tex = tex;
 				gc_root(_ui_view2d_render_tex);
-				_ui_view2d_render_x = ui->input_x - tx - ui_view2d_wx;
+				_ui_view2d_render_x = g_ui->input_x - tx - ui_view2d_wx;
 				;
-				_ui_view2d_render_y  = ui->input_y - ty - ui_view2d_wy;
+				_ui_view2d_render_y  = g_ui->input_y - ty - ui_view2d_wy;
 				_ui_view2d_render_tw = tw;
 				_ui_view2d_render_th = th;
 				sys_notify_on_next_frame(&ui_view2d_render_color_pick, NULL);
@@ -487,20 +487,20 @@ void ui_view2d_update(void *_) {
 		// Menu
 		i32 top_y = ui_menu_top_y();
 		i32 ew    = math_floor(UI_ELEMENT_W());
-		draw_set_color(ui->ops->theme->WINDOW_BG_COL);
+		draw_set_color(g_ui->ops->theme->WINDOW_BG_COL);
 		draw_filled_rect(0, top_y, ui_view2d_ww, UI_ELEMENT_H() + UI_ELEMENT_OFFSET() * 2);
 		draw_set_color(0xffffffff);
 
 		f32 start_y = top_y + UI_ELEMENT_OFFSET();
-		ui->_x      = 2;
-		ui->_y      = 2 + start_y;
-		ui->_w      = ew;
+		g_ui->_x      = 2;
+		g_ui->_y      = 2 + start_y;
+		g_ui->_w      = ew;
 
 		// Editable layer name
 		ui_handle_t *h    = ui_handle(__ID__);
 		char        *text = ui_view2d_type == VIEW_2D_TYPE_NODE ? g_context->node_preview_name : h->text;
 
-		ui->_w = math_floor(math_min(draw_string_width(ui->ops->font, ui->font_size, text) + 15 * UI_SCALE(), 100 * UI_SCALE()));
+		g_ui->_w = math_floor(math_min(draw_string_width(g_ui->ops->font, g_ui->font_size, text) + 15 * UI_SCALE(), 100 * UI_SCALE()));
 
 		if (ui_view2d_type == VIEW_2D_TYPE_ASSET) {
 			asset_t *asset = g_context->texture;
@@ -515,7 +515,7 @@ void ui_view2d_update(void *_) {
 		else if (ui_view2d_type == VIEW_2D_TYPE_LAYER) {
 			h->text                    = string_copy(l->name);
 			l->name                    = string_copy(ui_text_input(h, "", UI_ALIGN_LEFT, true, false));
-			ui_view2d_text_input_hover = ui->is_hovered;
+			ui_view2d_text_input_hover = g_ui->is_hovered;
 		}
 		else if (ui_view2d_type == VIEW_2D_TYPE_FONT) {
 			h->text               = string_copy(g_context->font->name);
@@ -525,9 +525,9 @@ void ui_view2d_update(void *_) {
 		if (h->changed) {
 			ui_base_hwnds->buffer[0]->redraws = 2;
 		}
-		ui->_x += ui->_w + 3;
-		ui->_y = 2 + start_y;
-		ui->_w = ew;
+		g_ui->_x += g_ui->_w + 3;
+		g_ui->_y = 2 + start_y;
+		g_ui->_w = ew;
 
 		if (ui_view2d_type == VIEW_2D_TYPE_LAYER) {
 			ui_handle_t *h_layer_mode        = ui_handle(__ID__);
@@ -539,8 +539,8 @@ void ui_view2d_update(void *_) {
 			    },
 			    2);
 			ui_view2d_layer_mode = ui_combo(h_layer_mode, layer_mode_combo, tr("Layers"), false, UI_ALIGN_LEFT, true);
-			ui->_x += ew + 3;
-			ui->_y = 2 + start_y;
+			g_ui->_x += ew + 3;
+			g_ui->_y = 2 + start_y;
 
 			if (!slot_layer_is_mask(g_context->layer)) {
 				ui_handle_t *h_tex_type        = ui_handle(__ID__);
@@ -566,8 +566,8 @@ void ui_view2d_update(void *_) {
 				}
 
 				ui_view2d_tex_type = ui_combo(h_tex_type, tex_type_combo, tr("Texture"), false, UI_ALIGN_LEFT, true);
-				ui->_x += ew + 3;
-				ui->_y = 2 + start_y;
+				g_ui->_x += ew + 3;
+				g_ui->_y = 2 + start_y;
 			}
 		}
 
@@ -576,14 +576,14 @@ void ui_view2d_update(void *_) {
 			ui_handle_t *h_zoom        = ui_handle(__ID__);
 			i32          scale_percent = math_round((tw / (float)tex->width) * 100);
 			h_zoom->f                  = scale_percent;
-			ui->_w                     = math_floor(ew + 3);
+			g_ui->_w                     = math_floor(ew + 3);
 			f32 new_percent            = ui_slider(h_zoom, string("%d%%", scale_percent), 1, 100, true, 1, false, UI_ALIGN_LEFT, true);
 			if (h_zoom->changed) {
 				ui_view2d_pan_scale     = new_percent / 100.0 * tex->width / (wm * 0.9);
 				ui_view2d_hwnd->redraws = 2;
 			}
-			ui->_x += ew + 3;
-			ui->_y = 2 + start_y;
+			g_ui->_x += ew + 3;
+			g_ui->_y = 2 + start_y;
 		}
 
 		char *view_type = ui_view2d_type == VIEW_2D_TYPE_ASSET   ? tr("Asset")
@@ -592,15 +592,15 @@ void ui_view2d_update(void *_) {
 		                  : ui_view2d_type == VIEW_2D_TYPE_UVMAP ? tr("UVMap")
 		                                                         : tr("Layer");
 
-		ui->_w = math_floor(ew * 0.7 + 3);
+		g_ui->_w = math_floor(ew * 0.7 + 3);
 		if (ui_icon_button(view_type, ICON_EDIT, UI_ALIGN_CENTER)) {
 			gc_unroot(ui_view2d_tex);
 			ui_view2d_tex = tex;
 			gc_root(ui_view2d_tex);
 			ui_menu_draw(&ui_view2d_draw_edit, -1, -1);
 		}
-		ui->_x += ew * 0.7 + 3;
-		ui->_y = 2 + start_y;
+		g_ui->_x += ew * 0.7 + 3;
+		g_ui->_y = 2 + start_y;
 
 		// Picked position
 		if (g_context->tool == TOOL_TYPE_PICKER && (ui_view2d_type == VIEW_2D_TYPE_LAYER || ui_view2d_type == VIEW_2D_TYPE_ASSET)) {
@@ -612,5 +612,5 @@ void ui_view2d_update(void *_) {
 	}
 	ui_end();
 
-	ui->input_enabled = true;
+	g_ui->input_enabled = true;
 }

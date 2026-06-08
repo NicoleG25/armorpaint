@@ -20,22 +20,22 @@ void ui_box_init() {
 }
 
 void ui_box_window_border() {
-	if (ui->scissor) {
-		ui->scissor = false;
+	if (g_ui->scissor) {
+		g_ui->scissor = false;
 		gpu_disable_scissor();
 	}
 	// Border
-	draw_set_color(ui->ops->theme->SEPARATOR_COL);
-	draw_filled_rect(0, 0, 1, ui->_window_h);
-	draw_filled_rect(0 + ui->_window_w - 1, 0, 1, ui->_window_h);
-	draw_filled_rect(0, 0 + ui->_window_h - 1, ui->_window_w, 1);
+	draw_set_color(g_ui->ops->theme->SEPARATOR_COL);
+	draw_filled_rect(0, 0, 1, g_ui->_window_h);
+	draw_filled_rect(0 + g_ui->_window_w - 1, 0, 1, g_ui->_window_h);
+	draw_filled_rect(0, 0 + g_ui->_window_h - 1, g_ui->_window_w, 1);
 }
 
 void ui_box_render() {
 	if (!ui_menu_show) {
-		bool in_use    = ui->combo_selected_handle != NULL;
-		bool is_escape = ui->is_escape_down;
-		if (ui_box_draws > 2 && (ui->input_released || is_escape) && !in_use && !ui->is_typing) {
+		bool in_use    = g_ui->combo_selected_handle != NULL;
+		bool is_escape = g_ui->is_escape_down;
+		if (ui_box_draws > 2 && (g_ui->input_released || is_escape) && !in_use && !g_ui->is_typing) {
 			i32 appw   = iron_window_width();
 			i32 apph   = iron_window_height();
 			i32 mw     = math_floor(ui_box_modalw * UI_SCALE());
@@ -78,9 +78,9 @@ void ui_box_render() {
 	ui_box_hwnd->text = string_copy(ui_box_title);
 
 	if (ui_box_commands == NULL) {
-		ui_begin(ui);
+		ui_begin(g_ui);
 		if (ui_window(ui_box_hwnd, left, top, mw, mh, ui_box_draggable)) {
-			ui->_y += 10;
+			g_ui->_y += 10;
 			ui_handle_t *htext = ui_handle(__ID__);
 			htext->text        = string_copy(ui_box_text);
 			if (ui_box_copyable) {
@@ -129,14 +129,14 @@ void ui_box_render() {
 		ui_end();
 	}
 	else {
-		ui_begin(ui);
-		ui->input_enabled = !ui_menu_show && ui->combo_selected_handle == NULL;
+		ui_begin(g_ui);
+		g_ui->input_enabled = !ui_menu_show && g_ui->combo_selected_handle == NULL;
 		if (ui_window(ui_box_hwnd, left, top, mw, mh, ui_box_draggable)) {
-			ui->_y += 10;
+			g_ui->_y += 10;
 			ui_box_commands();
 			ui_box_window_border();
 		}
-		ui->input_enabled = true;
+		g_ui->input_enabled = true;
 		ui_end();
 	}
 

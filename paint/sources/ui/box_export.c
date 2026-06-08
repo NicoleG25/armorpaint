@@ -100,16 +100,16 @@ void box_export_tab_export_textures(char *title, bool bake_material) {
 			g_context->format_type = ui_combo(h, format_combo, tr("Format"), true, UI_ALIGN_LEFT, true);
 		}
 
-		ui->enabled = g_context->format_type == TEXTURE_LDR_FORMAT_JPG && base_bits_handle->i == TEXTURE_BITS_BITS8;
+		g_ui->enabled = g_context->format_type == TEXTURE_LDR_FORMAT_JPG && base_bits_handle->i == TEXTURE_BITS_BITS8;
 
 		ui_handle_t *h_quality    = ui_handle(__ID__);
 		h_quality->f              = g_context->format_quality;
 		g_context->format_quality = ui_slider(h_quality, tr("Quality"), 0.0, 100.0, true, 1, true, UI_ALIGN_RIGHT, true);
 
-		ui->enabled = true;
+		g_ui->enabled = true;
 
 		ui_row2();
-		ui->enabled                         = !bake_material;
+		g_ui->enabled                         = !bake_material;
 		ui_handle_t *layers_export_handle   = ui_handle(__ID__);
 		layers_export_handle->i             = g_context->layers_export;
 		string_array_t *layers_export_combo = any_array_create_from_raw(
@@ -121,7 +121,7 @@ void box_export_tab_export_textures(char *title, bool bake_material) {
 		    },
 		    4);
 		g_context->layers_export = ui_combo(layers_export_handle, layers_export_combo, tr("Layers"), true, UI_ALIGN_LEFT, true);
-		ui->enabled              = true;
+		g_ui->enabled              = true;
 
 		ui_combo(box_export_hpreset, box_export_files, tr("Preset"), true, UI_ALIGN_LEFT, true);
 		if (box_export_hpreset->changed) {
@@ -163,7 +163,7 @@ void box_export_tab_export_textures(char *title, bool bake_material) {
 				ui_files_show(filters, true, false, &box_export_tab_export_textures_path_picked);
 			}
 		}
-		if (ui->is_hovered) {
+		if (g_ui->is_hovered) {
 			char *key = any_map_get(g_keymap, "file_export_textures");
 			char *tip = string("%s (%s)", tr("Export texture files"), key);
 			ui_tooltip(tip);
@@ -251,7 +251,7 @@ void box_export_tab_presets_new_box() {
 			h_preset->text = "new_preset";
 		}
 		char *preset_name = ui_text_input(h_preset, tr("Name"), UI_ALIGN_LEFT, true, false);
-		if (ui_icon_button(tr("OK"), ICON_CHECK, UI_ALIGN_CENTER) || ui->is_return_down) {
+		if (ui_icon_button(tr("OK"), ICON_CHECK, UI_ALIGN_CENTER) || g_ui->is_return_down) {
 			box_export_new_preset(preset_name);
 			box_export_fetch_presets();
 			gc_unroot(box_export_preset);
@@ -314,7 +314,7 @@ void box_export_tab_presets() {
 		ui_text(tr("B"), UI_ALIGN_LEFT, 0x00000000);
 		ui_text(tr("A"), UI_ALIGN_LEFT, 0x00000000);
 		ui_text(tr("Color Space"), UI_ALIGN_LEFT, 0x00000000);
-		ui->changed = false;
+		g_ui->changed = false;
 		for (i32 i = 0; i < box_export_preset->textures->length; ++i) {
 			export_preset_texture_t *t = box_export_preset->textures->buffer[i];
 			ui_row6();
@@ -322,7 +322,7 @@ void box_export_tab_presets() {
 			htex->text        = string_copy(t->name);
 			t->name           = string_copy(ui_text_input(htex, "", UI_ALIGN_LEFT, true, false));
 
-			if (ui->is_hovered && ui->input_released_r) {
+			if (g_ui->is_hovered && g_ui->input_released_r) {
 				gc_unroot(_box_export_t);
 				_box_export_t = t;
 				gc_root(_box_export_t);
@@ -363,7 +363,7 @@ void box_export_tab_presets() {
 			}
 		}
 
-		if (ui->changed) {
+		if (g_ui->changed) {
 			box_export_save_preset();
 		}
 

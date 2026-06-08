@@ -48,7 +48,7 @@ void nodes_material_rgb_curves_button(i32 node_id) {
 	ui_node_button_t *but     = node->buttons->buffer[0];
 	ui_handle_t      *nhandle = ui_nest(ui_handle(__ID__), node->id);
 	f32_array_t      *val     = but->default_value;
-	f32               sw      = ui->_w / (float)UI_NODES_SCALE();
+	f32               sw      = g_ui->_w / (float)UI_NODES_SCALE();
 
 	// Channel selector: C, R, G, B
 	ui_row4();
@@ -68,8 +68,8 @@ void nodes_material_rgb_curves_button(i32 node_id) {
 	f32 ph  = UI_LINE_H() * 4 - 2 * UI_NODES_SCALE();
 	f32 phs = ph * UI_SCALE();
 	f32 pws = sw * UI_SCALE();
-	f32 bx  = ui->_x;
-	f32 by  = ui->_y;
+	f32 bx  = g_ui->_x;
+	f32 by  = g_ui->_y;
 	// Background
 	ui_fill(0, 0, sw, ph, 0xff1a1a1a);
 	// Grid lines at midpoints
@@ -95,7 +95,7 @@ void nodes_material_rgb_curves_button(i32 node_id) {
 		prev_ay = ay;
 	}
 	draw_set_color(0xffffffff);
-	ui->_y += UI_LINE_H() * 4;
+	g_ui->_y += UI_LINE_H() * 4;
 
 	// Edit controls
 	f32_array_t *row = f32_array_create_from_raw(

@@ -566,7 +566,7 @@ void util_layer_update_path() {
 	}
 
 	// Check if mouse ray hits any point sphere
-	if (mouse_started("left") && !ui->is_hovered && !base_is_dragging && vis_points > 0) {
+	if (mouse_started("left") && !g_ui->is_hovered && !base_is_dragging && vis_points > 0) {
 		f32 min_dist = 1e10f;
 		i32 closest  = -1;
 

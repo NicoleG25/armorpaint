@@ -146,15 +146,15 @@ void tab_browser_draw(ui_handle_t *htab) {
 	}
 #endif
 
-	if (ui_tab(htab, title, false, -1, false) && ui->_window_h > ui_statusbar_default_h * UI_SCALE()) {
+	if (ui_tab(htab, title, false, -1, false) && g_ui->_window_h > ui_statusbar_default_h * UI_SCALE()) {
 		if (g_config->bookmarks == NULL) {
 			g_config->bookmarks = any_array_create_from_raw((void *[]){}, 0);
 		}
 
 		i32  bookmarks_w = math_floor(100 * UI_SCALE());
-		bool show_full   = ui->_w > (500 * UI_SCALE());
-		bool in_focus    = ui->input_x > ui->_window_x && ui->input_x < ui->_window_x + ui->_window_w && ui->input_y > ui->_window_y &&
-		                ui->input_y < ui->_window_y + ui->_window_h;
+		bool show_full   = g_ui->_w > (500 * UI_SCALE());
+		bool in_focus    = g_ui->input_x > g_ui->_window_x && g_ui->input_x < g_ui->_window_x + g_ui->_window_w && g_ui->input_y > g_ui->_window_y &&
+		                g_ui->input_y < g_ui->_window_y + g_ui->_window_h;
 
 		if (string_equals(tab_browser_hpath->text, "") && g_config->bookmarks->length > 0) { // Init to first bookmark
 			tab_browser_hpath->text = string_copy(g_config->bookmarks->buffer[0]);
@@ -166,11 +166,11 @@ void tab_browser_draw(ui_handle_t *htab) {
 		ui_begin_sticky();
 
 		if (show_full) {
-			f32 step = (1.0 - bookmarks_w / (float)ui->_w);
+			f32 step = (1.0 - bookmarks_w / (float)g_ui->_w);
 			if (!string_equals(tab_browser_hsearch->text, "")) {
 				f32_array_t *row = f32_array_create_from_raw(
 				    (f32[]){
-				        bookmarks_w / (float)ui->_w,
+				        bookmarks_w / (float)g_ui->_w,
 				        step * 0.07,
 				        step * 0.07,
 				        step * 0.66,
@@ -183,7 +183,7 @@ void tab_browser_draw(ui_handle_t *htab) {
 			else {
 				f32_array_t *row = f32_array_create_from_raw(
 				    (f32[]){
-				        bookmarks_w / (float)ui->_w,
+				        bookmarks_w / (float)g_ui->_w,
 				        step * 0.07,
 				        step * 0.07,
 				        step * 0.66,
@@ -204,9 +204,9 @@ void tab_browser_draw(ui_handle_t *htab) {
 			}
 
 			// Refresh
-			in_focus = ui->input_x > ui->_window_x && ui->input_x < ui->_window_x + ui->_window_w && ui->input_y > ui->_window_y &&
-			           ui->input_y < ui->_window_y + ui->_window_h;
-			if (ui_icon_button(tr("Refresh"), ICON_REFRESH, UI_ALIGN_CENTER) || (in_focus && ui->is_key_pressed && ui->key_code == KEY_CODE_F5)) {
+			in_focus = g_ui->input_x > g_ui->_window_x && g_ui->input_x < g_ui->_window_x + g_ui->_window_w && g_ui->input_y > g_ui->_window_y &&
+			           g_ui->input_y < g_ui->_window_y + g_ui->_window_h;
+			if (ui_icon_button(tr("Refresh"), ICON_REFRESH, UI_ALIGN_CENTER) || (in_focus && g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_F5)) {
 				tab_browser_refresh = true;
 			}
 		}
@@ -234,12 +234,12 @@ void tab_browser_draw(ui_handle_t *htab) {
 		nested = nested && !(string_length(text) >= 2 && string_equals(char_at(text, 0), PATH_SEP) && string_equals(char_at(text, 1), PATH_SEP) &&
 		                     string_last_index_of(text, PATH_SEP) == 1);
 #endif
-		ui->enabled = nested;
+		g_ui->enabled = nested;
 		if (ui_icon_button("", ICON_CHEVRON_LEFT, UI_ALIGN_CENTER)) {
 			ui_files_go_up(tab_browser_hpath);
 		}
-		ui->enabled = true;
-		if (ui->is_hovered) {
+		g_ui->enabled = true;
+		if (g_ui->is_hovered) {
 			ui_tooltip(tr("Previous folder"));
 		}
 
@@ -262,13 +262,13 @@ void tab_browser_draw(ui_handle_t *htab) {
 
 		if (show_full) {
 			tab_browser_hsearch->text = string_copy(ui_text_input(tab_browser_hsearch, tr("Search"), UI_ALIGN_LEFT, true, true));
-			if (ui->is_hovered) {
+			if (g_ui->is_hovered) {
 				ui_tooltip(string("%s\n%s", tr("ctrl+f to search"), tr("esc to cancel")));
 			}
-			if (ui->is_ctrl_down && ui->is_key_pressed && ui->key_code == KEY_CODE_F) { // Start searching via ctrl+f
+			if (g_ui->is_ctrl_down && g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_F) { // Start searching via ctrl+f
 				ui_start_text_edit(tab_browser_hsearch, UI_ALIGN_LEFT);
 			}
-			if (!string_equals(tab_browser_hsearch->text, "") && (ui_button(tr("X"), UI_ALIGN_CENTER, "") || ui->is_escape_down)) {
+			if (!string_equals(tab_browser_hsearch->text, "") && (ui_button(tr("X"), UI_ALIGN_CENTER, "") || g_ui->is_escape_down)) {
 				tab_browser_hsearch->text = "";
 			}
 		}
@@ -282,10 +282,10 @@ void tab_browser_draw(ui_handle_t *htab) {
 		tab_browser_last_path = string_copy(tab_browser_hpath->text);
 		gc_root(tab_browser_last_path);
 
-		f32 _y = ui->_y;
+		f32 _y = g_ui->_y;
 		if (show_full) {
-			ui->_x = bookmarks_w;
-			ui->_w -= bookmarks_w;
+			g_ui->_x = bookmarks_w;
+			g_ui->_w -= bookmarks_w;
 		}
 
 		ui_files_file_browser(tab_browser_hpath, true, tab_browser_hsearch->text, tab_browser_refresh, &tab_browser_draw_context_menu);
@@ -310,10 +310,10 @@ void tab_browser_draw(ui_handle_t *htab) {
 		}
 
 		if (show_full) {
-			i32 bottom_y = ui->_y;
-			ui->_x       = 0;
-			ui->_y       = _y;
-			ui->_w       = bookmarks_w;
+			i32 bottom_y = g_ui->_y;
+			g_ui->_x       = 0;
+			g_ui->_y       = _y;
+			g_ui->_w       = bookmarks_w;
 
 			if (ui_icon_button(tr("Cloud"), ICON_CLOUD, UI_ALIGN_LEFT)) {
 				tab_browser_go_to_cloud();
@@ -334,32 +334,32 @@ void tab_browser_draw(ui_handle_t *htab) {
 #endif
 				}
 
-				if (ui->is_hovered && ui->input_released_r) {
+				if (g_ui->is_hovered && g_ui->input_released_r) {
 					gc_unroot(_tab_browser_draw_b);
 					_tab_browser_draw_b = string_copy(b);
 					gc_root(_tab_browser_draw_b);
 					ui_menu_draw(&tab_browser_draw_bookmark_menu, -1, -1);
 				}
 			}
-			if (ui->_y < bottom_y) {
-				ui->_y = bottom_y;
+			if (g_ui->_y < bottom_y) {
+				g_ui->_y = bottom_y;
 			}
 		}
 
 		if (in_focus) {
-			if (ui->is_key_pressed && ui->key_code == KEY_CODE_LEFT)
+			if (g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_LEFT)
 				ui_files_navigate(-1, 0);
-			if (ui->is_key_pressed && ui->key_code == KEY_CODE_RIGHT)
+			if (g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_RIGHT)
 				ui_files_navigate(1, 0);
-			if (ui->is_key_pressed && ui->key_code == KEY_CODE_UP)
+			if (g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_UP)
 				ui_files_navigate(0, -1);
-			if (ui->is_key_pressed && ui->key_code == KEY_CODE_DOWN)
+			if (g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_DOWN)
 				ui_files_navigate(0, 1);
-			if (ui->is_key_pressed && ui->key_code == KEY_CODE_RETURN)
+			if (g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_RETURN)
 				ui_files_enter_selected(tab_browser_hpath);
-			if (ui->is_key_pressed && ui->key_code == KEY_CODE_BACKSPACE && nested)
+			if (g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_BACKSPACE && nested)
 				ui_files_go_up(tab_browser_hpath);
-			if (ui->is_escape_down)
+			if (g_ui->is_escape_down)
 				ui_files_selected = -1;
 		}
 	}

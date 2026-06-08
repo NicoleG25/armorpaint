@@ -8,23 +8,23 @@ void ui_sidebar_render_ui() {
 
 	// Expand button
 	if (g_config->layout->buffer[LAYOUT_SIZE_SIDEBAR_W] == 0) {
-		i32 width = math_floor(draw_string_width(ui->ops->font, ui->font_size, "<") + 25 * UI_SCALE());
+		i32 width = math_floor(draw_string_width(g_ui->ops->font, g_ui->font_size, "<") + 25 * UI_SCALE());
 		if (ui_window(ui_sidebar_hminimized, iron_window_width() - width, -1, width, math_floor(UI_ELEMENT_H() + 4 * UI_SCALE()), false)) {
-			ui_fill(0, 0, ui->_window_w, ui->_window_h + 1, ui->ops->theme->SEPARATOR_COL);
-			ui->_w                     = width;
-			i32 _BUTTON_H              = ui->ops->theme->BUTTON_H;
-			i32 _BUTTON_COL            = ui->ops->theme->BUTTON_COL;
-			i32 _TEXT_COL              = ui->ops->theme->TEXT_COL;
-			ui->ops->theme->BUTTON_H   = ui->ops->theme->ELEMENT_H;
-			ui->ops->theme->BUTTON_COL = ui->ops->theme->SEPARATOR_COL;
-			ui->ops->theme->TEXT_COL   = ui->ops->theme->HOVER_COL;
+			ui_fill(0, 0, g_ui->_window_w, g_ui->_window_h + 1, g_ui->ops->theme->SEPARATOR_COL);
+			g_ui->_w                     = width;
+			i32 _BUTTON_H              = g_ui->ops->theme->BUTTON_H;
+			i32 _BUTTON_COL            = g_ui->ops->theme->BUTTON_COL;
+			i32 _TEXT_COL              = g_ui->ops->theme->TEXT_COL;
+			g_ui->ops->theme->BUTTON_H   = g_ui->ops->theme->ELEMENT_H;
+			g_ui->ops->theme->BUTTON_COL = g_ui->ops->theme->SEPARATOR_COL;
+			g_ui->ops->theme->TEXT_COL   = g_ui->ops->theme->HOVER_COL;
 
 			if (ui_button("<", UI_ALIGN_CENTER, "")) {
 				ui_sidebar_show(true);
 			}
-			ui->ops->theme->BUTTON_H   = _BUTTON_H;
-			ui->ops->theme->BUTTON_COL = _BUTTON_COL;
-			ui->ops->theme->TEXT_COL   = _TEXT_COL;
+			g_ui->ops->theme->BUTTON_H   = _BUTTON_H;
+			g_ui->ops->theme->BUTTON_COL = _BUTTON_COL;
+			g_ui->ops->theme->TEXT_COL   = _TEXT_COL;
 		}
 		return;
 	}
@@ -34,9 +34,9 @@ void ui_sidebar_render_ui() {
 	i32  expand_button_offset = g_config->touch_ui ? math_floor(UI_ELEMENT_H() + UI_ELEMENT_OFFSET()) : 0;
 	ui_sidebar_tabx           = iron_window_width() - g_config->layout->buffer[LAYOUT_SIZE_SIDEBAR_W];
 
-	i32 _SCROLL_W = ui->ops->theme->SCROLL_W;
+	i32 _SCROLL_W = g_ui->ops->theme->SCROLL_W;
 	if (mini) {
-		ui->ops->theme->SCROLL_W = ui->ops->theme->SCROLL_MINI_W;
+		g_ui->ops->theme->SCROLL_W = g_ui->ops->theme->SCROLL_MINI_W;
 	}
 
 	i32 sidebar_y = 0;
@@ -46,10 +46,10 @@ void ui_sidebar_render_ui() {
 		sidebar_y += UI_ELEMENT_H() + UI_ELEMENT_OFFSET();
 		ui_end();
 		draw_begin(NULL, false, 0);
-		draw_set_color(ui->ops->theme->PRESSED_COL);
+		draw_set_color(g_ui->ops->theme->PRESSED_COL);
 		draw_filled_rect(ui_sidebar_tabx, 0, g_config->layout->buffer[LAYOUT_SIZE_SIDEBAR_W], sidebar_y);
 		draw_end();
-		ui_begin(ui);
+		ui_begin(g_ui);
 	}
 #endif
 
@@ -79,24 +79,24 @@ void ui_sidebar_render_ui() {
 	}
 
 	ui_end_window();
-	ui->ops->theme->SCROLL_W = _SCROLL_W;
+	g_ui->ops->theme->SCROLL_W = _SCROLL_W;
 
 	// Collapse / expand button for mini sidebar
 	if (g_config->touch_ui) {
 		i32 width  = g_config->layout->buffer[LAYOUT_SIZE_SIDEBAR_W];
 		i32 height = math_floor(UI_ELEMENT_H() + UI_ELEMENT_OFFSET());
 		if (ui_window(ui_handle(__ID__), iron_window_width() - width, iron_window_height() - height, width, height + 1, false)) {
-			ui->_w                     = width;
-			i32 _BUTTON_H              = ui->ops->theme->BUTTON_H;
-			i32 _BUTTON_COL            = ui->ops->theme->BUTTON_COL;
-			ui->ops->theme->BUTTON_H   = ui->ops->theme->ELEMENT_H;
-			ui->ops->theme->BUTTON_COL = ui->ops->theme->WINDOW_BG_COL;
+			g_ui->_w                     = width;
+			i32 _BUTTON_H              = g_ui->ops->theme->BUTTON_H;
+			i32 _BUTTON_COL            = g_ui->ops->theme->BUTTON_COL;
+			g_ui->ops->theme->BUTTON_H   = g_ui->ops->theme->ELEMENT_H;
+			g_ui->ops->theme->BUTTON_COL = g_ui->ops->theme->WINDOW_BG_COL;
 			if (ui_button(mini ? "<" : ">", UI_ALIGN_CENTER, "")) {
 				g_config->layout->buffer[LAYOUT_SIZE_SIDEBAR_W] = mini ? ui_sidebar_default_w_full : ui_sidebar_default_w_mini;
 				g_config->layout->buffer[LAYOUT_SIZE_SIDEBAR_W] = math_floor(g_config->layout->buffer[LAYOUT_SIZE_SIDEBAR_W] * UI_SCALE());
 			}
-			ui->ops->theme->BUTTON_H   = _BUTTON_H;
-			ui->ops->theme->BUTTON_COL = _BUTTON_COL;
+			g_ui->ops->theme->BUTTON_H   = _BUTTON_H;
+			g_ui->ops->theme->BUTTON_COL = _BUTTON_COL;
 		}
 	}
 }
