@@ -1749,11 +1749,9 @@ void minic_register_builtins() {
 	R(sys_notify_on_app_state, "v(p,p,p,p,p)");
 	R(sys_notify_on_drop_files, "v(p)");
 	R(sys_notify_on_update, "v(p,p)");
-	R(sys_notify_on_render, "v(p,p)");
 	R(sys_notify_on_next_frame, "v(p,p)");
 	R(sys_notify_on_end_frame, "v(p,p)");
 	R(sys_remove_update, "v(p)");
-	R(sys_remove_render, "v(p)");
 	R(sys_remove_end_frame, "v(p)");
 	R(data_path, "p()");
 	R(video_unload, "v(p)");

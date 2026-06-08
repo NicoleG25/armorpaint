@@ -827,11 +827,9 @@ static void cmd(struct android_app *app, int32_t cmd) {
 		updateAppForegroundStatus(displayIsInitialized, true);
 		break;
 	case APP_CMD_RESUME:
-		iron_internal_resume_callback();
 		paused = false;
 		break;
 	case APP_CMD_PAUSE:
-		iron_internal_pause_callback();
 		paused = true;
 		break;
 	case APP_CMD_STOP:

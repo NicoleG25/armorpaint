@@ -780,11 +780,9 @@ void iron_internal_call_resize_callback(int width, int height) {
 }
 
 - (void)windowDidResignMain:(NSNotification *)notification {
-	iron_internal_pause_callback();
 }
 
 - (void)windowDidBecomeMain:(NSNotification *)notification {
-	iron_internal_resume_callback();
 }
 
 @end

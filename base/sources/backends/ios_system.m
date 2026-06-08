@@ -577,11 +577,9 @@ void importFile(NSURL *url) {
 }
 
 - (void)sceneDidBecomeActive:(UIScene *)scene {
-	iron_internal_resume_callback();
 }
 
 - (void)sceneWillResignActive:(UIScene *)scene {
-	iron_internal_pause_callback();
 }
 
 - (void)sceneWillEnterForeground:(UIScene *)scene {

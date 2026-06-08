@@ -13,8 +13,7 @@
 void          _iron_init(iron_window_options_t *ops);
 void          _iron_set_update_callback(void (*callback)(void));
 void          _iron_set_drop_files_callback(void (*callback)(char *));
-void          iron_set_application_state_callback(void (*on_foreground)(void), void (*on_resume)(void), void (*on_pause)(void), void (*on_background)(void),
-                                                  void (*on_shutdown)(void));
+void          iron_set_application_state_callback(void (*on_foreground)(void), void (*on_background)(void), void (*on_shutdown)(void));
 void          iron_set_keyboard_down_callback(void (*callback)(int));
 void          iron_set_keyboard_up_callback(void (*callback)(int));
 void          iron_set_mouse_down_callback(void (*callback)(int, int, int));
@@ -46,8 +45,6 @@ f32        _sys_start_time = 0.0f;
 char       _sys_window_title[1024];
 
 any_array_t *_sys_foreground_listeners = NULL;
-any_array_t *_sys_resume_listeners     = NULL;
-any_array_t *_sys_pause_listeners      = NULL;
 any_array_t *_sys_background_listeners = NULL;
 any_array_t *_sys_shutdown_listeners   = NULL;
 any_array_t *_sys_drop_files_listeners = NULL;
@@ -55,7 +52,6 @@ any_array_t *_sys_drop_files_listeners = NULL;
 any_array_t *_sys_on_next_frames = NULL;
 any_array_t *_sys_on_end_frames  = NULL;
 any_array_t *_sys_on_updates     = NULL;
-any_array_t *_sys_on_renders     = NULL;
 i32          _sys_lastw          = -1;
 i32          _sys_lasth          = -1;
 
@@ -85,10 +81,6 @@ static callback_t *_callback_create(void (*f)(void *data), void *data) {
 void sys_start(iron_window_options_t *ops) {
 	_sys_foreground_listeners = any_array_create(0);
 	gc_root(_sys_foreground_listeners);
-	_sys_resume_listeners = any_array_create(0);
-	gc_root(_sys_resume_listeners);
-	_sys_pause_listeners = any_array_create(0);
-	gc_root(_sys_pause_listeners);
 	_sys_background_listeners = any_array_create(0);
 	gc_root(_sys_background_listeners);
 	_sys_shutdown_listeners = any_array_create(0);
@@ -101,8 +93,6 @@ void sys_start(iron_window_options_t *ops) {
 	gc_root(_sys_on_end_frames);
 	_sys_on_updates = any_array_create(0);
 	gc_root(_sys_on_updates);
-	_sys_on_renders = any_array_create(0);
-	gc_root(_sys_on_renders);
 	_sys_shaders = any_map_create();
 	gc_root(_sys_shaders);
 
@@ -152,7 +142,7 @@ void sys_start(iron_window_options_t *ops) {
 
 	_iron_set_update_callback(sys_render);
 	_iron_set_drop_files_callback(sys_drop_files_callback);
-	iron_set_application_state_callback(sys_foreground_callback, sys_resume_callback, sys_pause_callback, sys_background_callback, sys_shutdown_callback);
+	iron_set_application_state_callback(sys_foreground_callback, sys_background_callback, sys_shutdown_callback);
 	iron_set_keyboard_down_callback(sys_keyboard_down_callback);
 	iron_set_keyboard_up_callback(sys_keyboard_up_callback);
 	iron_set_mouse_down_callback(sys_mouse_down_callback);
@@ -172,16 +162,9 @@ void sys_start(iron_window_options_t *ops) {
 	input_register();
 }
 
-void sys_notify_on_app_state(void (*on_foreground)(void), void (*on_resume)(void), void (*on_pause)(void), void (*on_background)(void),
-                             void (*on_shutdown)(void)) {
+void sys_notify_on_app_state(void (*on_foreground)(void), void (*on_background)(void), void (*on_shutdown)(void)) {
 	if (on_foreground != NULL) {
 		any_array_push(_sys_foreground_listeners, _sys_callback_create(on_foreground));
-	}
-	if (on_resume != NULL) {
-		any_array_push(_sys_resume_listeners, _sys_callback_create(on_resume));
-	}
-	if (on_pause != NULL) {
-		any_array_push(_sys_pause_listeners, _sys_callback_create(on_pause));
 	}
 	if (on_background != NULL) {
 		any_array_push(_sys_background_listeners, _sys_callback_create(on_background));
@@ -203,20 +186,6 @@ void sys_foreground(void) {
 		cb->f();
 	}
 	input_on_foreground();
-}
-
-void sys_resume(void) {
-	for (i32 i = 0; i < (i32)_sys_resume_listeners->length; ++i) {
-		sys_callback_t *cb = _sys_resume_listeners->buffer[i];
-		cb->f();
-	}
-}
-
-void sys_pause(void) {
-	for (i32 i = 0; i < (i32)_sys_pause_listeners->length; ++i) {
-		sys_callback_t *cb = _sys_pause_listeners->buffer[i];
-		cb->f();
-	}
 }
 
 void sys_background(void) {
@@ -250,14 +219,6 @@ void sys_drop_files_callback(char *file_path) {
 
 void sys_foreground_callback(void) {
 	sys_foreground();
-}
-
-void sys_resume_callback(void) {
-	sys_resume();
-}
-
-void sys_pause_callback(void) {
-	sys_pause();
 }
 
 void sys_background_callback(void) {
@@ -441,24 +402,14 @@ static void _sys_run_callbacks(any_array_t *cbs, i32 len) {
 }
 
 void sys_render(void) {
-	if (_sys_on_next_frames->length > 0) {
-		i32 len = _sys_on_next_frames->length;
-		_sys_run_callbacks(_sys_on_next_frames, len);
-		array_splice(_sys_on_next_frames, 0, len);
-	}
+	_sys_run_callbacks(_sys_on_next_frames, _sys_on_next_frames->length);
+	array_splice(_sys_on_next_frames, 0, _sys_on_next_frames->length);
 
+	scene_render_frame();
 	_sys_run_callbacks(_sys_on_updates, _sys_on_updates->length);
 
-	if (iron_window_width() > 0 && iron_window_height() > 0) {
-		scene_render_frame();
-		_sys_run_callbacks(_sys_on_renders, _sys_on_renders->length);
-	}
-
-	if (_sys_on_end_frames->length > 0) {
-		i32 len = _sys_on_end_frames->length;
-		_sys_run_callbacks(_sys_on_end_frames, len);
-		array_splice(_sys_on_end_frames, 0, len);
-	}
+	_sys_run_callbacks(_sys_on_end_frames, _sys_on_end_frames->length);
+	array_splice(_sys_on_end_frames, 0, _sys_on_end_frames->length);
 
 	input_end_frame();
 
@@ -484,10 +435,6 @@ void sys_notify_on_update(void (*f)(void *data), void *data) {
 	any_array_push(_sys_on_updates, _callback_create(f, data));
 }
 
-void sys_notify_on_render(void (*f)(void *data), void *data) {
-	any_array_push(_sys_on_renders, _callback_create(f, data));
-}
-
 void sys_notify_on_next_frame(void (*f)(void *data), void *data) {
 	any_array_push(_sys_on_next_frames, _callback_create(f, data));
 }
@@ -508,10 +455,6 @@ static void _sys_remove_callback(any_array_t *ar, void (*f)(void *data)) {
 
 void sys_remove_update(void (*f)(void *data)) {
 	_sys_remove_callback(_sys_on_updates, f);
-}
-
-void sys_remove_render(void (*f)(void *data)) {
-	_sys_remove_callback(_sys_on_renders, f);
 }
 
 void sys_remove_end_frame(void (*f)(void *data)) {

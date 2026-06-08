@@ -591,16 +591,11 @@ void _iron_set_drop_files_callback(void (*callback)(char *)) {
 	iron_set_drop_files_callback(_drop_files, NULL);
 }
 
-void iron_set_application_state_callback(void (*on_foreground)(void), void (*on_resume)(void), void (*on_pause)(void), void (*on_background)(void),
-                                         void (*on_shutdown)(void)) {
+void iron_set_application_state_callback(void (*on_foreground)(void), void (*on_background)(void), void (*on_shutdown)(void)) {
 	iron_set_foreground_callback(on_foreground != NULL ? _foreground : NULL, NULL);
-	iron_set_resume_callback(on_resume != NULL ? _resume : NULL, NULL);
-	iron_set_pause_callback(on_pause != NULL ? _pause : NULL, NULL);
 	iron_set_background_callback(on_background != NULL ? _background : NULL, NULL);
 	iron_set_shutdown_callback(on_shutdown != NULL ? _shutdown : NULL, NULL);
 	iron_foreground = on_foreground;
-	iron_resume     = on_resume;
-	iron_pause      = on_pause;
 	iron_background = on_background;
 	iron_shutdown   = on_shutdown;
 }
@@ -714,7 +709,6 @@ void *gpu_create_vertex_buffer(i32 count, gpu_vertex_structure_t *structure) {
 	gpu_vertex_buffer_init(buffer, count, structure);
 	return buffer;
 }
-
 
 gpu_shader_t *gpu_create_shader(buffer_t *data, i32 shader_type) {
 	gpu_shader_t *shader = (gpu_shader_t *)malloc(sizeof(gpu_shader_t));

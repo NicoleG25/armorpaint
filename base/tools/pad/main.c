@@ -174,7 +174,7 @@ void _main() {
 	gc_root(ui_on_border_hover);
 	ui_text_area_line_numbers    = true;
 	ui_text_area_scroll_past_end = true;
-	sys_notify_on_render(render, NULL);
+	sys_notify_on_update(render, NULL);
 	_iron_set_drop_files_callback(drop_files);
 	iron_set_application_state_callback(NULL, NULL, NULL, NULL, on_shutdown);
 }

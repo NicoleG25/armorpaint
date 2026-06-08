@@ -86,10 +86,6 @@ static void (*foreground_callback)(void *)         = NULL;
 static void *foreground_callback_data              = NULL;
 static void (*background_callback)(void *)         = NULL;
 static void *background_callback_data              = NULL;
-static void (*pause_callback)(void *)              = NULL;
-static void *pause_callback_data                   = NULL;
-static void (*resume_callback)(void *)             = NULL;
-static void *resume_callback_data                  = NULL;
 static void (*shutdown_callback)(void *)           = NULL;
 static void *shutdown_callback_data                = NULL;
 static void (*drop_files_callback)(char *, void *) = NULL;
@@ -112,16 +108,6 @@ void iron_set_update_callback(void (*callback)(void)) {
 void iron_set_foreground_callback(void (*callback)(void *), void *data) {
 	foreground_callback      = callback;
 	foreground_callback_data = data;
-}
-
-void iron_set_resume_callback(void (*callback)(void *), void *data) {
-	resume_callback      = callback;
-	resume_callback_data = data;
-}
-
-void iron_set_pause_callback(void (*callback)(void *), void *data) {
-	pause_callback      = callback;
-	pause_callback_data = data;
 }
 
 void iron_set_background_callback(void (*callback)(void *), void *data) {
@@ -163,18 +149,6 @@ void iron_internal_update_callback(void) {
 void iron_internal_foreground_callback(void) {
 	if (foreground_callback != NULL) {
 		foreground_callback(foreground_callback_data);
-	}
-}
-
-void iron_internal_resume_callback(void) {
-	if (resume_callback != NULL) {
-		resume_callback(resume_callback_data);
-	}
-}
-
-void iron_internal_pause_callback(void) {
-	if (pause_callback != NULL) {
-		pause_callback(pause_callback_data);
 	}
 }
 

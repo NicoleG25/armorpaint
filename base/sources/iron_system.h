@@ -122,8 +122,6 @@ bool        iron_internal_handle_messages(void);
 void        iron_internal_shutdown(void);
 void        iron_internal_update_callback(void);
 void        iron_internal_foreground_callback(void);
-void        iron_internal_resume_callback(void);
-void        iron_internal_pause_callback(void);
 void        iron_internal_background_callback(void);
 void        iron_internal_shutdown_callback(void);
 void        iron_internal_drop_files_callback(char *);

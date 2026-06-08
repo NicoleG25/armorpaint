@@ -13,7 +13,6 @@ extern f32        _sys_start_time;
 extern any_array_t *_sys_on_next_frames;
 extern any_array_t *_sys_on_end_frames;
 extern any_array_t *_sys_on_updates;
-extern any_array_t *_sys_on_renders;
 extern i32          _sys_lastw;
 extern i32          _sys_lasth;
 
@@ -37,8 +36,6 @@ typedef struct callback {
 } callback_t;
 
 extern any_array_t *_sys_foreground_listeners;
-extern any_array_t *_sys_resume_listeners;
-extern any_array_t *_sys_pause_listeners;
 extern any_array_t *_sys_background_listeners;
 extern any_array_t *_sys_shutdown_listeners;
 extern any_array_t *_sys_drop_files_listeners;
@@ -62,15 +59,12 @@ char *sys_shader_ext(void);
 
 gpu_shader_t *sys_get_shader(char *name);
 
-void sys_notify_on_app_state(void (*on_foreground)(void), void (*on_resume)(void), void (*on_pause)(void), void (*on_background)(void),
-                             void (*on_shutdown)(void));
+void sys_notify_on_app_state(void (*on_foreground)(void), void (*on_background)(void), void (*on_shutdown)(void));
 void sys_notify_on_drop_files(void (*drop_files_listener)(char *s));
 void sys_notify_on_update(void (*f)(void *data), void *data);
-void sys_notify_on_render(void (*f)(void *data), void *data);
 void sys_notify_on_next_frame(void (*f)(void *data), void *data);
 void sys_notify_on_end_frame(void (*f)(void *data), void *data);
 void sys_remove_update(void (*f)(void *data));
-void sys_remove_render(void (*f)(void *data));
 void sys_remove_end_frame(void (*f)(void *data));
 
 void sys_render(void);
@@ -82,8 +76,6 @@ void sys_shutdown(void);
 void sys_drop_files(char *file_path);
 
 void sys_foreground_callback(void);
-void sys_resume_callback(void);
-void sys_pause_callback(void);
 void sys_background_callback(void);
 void sys_shutdown_callback(void);
 void sys_drop_files_callback(char *file_path);
