@@ -184,11 +184,11 @@ void import_mesh_make_mesh(raw_mesh_t *mesh) {
 
 	mesh_object_set_data(g_context->paint_object, md);
 	g_context->paint_object->base->name = mesh->name;
-	g_project->_->paint_objects = any_array_create_from_raw(
-	    (void *[]){
-	        g_context->paint_object,
-	    },
-	    1);
+	g_project->_->paint_objects         = any_array_create_from_raw(
+        (void *[]){
+            g_context->paint_object,
+        },
+        1);
 
 	md->_->handle = string_copy(raw->name);
 	any_map_set(data_cached_meshes, md->_->handle, md);

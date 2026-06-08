@@ -380,9 +380,9 @@ void _kickstart() {
 	g_project = GC_ALLOC_INIT(project_t, {0});
 	gc_root(g_project);
 
-	g_project->_        = gc_alloc(sizeof(project_runtime_t));
+	g_project->_           = gc_alloc(sizeof(project_runtime_t));
 	g_project->_->filepath = "";
-	g_project->_->assets = any_array_create_from_raw((void *[]){}, 0);
+	g_project->_->assets   = any_array_create_from_raw((void *[]){}, 0);
 
 	g_project->mesh_assets = any_array_create_from_raw((void *[]){}, 0);
 

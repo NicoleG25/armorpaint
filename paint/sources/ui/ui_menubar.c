@@ -269,7 +269,7 @@ void ui_menubar_draw_category_items() {
 			project_save_as(false);
 		}
 
-		g_ui->changed                    = false;
+		g_ui->changed                  = false;
 		ui_handle_t *h_pack_assets     = ui_handle(__ID__);
 		h_pack_assets->b               = g_context->pack_assets_on_save;
 		g_context->pack_assets_on_save = ui_check(h_pack_assets, tr("Pack Assets"), "");
@@ -346,7 +346,7 @@ void ui_menubar_draw_category_items() {
 			step_redo = string_copy(history_steps->buffer[history_steps->length - history_redos]->name);
 		}
 
-		g_ui->enabled          = history_undos > 0;
+		g_ui->enabled        = history_undos > 0;
 		any_map_t *vars_undo = any_map_create();
 		any_map_set(vars_undo, "step", step_undo);
 		if (ui_menu_button(vtr("Undo {step}", vars_undo), any_map_get(g_keymap, "edit_undo"), ICON_UNDO)) {
@@ -354,7 +354,7 @@ void ui_menubar_draw_category_items() {
 			ui_menu_keep_open = true;
 		}
 
-		g_ui->enabled          = history_redos > 0;
+		g_ui->enabled        = history_redos > 0;
 		any_map_t *vars_redo = any_map_create();
 		any_map_set(vars_redo, "step", step_redo);
 		if (ui_menu_button(vtr("Redo {step}", vars_redo), any_map_get(g_keymap, "edit_redo"), ICON_REDO)) {

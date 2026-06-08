@@ -20,7 +20,7 @@ gpu_texture_t *tab_swatches_empty_get() {
 }
 
 void tab_swatches_delete_swatch(swatch_color_t *swatch) {
-	i32 i = array_index_of(g_project->swatches, swatch);
+	i32 i             = array_index_of(g_project->swatches, swatch);
 	g_context->swatch = g_project->swatches->buffer[i == g_project->swatches->length - 1 ? i - 1 : i + 1];
 	array_splice(g_project->swatches, i, 1);
 	ui_base_hwnds->buffer[TAB_AREA_STATUS]->redraws = 2;
@@ -67,7 +67,7 @@ void tab_swatches_draw_color_picker() {
 }
 
 void tab_swatches_draw_edit_menu() {
-	g_ui->changed    = false;
+	g_ui->changed  = false;
 	ui_handle_t *h = ui_handle(__ID__);
 	h->color       = g_context->swatch->base;
 
@@ -96,7 +96,7 @@ void tab_swatches_draw_edit_menu() {
 		ui_menu_keep_open = true;
 	}
 	if (g_ui->input_released) {
-		g_context->swatch = g_context->swatch; // Trigger material preview update
+		g_context->swatch         = g_context->swatch; // Trigger material preview update
 		g_context->picked_color   = util_clone_swatch_color(g_context->swatch);
 		ui_header_handle->redraws = 2;
 	}
@@ -150,7 +150,7 @@ void tab_swatches_draw(ui_handle_t *htab) {
 		}
 
 		if (ui_icon_button(tr("Clear"), ICON_ERASE, UI_ALIGN_CENTER)) {
-			g_context->swatch = project_make_swatch(0xffffffff);
+			g_context->swatch   = project_make_swatch(0xffffffff);
 			g_project->swatches = any_array_create_from_raw(
 			    (void *[]){
 			        g_context->swatch,
@@ -214,8 +214,8 @@ void tab_swatches_draw(ui_handle_t *htab) {
 
 				if (state == UI_STATE_STARTED) {
 					g_context->swatch = g_project->swatches->buffer[i];
-					base_drag_off_x = -(mouse_x - uix - g_ui->_window_x);
-					base_drag_off_y = -(mouse_y - uiy - g_ui->_window_y + 1);
+					base_drag_off_x   = -(mouse_x - uix - g_ui->_window_x);
+					base_drag_off_y   = -(mouse_y - uiy - g_ui->_window_y + 1);
 					gc_unroot(base_drag_swatch);
 					base_drag_swatch = g_context->swatch;
 					gc_root(base_drag_swatch);

@@ -149,7 +149,7 @@ void tab_scripts_draw(ui_handle_t *htab) {
 		i32          _font_size = g_ui->font_size;
 		draw_font_t *f          = data_get_font("font_mono.ttf");
 		ui_set_font(g_ui, f);
-		g_ui->font_size                = math_floor(15 * UI_SCALE());
+		g_ui->font_size              = math_floor(15 * UI_SCALE());
 		ui_text_area_line_numbers    = true;
 		ui_text_area_scroll_past_end = true;
 		gc_unroot(ui_text_area_coloring);

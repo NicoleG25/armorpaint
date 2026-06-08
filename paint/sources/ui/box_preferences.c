@@ -138,7 +138,7 @@ void box_preferences_interface_tab() {
 		ui_tooltip(tr("Wrap mouse around view boundaries during camera control"));
 	}
 
-	g_ui->changed                     = false;
+	g_ui->changed                   = false;
 	ui_handle_t *h_show_asset_names = ui_handle(__ID__);
 	h_show_asset_names->b           = g_config->show_asset_names;
 	g_config->show_asset_names      = ui_check(h_show_asset_names, tr("Show Asset Names"), "");
@@ -146,7 +146,7 @@ void box_preferences_interface_tab() {
 		base_redraw_ui();
 	}
 
-	g_ui->changed             = false;
+	g_ui->changed           = false;
 	ui_handle_t *h_touch_ui = ui_handle(__ID__);
 	h_touch_ui->b           = g_config->touch_ui;
 	g_config->touch_ui      = ui_check(h_touch_ui, tr("Touch UI"), "");
@@ -190,7 +190,7 @@ void box_preferences_interface_tab() {
 //    ╚═╝   ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚══════╝
 
 void box_preferences_theme_tab_theme_field_menu() {
-	g_ui->changed                       = false;
+	g_ui->changed                     = false;
 	i32  color                        = ui_color_wheel(_box_preferences_h, false, -1, 11 * g_ui->ops->theme->ELEMENT_H * UI_SCALE(), true, NULL, NULL);
 	u32 *u32_theme                    = base_theme;
 	*(u32_theme + _box_preferences_i) = color;
@@ -290,7 +290,7 @@ void box_preferences_theme_tab() {
 	char        *theme_search = to_lower_case(box_preferences_theme_hsearch->text);
 	ui_handle_t *h_list       = ui_handle(__ID__);
 	u32         *u32_theme    = base_theme;
-	g_ui->input_enabled         = !ui_menu_show;
+	g_ui->input_enabled       = !ui_menu_show;
 	for (i32 i = 0; i < ui_theme_keys_count; ++i) {
 		char *key = ui_theme_keys[i];
 		if (!string_equals(theme_search, "") && string_index_of(to_lower_case(key), theme_search) == -1) {
@@ -849,7 +849,7 @@ void box_preferences_model_panel(neural_node_model_t *m) {
 			box_preferences_htab->redraws = 2;
 			iron_delay_idle_sleep();
 
-			i32 _BUTTON_COL            = g_ui->ops->theme->BUTTON_COL;
+			i32 _BUTTON_COL              = g_ui->ops->theme->BUTTON_COL;
 			g_ui->ops->theme->BUTTON_COL = g_ui->ops->theme->HIGHLIGHT_COL;
 
 			ui_handle_t *h = ui_handle(__ID__);
@@ -975,7 +975,7 @@ void box_preferences_keymap_tab() {
 	ui_separator(8, false);
 
 	i32 index            = 0;
-	g_ui->changed          = false;
+	g_ui->changed        = false;
 	string_array_t *keys = map_keys(g_keymap);
 	array_sort(keys, NULL);
 	char *search = to_lower_case(box_preferences_keymap_hsearch->text);

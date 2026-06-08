@@ -37,11 +37,11 @@ void ui_menu_fit_to_screen() {
 void ui_menu_render() {
 	i32 menu_w = ui_menu_commands != NULL ? math_floor(base_default_element_w * UI_SCALE() * 2.3) : math_floor(UI_ELEMENT_W() * 2.3);
 
-	i32 _FILL_BUTTON_BG            = g_ui->ops->theme->FILL_BUTTON_BG;
+	i32 _FILL_BUTTON_BG              = g_ui->ops->theme->FILL_BUTTON_BG;
 	g_ui->ops->theme->FILL_BUTTON_BG = false;
-	i32 _ELEMENT_OFFSET            = g_ui->ops->theme->ELEMENT_OFFSET;
+	i32 _ELEMENT_OFFSET              = g_ui->ops->theme->ELEMENT_OFFSET;
 	g_ui->ops->theme->ELEMENT_OFFSET = 0;
-	i32 _ELEMENT_H                 = g_ui->ops->theme->ELEMENT_H;
+	i32 _ELEMENT_H                   = g_ui->ops->theme->ELEMENT_H;
 	g_ui->ops->theme->ELEMENT_H      = g_config->touch_ui ? (28 + 2) : 28;
 
 	if (ui_menu_nested) {
@@ -130,8 +130,8 @@ bool ui_menu_button(char *text, char *label, icon_t icon) {
 		gpu_texture_t *icons     = resource_get("icons05x.k");
 		rect_t        *rect      = resource_tile50(icons, icon);
 		i32            icon_h    = 25 * UI_SCALE();
-		g_ui->_x                   = _x_left - 5 * UI_SCALE();
-		g_ui->_y                   = _y_top - 1;
+		g_ui->_x                 = _x_left - 5 * UI_SCALE();
+		g_ui->_y                 = _y_top - 1;
 		if (g_config->touch_ui) {
 			g_ui->_x = _x_left - 2 * UI_SCALE();
 			g_ui->_y = _y_top + 2 * UI_SCALE();
@@ -177,8 +177,8 @@ bool ui_icon_button(char *text, icon_t icon, ui_align_t align) {
 		gpu_texture_t *icons     = resource_get("icons05x.k");
 		rect_t        *rect      = resource_tile50(icons, icon);
 		i32            icon_h    = 25 * UI_SCALE();
-		g_ui->_x                   = align == UI_ALIGN_LEFT ? _x_left : _x_left + _w / 2.0 - textw / 2.0 - icon_h / 2.0;
-		g_ui->_y                   = _y_top;
+		g_ui->_x                 = align == UI_ALIGN_LEFT ? _x_left : _x_left + _w / 2.0 - textw / 2.0 - icon_h / 2.0;
+		g_ui->_y                 = _y_top;
 
 		if (g_config->touch_ui) {
 			g_ui->_x += 1 * UI_SCALE();
@@ -218,8 +218,8 @@ bool ui_menu_sub_button(ui_handle_t *handle, char *text) {
 }
 
 void ui_menu_label(char *text, char *shortcut) {
-	i32 _y                   = g_ui->_y;
-	i32 _TEXT_COL            = g_ui->ops->theme->TEXT_COL;
+	i32 _y                     = g_ui->_y;
+	i32 _TEXT_COL              = g_ui->ops->theme->TEXT_COL;
 	g_ui->ops->theme->TEXT_COL = g_ui->ops->theme->LABEL_COL;
 	ui_text(text, UI_ALIGN_LEFT, 0x00000000);
 	if (shortcut != NULL) {

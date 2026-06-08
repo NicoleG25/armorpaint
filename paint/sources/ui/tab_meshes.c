@@ -63,7 +63,7 @@ void tab_meshes_draw_context_menu() {
 	rot              = vec4_mult(rot, 180 / 3.141592);
 	f32  f           = 0.0;
 	bool changed     = false;
-	g_ui->changed      = false;
+	g_ui->changed    = false;
 
 	ui_row4();
 	ui_text("Loc", UI_ALIGN_LEFT, 0x00000000);
@@ -606,8 +606,8 @@ void tab_meshes_draw(ui_handle_t *htab) {
 				if (g_context->paint_object == o) {
 					f32 _uix = g_ui->_x;
 					f32 _uiy = g_ui->_y;
-					g_ui->_x   = uix;
-					g_ui->_y   = uiy + 4;
+					g_ui->_x = uix;
+					g_ui->_y = uiy + 4;
 					i32 hoff = i % 2 == 1 ? 1 : 0;
 					i32 w    = 75;
 					ui_fill(0, 0, w + 3, 2, g_ui->ops->theme->HIGHLIGHT_COL);
@@ -647,7 +647,7 @@ void tab_meshes_draw(ui_handle_t *htab) {
 				i32 check_w  = UI_ELEMENT_H();
 				i32 text_w   = draw_string_width(g_ui->ops->font, g_ui->font_size, o->base->name);
 				i32 center_x = (slotw - check_w - text_w) / 2;
-				g_ui->_x       = uix + (center_x > 0 ? center_x : 0);
+				g_ui->_x     = uix + (center_x > 0 ? center_x : 0);
 				g_ui->_y += slotw * 0.9 + 8;
 
 				ui_handle_t *h   = ui_handle(__ID__);

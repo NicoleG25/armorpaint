@@ -258,8 +258,8 @@ void tab_textures_draw(ui_handle_t *htab) {
 					if (asset == g_context->texture) {
 						f32 _uix = g_ui->_x;
 						f32 _uiy = g_ui->_y;
-						g_ui->_x   = uix;
-						g_ui->_y   = uiy;
+						g_ui->_x = uix;
+						g_ui->_y = uiy;
 						i32 off  = i % 2 == 1 ? 1 : 0;
 						i32 w    = 50;
 						ui_fill(0, 0, w + 3, 2, g_ui->ops->theme->HIGHLIGHT_COL);

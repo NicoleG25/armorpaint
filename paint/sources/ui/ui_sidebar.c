@@ -12,9 +12,9 @@ void ui_sidebar_render_ui() {
 		if (ui_window(ui_sidebar_hminimized, iron_window_width() - width, -1, width, math_floor(UI_ELEMENT_H() + 4 * UI_SCALE()), false)) {
 			ui_fill(0, 0, g_ui->_window_w, g_ui->_window_h + 1, g_ui->ops->theme->SEPARATOR_COL);
 			g_ui->_w                     = width;
-			i32 _BUTTON_H              = g_ui->ops->theme->BUTTON_H;
-			i32 _BUTTON_COL            = g_ui->ops->theme->BUTTON_COL;
-			i32 _TEXT_COL              = g_ui->ops->theme->TEXT_COL;
+			i32 _BUTTON_H                = g_ui->ops->theme->BUTTON_H;
+			i32 _BUTTON_COL              = g_ui->ops->theme->BUTTON_COL;
+			i32 _TEXT_COL                = g_ui->ops->theme->TEXT_COL;
 			g_ui->ops->theme->BUTTON_H   = g_ui->ops->theme->ELEMENT_H;
 			g_ui->ops->theme->BUTTON_COL = g_ui->ops->theme->SEPARATOR_COL;
 			g_ui->ops->theme->TEXT_COL   = g_ui->ops->theme->HOVER_COL;
@@ -87,8 +87,8 @@ void ui_sidebar_render_ui() {
 		i32 height = math_floor(UI_ELEMENT_H() + UI_ELEMENT_OFFSET());
 		if (ui_window(ui_handle(__ID__), iron_window_width() - width, iron_window_height() - height, width, height + 1, false)) {
 			g_ui->_w                     = width;
-			i32 _BUTTON_H              = g_ui->ops->theme->BUTTON_H;
-			i32 _BUTTON_COL            = g_ui->ops->theme->BUTTON_COL;
+			i32 _BUTTON_H                = g_ui->ops->theme->BUTTON_H;
+			i32 _BUTTON_COL              = g_ui->ops->theme->BUTTON_COL;
 			g_ui->ops->theme->BUTTON_H   = g_ui->ops->theme->ELEMENT_H;
 			g_ui->ops->theme->BUTTON_COL = g_ui->ops->theme->WINDOW_BG_COL;
 			if (ui_button(mini ? "<" : ">", UI_ALIGN_CENTER, "")) {

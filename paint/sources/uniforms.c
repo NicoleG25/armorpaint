@@ -10,9 +10,9 @@ i32 uniforms_ext_i32_link(object_t *object, material_data_t *mat, char *link) {
 
 f32 uniforms_ext_f32_link(object_t *object, material_data_t *mat, char *link) {
 	if (string_equals(link, "_brush_radius")) {
-		bool decal      = context_is_decal();
-		bool decal_mask = decal && operator_shortcut(string("%s+%s", any_map_get(g_keymap, "decal_mask"), any_map_get(g_keymap, "action_paint")),
-		                                             SHORTCUT_TYPE_DOWN);
+		bool decal = context_is_decal();
+		bool decal_mask =
+		    decal && operator_shortcut(string("%s+%s", any_map_get(g_keymap, "decal_mask"), any_map_get(g_keymap, "action_paint")), SHORTCUT_TYPE_DOWN);
 		f32  brush_decal_mask_radius = g_context->brush_decal_mask_radius;
 		bool paint2d                 = g_context->paint2d || g_context->paint2d_view;
 		brush_decal_mask_radius *= 2.0;

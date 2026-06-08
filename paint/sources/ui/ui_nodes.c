@@ -68,7 +68,7 @@ void ui_nodes_node_search_menu() {
 	ui_menu_h                  = UI_ELEMENT_H() * 8;
 	ui_handle_t *search_handle = ui_handle(__ID__);
 	char        *search        = to_lower_case(ui_text_input(search_handle, "", UI_ALIGN_LEFT, true, true));
-	g_ui->changed                = false;
+	g_ui->changed              = false;
 	if (_ui_nodes_node_search_first) {
 		_ui_nodes_node_search_first = false;
 		search_handle->text         = "";
@@ -87,10 +87,10 @@ void ui_nodes_node_search_menu() {
 			ui_nodes_node_search_offset--;
 		}
 	}
-	bool enter                     = keyboard_down("enter");
-	i32  count                     = 0;
-	i32  BUTTON_COL                = g_ui->ops->theme->BUTTON_COL;
-	bool FILL_BUTTON_BG            = g_ui->ops->theme->FILL_BUTTON_BG;
+	bool enter                       = keyboard_down("enter");
+	i32  count                       = 0;
+	i32  BUTTON_COL                  = g_ui->ops->theme->BUTTON_COL;
+	bool FILL_BUTTON_BG              = g_ui->ops->theme->FILL_BUTTON_BG;
 	g_ui->ops->theme->FILL_BUTTON_BG = true;
 
 	node_list_t_array_t *node_list = ui_nodes_canvas_type == CANVAS_TYPE_MATERIAL ? nodes_material_list : nodes_brush_list;
@@ -119,7 +119,7 @@ void ui_nodes_node_search_menu() {
 					ui_nodes_hwnd->redraws = 2;
 					if (enter) {
 						g_ui->changed = true;
-						count       = 6; // Trigger break
+						count         = 6; // Trigger break
 					}
 					if (_ui_nodes_node_search_done != NULL) {
 						_ui_nodes_node_search_done();
@@ -135,7 +135,7 @@ void ui_nodes_node_search_menu() {
 		}
 	}
 	if (enter && count == 0) { // Hide popup on enter when node is not found
-		g_ui->changed         = true;
+		g_ui->changed       = true;
 		search_handle->text = "";
 	}
 	g_ui->ops->theme->BUTTON_COL     = BUTTON_COL;
@@ -316,7 +316,7 @@ void ui_viewnodes_on_canvas_context_menu() {
 		if (ui_menu_button(tr("Add Swatch"), "", ICON_PALETTE)) {
 			f32_array_t    *color      = selected->outputs->buffer[0]->default_value;
 			swatch_color_t *new_swatch = project_make_swatch(color_from_floats(color->buffer[0], color->buffer[1], color->buffer[2], color->buffer[3]));
-			g_context->swatch = new_swatch;
+			g_context->swatch          = new_swatch;
 			any_array_push(g_project->swatches, new_swatch);
 			ui_base_hwnds->buffer[TAB_AREA_STATUS]->redraws = 1;
 		}
@@ -334,7 +334,8 @@ void ui_viewnodes_on_canvas_context_menu() {
 }
 
 void ui_viewnodes_on_canvas_released() {
-	if (g_ui->input_released_r && context_in_nodes() && math_abs(g_ui->input_x - g_ui->input_started_x) < 2 && math_abs(g_ui->input_y - g_ui->input_started_y) < 2) {
+	if (g_ui->input_released_r && context_in_nodes() && math_abs(g_ui->input_x - g_ui->input_started_x) < 2 &&
+	    math_abs(g_ui->input_y - g_ui->input_started_y) < 2) {
 
 		// Node selection
 		ui_nodes_t       *nodes    = ui_nodes_get_nodes();
@@ -461,12 +462,12 @@ ui_canvas_control_t *ui_nodes_get_canvas_control(bool controls_down, bool is_nod
 		return cc;
 	}
 
-	bool pan                     = g_ui->input_down_r || operator_shortcut(any_map_get(g_keymap, "action_pan"), SHORTCUT_TYPE_DOWN);
-	f32  zoom_delta              = operator_shortcut(any_map_get(g_keymap, "action_zoom"), SHORTCUT_TYPE_DOWN) ? ui_nodes_get_zoom_delta() / 100.0 : 0.0;
-	ui_canvas_control_t *control = GC_ALLOC_INIT(ui_canvas_control_t, {.pan_x         = pan ? g_ui->input_dx : 0.0,
-	                                                                   .pan_y         = pan ? g_ui->input_dy : 0.0,
-	                                                                   .zoom          = g_ui->input_wheel_delta != 0.0 ? -g_ui->input_wheel_delta / 10 : zoom_delta,
-	                                                                   .controls_down = controls_down});
+	bool                 pan        = g_ui->input_down_r || operator_shortcut(any_map_get(g_keymap, "action_pan"), SHORTCUT_TYPE_DOWN);
+	f32                  zoom_delta = operator_shortcut(any_map_get(g_keymap, "action_zoom"), SHORTCUT_TYPE_DOWN) ? ui_nodes_get_zoom_delta() / 100.0 : 0.0;
+	ui_canvas_control_t *control    = GC_ALLOC_INIT(ui_canvas_control_t, {.pan_x = pan ? g_ui->input_dx : 0.0,
+	                                                                      .pan_y = pan ? g_ui->input_dy : 0.0,
+	                                                                      .zoom  = g_ui->input_wheel_delta != 0.0 ? -g_ui->input_wheel_delta / 10 : zoom_delta,
+	                                                                      .controls_down = controls_down});
 
 	if (is_node_view && g_ui->input_x < g_ui->_window_x) {
 		control->pan_x = 0.0;
@@ -559,14 +560,14 @@ void ui_nodes_draw_menubar() {
 	draw_set_color(0xffffffff);
 
 	i32 start_y = top_y + UI_ELEMENT_OFFSET();
-	g_ui->_x      = 0;
-	g_ui->_y      = 2 + start_y;
-	g_ui->_w      = ew;
+	g_ui->_x    = 0;
+	g_ui->_y    = 2 + start_y;
+	g_ui->_w    = ew;
 
 	// Editable canvas name
 	ui_handle_t *h = ui_handle(__ID__);
 	h->text        = string_copy(c->name);
-	g_ui->_w         = math_floor(math_min(draw_string_width(g_ui->ops->font, g_ui->font_size, h->text) + 15 * UI_SCALE(), 100 * UI_SCALE()));
+	g_ui->_w       = math_floor(math_min(draw_string_width(g_ui->ops->font, g_ui->font_size, h->text) + 15 * UI_SCALE(), 100 * UI_SCALE()));
 	char *new_name = ui_text_input(h, "", UI_ALIGN_LEFT, true, false);
 	g_ui->_x += g_ui->_w + 3;
 	g_ui->_y = 2 + start_y;
@@ -607,11 +608,11 @@ void ui_nodes_draw_menubar() {
 			c->name = string_copy(new_name);
 		}
 	}
-	i32  _BUTTON_COL           = g_ui->ops->theme->BUTTON_COL;
-	bool _SHADOWS              = g_ui->ops->theme->SHADOWS;
+	i32  _BUTTON_COL             = g_ui->ops->theme->BUTTON_COL;
+	bool _SHADOWS                = g_ui->ops->theme->SHADOWS;
 	g_ui->ops->theme->BUTTON_COL = g_ui->ops->theme->WINDOW_BG_COL;
 	g_ui->ops->theme->SHADOWS    = false;
-	string_array_t *cats       = ui_nodes_canvas_type == CANVAS_TYPE_MATERIAL ? nodes_material_categories : nodes_brush_categories;
+	string_array_t *cats         = ui_nodes_canvas_type == CANVAS_TYPE_MATERIAL ? nodes_material_categories : nodes_brush_categories;
 	for (i32 i = 0; i < cats->length; ++i) {
 		if ((ui_menubar_button(tr(cats->buffer[i]))) || (g_ui->is_hovered && ui_nodes_show_menu)) {
 			ui_nodes_show_menu     = true;
@@ -629,7 +630,7 @@ void ui_nodes_draw_menubar() {
 		g_ui->_y = 2 + start_y;
 	}
 	if (g_config->touch_ui) {
-		i32 _w = g_ui->_w;
+		i32 _w   = g_ui->_w;
 		g_ui->_w = math_floor(36 * UI_SCALE());
 		g_ui->_y = 4 * UI_SCALE() + start_y;
 		if (ui_menubar_icon_button(ICON_SEARCH)) {
@@ -694,8 +695,8 @@ void ui_nodes_update(void *_) {
 		ui_nodes_wh -= ui_header_h * 4;
 	}
 
-	i32 mx = mouse_x;
-	i32 my = mouse_y;
+	i32  mx      = mouse_x;
+	i32  my      = mouse_y;
 	bool enabled = true;
 	if (mx < ui_nodes_wx || mx > ui_nodes_wx + ww || my < ui_nodes_wy) {
 		enabled = false;
@@ -933,9 +934,9 @@ void ui_nodes_update(void *_) {
 		}
 
 		// Nodes
-		bool _input_enabled      = g_ui->input_enabled;
-		i32  header_h            = UI_ELEMENT_H() * 2 + UI_ELEMENT_OFFSET() * 2;
-		bool header_hover        = g_ui->input_y < g_ui->_window_y + header_h;
+		bool _input_enabled        = g_ui->input_enabled;
+		i32  header_h              = UI_ELEMENT_H() * 2 + UI_ELEMENT_OFFSET() * 2;
+		bool header_hover          = g_ui->input_y < g_ui->_window_y + header_h;
 		g_ui->input_enabled        = _input_enabled && !ui_nodes_show_menu && !header_hover;
 		g_ui->window_border_right  = g_config->layout->buffer[LAYOUT_SIZE_SIDEBAR_W];
 		g_ui->window_border_top    = ui_header_h * 2;
@@ -990,9 +991,9 @@ void ui_nodes_update(void *_) {
 		}
 
 		if (ui_nodes_is_node_menu_op) {
-			ui_is_copy         = false;
-			ui_is_cut          = false;
-			ui_is_paste        = false;
+			ui_is_copy           = false;
+			ui_is_cut            = false;
+			ui_is_paste          = false;
 			g_ui->is_delete_down = false;
 		}
 
@@ -1049,13 +1050,13 @@ void ui_nodes_update(void *_) {
 		i32 menuw = math_floor(ew * 2.3);
 		draw_begin(NULL, false, 0);
 		ui_begin_region(g_ui, math_floor(ui_nodes_popup_x), math_floor(py), menuw);
-		i32 _FILL_BUTTON_BG            = g_ui->ops->theme->FILL_BUTTON_BG;
+		i32 _FILL_BUTTON_BG              = g_ui->ops->theme->FILL_BUTTON_BG;
 		g_ui->ops->theme->FILL_BUTTON_BG = false;
-		i32 _ELEMENT_OFFSET            = g_ui->ops->theme->ELEMENT_OFFSET;
+		i32 _ELEMENT_OFFSET              = g_ui->ops->theme->ELEMENT_OFFSET;
 		g_ui->ops->theme->ELEMENT_OFFSET = 0;
-		i32 _ELEMENT_H                 = g_ui->ops->theme->ELEMENT_H;
+		i32 _ELEMENT_H                   = g_ui->ops->theme->ELEMENT_H;
 		g_ui->ops->theme->ELEMENT_H      = g_config->touch_ui ? (28 + 2) : 28;
-		ui_menu_h                      = category->length * UI_ELEMENT_H();
+		ui_menu_h                        = category->length * UI_ELEMENT_H();
 		if (is_group_category) {
 			ui_menu_h += g_project->_->material_groups->length * UI_ELEMENT_H();
 		}
@@ -1084,7 +1085,7 @@ void ui_nodes_update(void *_) {
 		if (is_group_category) {
 			for (i32 i = 0; i < g_project->_->material_groups->length; ++i) {
 				node_group_t *g  = g_project->_->material_groups->buffer[i];
-				g_ui->enabled      = ui_nodes_can_place_group(g->canvas->name);
+				g_ui->enabled    = ui_nodes_can_place_group(g->canvas->name);
 				f32_array_t *row = f32_array_create_from_raw(
 				    (f32[]){
 				        5 / 6.0,
@@ -1113,9 +1114,9 @@ void ui_nodes_update(void *_) {
 				g_ui->enabled = true;
 			}
 		}
-		ui_nodes_hide_menu =
-		    g_ui->combo_selected_handle == NULL && !ui_nodes_show_menu_first && (g_ui->changed || g_ui->input_released || g_ui->input_released_r || g_ui->is_escape_down);
-		ui_nodes_show_menu_first       = false;
+		ui_nodes_hide_menu = g_ui->combo_selected_handle == NULL && !ui_nodes_show_menu_first &&
+		                     (g_ui->changed || g_ui->input_released || g_ui->input_released_r || g_ui->is_escape_down);
+		ui_nodes_show_menu_first         = false;
 		g_ui->ops->theme->FILL_BUTTON_BG = _FILL_BUTTON_BG;
 		g_ui->ops->theme->ELEMENT_OFFSET = _ELEMENT_OFFSET;
 		g_ui->ops->theme->ELEMENT_H      = _ELEMENT_H;

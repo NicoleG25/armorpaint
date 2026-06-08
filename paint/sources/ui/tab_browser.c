@@ -311,9 +311,9 @@ void tab_browser_draw(ui_handle_t *htab) {
 
 		if (show_full) {
 			i32 bottom_y = g_ui->_y;
-			g_ui->_x       = 0;
-			g_ui->_y       = _y;
-			g_ui->_w       = bookmarks_w;
+			g_ui->_x     = 0;
+			g_ui->_y     = _y;
+			g_ui->_w     = bookmarks_w;
 
 			if (ui_icon_button(tr("Cloud"), ICON_CLOUD, UI_ALIGN_LEFT)) {
 				tab_browser_go_to_cloud();

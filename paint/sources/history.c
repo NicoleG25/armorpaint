@@ -100,10 +100,10 @@ void history_swap_canvas(history_step_t *step) {
 		g_context->material = g_project->_->materials->buffer[step->material];
 	}
 	else {
-		ui_node_canvas_t *_canvas                    = g_project->_->brushes->buffer[step->brush]->canvas;
+		ui_node_canvas_t *_canvas                          = g_project->_->brushes->buffer[step->brush]->canvas;
 		g_project->_->brushes->buffer[step->brush]->canvas = step->canvas;
-		step->canvas                                 = _canvas;
-		g_context->brush                             = g_project->_->brushes->buffer[step->brush];
+		step->canvas                                       = _canvas;
+		g_context->brush                                   = g_project->_->brushes->buffer[step->brush];
 	}
 
 	ui_nodes_t *nodes                = ui_nodes_get_nodes();
@@ -169,7 +169,7 @@ void history_undo() {
 			slot_layer_delete(g_context->layer);
 		}
 		else if (step->action == HISTORY_ACTION_ORDER_LAYERS) {
-			slot_layer_t *target                     = g_project->_->layers->buffer[step->prev_order];
+			slot_layer_t *target                           = g_project->_->layers->buffer[step->prev_order];
 			g_project->_->layers->buffer[step->prev_order] = g_project->_->layers->buffer[step->layer];
 			g_project->_->layers->buffer[step->layer]      = target;
 		}
@@ -493,7 +493,7 @@ void history_redo() {
 			sys_notify_on_next_frame(&history_redo_duplicate_layer, NULL);
 		}
 		else if (step->action == HISTORY_ACTION_ORDER_LAYERS) {
-			slot_layer_t *target                     = g_project->_->layers->buffer[step->prev_order];
+			slot_layer_t *target                           = g_project->_->layers->buffer[step->prev_order];
 			g_project->_->layers->buffer[step->prev_order] = g_project->_->layers->buffer[step->layer];
 			g_project->_->layers->buffer[step->layer]      = target;
 		}
@@ -538,7 +538,7 @@ void history_redo() {
 			slot_layer_t *lay = history_undo_layers->buffer[history_undo_i];
 			slot_layer_swap(g_context->layer, lay);
 			g_context->layer->fill_material = g_project->_->materials->buffer[step->material];
-			history_undo_i               = (history_undo_i + 1) % g_config->undo_steps;
+			history_undo_i                  = (history_undo_i + 1) % g_config->undo_steps;
 		}
 		else if (step->action == HISTORY_ACTION_TO_PAINT_LAYER || step->action == HISTORY_ACTION_TO_PAINT_MASK) {
 			slot_layer_to_paint_layer(g_context->layer);
@@ -627,9 +627,9 @@ void history_reset() {
 history_step_t *history_push(history_action_t action) {
 	char *name = history_action_to_string(action);
 #if defined(IRON_WINDOWS) || defined(IRON_LINUX) || defined(IRON_MACOS)
-	char *filename = string_equals(g_project->_->filepath, "")
-	                     ? ui_files_filename
-	                     : substring(g_project->_->filepath, string_last_index_of(g_project->_->filepath, PATH_SEP) + 1, string_length(g_project->_->filepath) - 4);
+	char *filename = string_equals(g_project->_->filepath, "") ? ui_files_filename
+	                                                           : substring(g_project->_->filepath, string_last_index_of(g_project->_->filepath, PATH_SEP) + 1,
+	                                                                       string_length(g_project->_->filepath) - 4);
 	sys_title_set(string("%s* - %s", filename, manifest_title));
 #endif
 

@@ -407,16 +407,16 @@ typedef struct context {
 		struct physics_body *body;
 		struct object       *bullet;
 	} particles[32];
-	i32 particle_index;
-	f32 particle_friction;
-	f32 particle_bounciness;
-	f32 particle_gravity_x;
-	f32 particle_gravity_y;
-	f32 particle_gravity_z;
-	f32 particle_lifetime;
-	f32 particle_mass;
-	f32 particle_random;
-	f32 particle_spawn_distance;
+	i32             particle_index;
+	f32             particle_friction;
+	f32             particle_bounciness;
+	f32             particle_gravity_x;
+	f32             particle_gravity_y;
+	f32             particle_gravity_z;
+	f32             particle_lifetime;
+	f32             particle_mass;
+	f32             particle_random;
+	f32             particle_spawn_distance;
 	struct any_map *keymap;
 } context_t;
 
@@ -566,7 +566,7 @@ typedef struct project {
 	i32                                          timeline_max_frames;
 	struct timeline_layer_keyframe_data_t_array *timeline_layers;
 	struct timeline_mesh_keyframe_data_t_array  *timeline_meshes;
-	project_runtime_t *_;
+	project_runtime_t                           *_;
 } project_t;
 
 typedef struct asset {

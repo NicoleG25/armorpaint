@@ -41,7 +41,7 @@ void project_save(bool save_and_quit) {
 #ifdef IRON_IOS
 		char *document_directory = iron_save_dialog("", "");
 		document_directory       = string_copy(substring(document_directory, 0, string_length(document_directory) - 8)); // Strip /"untitled"
-		g_project->_->filepath = string("%s/%s.arm", document_directory, sys_title());
+		g_project->_->filepath   = string("%s/%s.arm", document_directory, sys_title());
 #elif defined(IRON_ANDROID)
 		g_project->_->filepath = string("%s/%s.arm", iron_internal_save_path(), sys_title());
 #else
@@ -134,7 +134,7 @@ void project_new(bool reset_layers) {
 	g_context->layer_preview_dirty = true;
 	g_context->layer_filter        = 0;
 	g_context->texture             = NULL;
-	g_project->mesh_assets = any_array_create_from_raw((void *[]){}, 0);
+	g_project->mesh_assets         = any_array_create_from_raw((void *[]){}, 0);
 
 	mesh_data_t *raw       = NULL;
 	char        *mesh_name = project_default_mesh_list == NULL ? "box_bevel" : project_default_mesh_list->buffer[g_context->project_type];
@@ -199,12 +199,12 @@ void project_new(bool reset_layers) {
 	ui_nodes_group_stack = any_array_create_from_raw((void *[]){}, 0);
 	gc_root(ui_nodes_group_stack);
 	g_project->_->material_groups = any_array_create_from_raw((void *[]){}, 0);
-	g_project->_->brushes = any_array_create_from_raw(
-	    (void *[]){
-	        slot_brush_create(NULL),
-	    },
-	    1);
-	g_context->brush = g_project->_->brushes->buffer[0];
+	g_project->_->brushes         = any_array_create_from_raw(
+        (void *[]){
+            slot_brush_create(NULL),
+        },
+        1);
+	g_context->brush    = g_project->_->brushes->buffer[0];
 	g_project->_->fonts = any_array_create_from_raw(
 	    (void *[]){
 	        slot_font_create("default.ttf", base_font, ""),
@@ -221,8 +221,8 @@ void project_new(bool reset_layers) {
 	make_material_parse_paint_material(true);
 	make_material_parse_brush();
 
-	g_project->_->assets = any_array_create_from_raw((void *[]){}, 0);
-	g_project->_->next_asset_id                                  = 0;
+	g_project->_->assets                              = any_array_create_from_raw((void *[]){}, 0);
+	g_project->_->next_asset_id                       = 0;
 	g_project->packed_assets                          = any_array_create_from_raw((void *[]){}, 0);
 	g_context->ddirty                                 = 4;
 	ui_base_hwnds->buffer[TAB_AREA_SIDEBAR0]->redraws = 2;

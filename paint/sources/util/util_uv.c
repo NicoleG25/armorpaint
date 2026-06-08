@@ -24,10 +24,11 @@ void util_uv_cache_uv_map() {
 		gc_root(util_uv_uvmap);
 	}
 
-	util_uv_uvmap_cached  = true;
-	i32            mask   = slot_layer_get_object_mask(g_context->layer);
-	mesh_object_t *merged = (mask > 0 && mask <= g_project->_->paint_objects->length) ? g_project->_->paint_objects->buffer[mask - 1] : g_context->merged_object;
-	mesh_data_t   *mesh   = (g_context->layer_filter == 0 && merged != NULL) ? merged->data : g_context->paint_object->data;
+	util_uv_uvmap_cached = true;
+	i32            mask  = slot_layer_get_object_mask(g_context->layer);
+	mesh_object_t *merged =
+	    (mask > 0 && mask <= g_project->_->paint_objects->length) ? g_project->_->paint_objects->buffer[mask - 1] : g_context->merged_object;
+	mesh_data_t *mesh = (g_context->layer_filter == 0 && merged != NULL) ? merged->data : g_context->paint_object->data;
 
 	i16_array_t *texa = mesh->vertex_arrays->buffer[2]->values;
 	u32_array_t *inda = mesh->index_array;

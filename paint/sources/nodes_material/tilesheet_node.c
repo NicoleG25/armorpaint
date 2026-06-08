@@ -13,13 +13,13 @@ char *tilesheet_node_vector(ui_node_t *node, ui_node_socket_t *socket) {
 void tilesheet_node_init() {
 
 	ui_node_t *tilesheet_node_def =
-	    GC_ALLOC_INIT(ui_node_t, {.id      = 0,
-	                              .name    = _tr("Tilesheet"),
-	                              .type    = "TILESHEET",
-	                              .x       = 0,
-	                              .y       = 0,
-	                              .color   = 0xffb34f5a,
-	                              .inputs  = any_array_create_from_raw(
+	    GC_ALLOC_INIT(ui_node_t, {.id     = 0,
+	                              .name   = _tr("Tilesheet"),
+	                              .type   = "TILESHEET",
+	                              .x      = 0,
+	                              .y      = 0,
+	                              .color  = 0xffb34f5a,
+	                              .inputs = any_array_create_from_raw(
 	                                  (void *[]){
 	                                      GC_ALLOC_INIT(ui_node_socket_t, {.id            = 0,
 	                                                                       .node_id       = 0,

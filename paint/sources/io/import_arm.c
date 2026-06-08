@@ -365,11 +365,11 @@ void import_arm_run_project(char *path) {
 	g_context->paint_object->base->transform->scale = (vec4_t){1, 1, 1, 1.0};
 	transform_build_matrix(g_context->paint_object->base->transform);
 	g_context->paint_object->base->name = md->name;
-	g_project->_->paint_objects = any_array_create_from_raw(
-	    (void *[]){
-	        g_context->paint_object,
-	    },
-	    1);
+	g_project->_->paint_objects         = any_array_create_from_raw(
+        (void *[]){
+            g_context->paint_object,
+        },
+        1);
 
 	for (i32 i = 1; i < project->mesh_datas->length; ++i) {
 		mesh_data_t   *raw    = project->mesh_datas->buffer[i];
@@ -387,8 +387,8 @@ void import_arm_run_project(char *path) {
 	}
 
 	if (project->mesh_assets != NULL && project->mesh_assets->length > 0) {
-		char *file = project->mesh_assets->buffer[0];
-		char *abs  = data_is_abs(file) ? file : string("%s%s", base, file);
+		char *file             = project->mesh_assets->buffer[0];
+		char *abs              = data_is_abs(file) ? file : string("%s%s", base, file);
 		g_project->mesh_assets = any_array_create_from_raw(
 		    (void *[]){
 		        abs,
@@ -536,7 +536,7 @@ void import_arm_run_project(char *path) {
 	context_set_layer(g_project->_->layers->buffer[0]);
 
 	// Materials
-	material_data_t *m0 = data_get_material("Scene", "Material");
+	material_data_t *m0     = data_get_material("Scene", "Material");
 	g_project->_->materials = any_array_create_from_raw((void *[]){}, 0);
 	for (i32 i = 0; i < project->material_nodes->length; ++i) {
 		ui_node_canvas_t *n = project->material_nodes->buffer[i];

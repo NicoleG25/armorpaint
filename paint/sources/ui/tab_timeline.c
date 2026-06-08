@@ -899,7 +899,7 @@ void tab_timeline_draw_frame_context_menu() {
 		tab_timeline_edit_script(tab_timeline_selected_row, tab_timeline_selected_frame);
 	}
 
-	g_ui->enabled          = has_kf;
+	g_ui->enabled        = has_kf;
 	ui_handle_t *h_tween = ui_handle(__ID__);
 	h_tween->b           = false;
 	if (g_ui->enabled) {
@@ -918,7 +918,7 @@ void tab_timeline_draw_frame_context_menu() {
 	}
 
 	bool has_script = tab_timeline_has_script(tab_timeline_selected_row, tab_timeline_selected_frame);
-	g_ui->enabled     = has_kf || has_script;
+	g_ui->enabled   = has_kf || has_script;
 	if (ui_menu_button(tr("Delete"), "delete", ICON_DELETE)) {
 		tab_timeline_delete_selected();
 	}

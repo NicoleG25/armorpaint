@@ -109,7 +109,7 @@ void box_export_tab_export_textures(char *title, bool bake_material) {
 		g_ui->enabled = true;
 
 		ui_row2();
-		g_ui->enabled                         = !bake_material;
+		g_ui->enabled                       = !bake_material;
 		ui_handle_t *layers_export_handle   = ui_handle(__ID__);
 		layers_export_handle->i             = g_context->layers_export;
 		string_array_t *layers_export_combo = any_array_create_from_raw(
@@ -121,7 +121,7 @@ void box_export_tab_export_textures(char *title, bool bake_material) {
 		    },
 		    4);
 		g_context->layers_export = ui_combo(layers_export_handle, layers_export_combo, tr("Layers"), true, UI_ALIGN_LEFT, true);
-		g_ui->enabled              = true;
+		g_ui->enabled            = true;
 
 		ui_combo(box_export_hpreset, box_export_files, tr("Preset"), true, UI_ALIGN_LEFT, true);
 		if (box_export_hpreset->changed) {
@@ -396,7 +396,7 @@ void box_export_tab_atlases() {
 	if (ui_tab(box_export_htab, tr("Atlases"), tab_vertical, -1, false)) {
 		if (g_project->atlas_objects == NULL || g_project->atlas_objects->length != g_project->_->paint_objects->length) {
 			g_project->atlas_objects = i32_array_create_from_raw((i32[]){}, 0);
-			g_project->atlas_names = any_array_create_from_raw((void *[]){}, 0);
+			g_project->atlas_names   = any_array_create_from_raw((void *[]){}, 0);
 			for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
 				i32_array_push(g_project->atlas_objects, 0);
 				i32 i1 = i + 1;
@@ -406,8 +406,8 @@ void box_export_tab_atlases() {
 		for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
 			ui_row2();
 			ui_text(g_project->_->paint_objects->buffer[i]->base->name, UI_ALIGN_LEFT, 0x00000000);
-			ui_handle_t *hatlas               = ui_nest(ui_handle(__ID__), i);
-			hatlas->i                         = g_project->atlas_objects->buffer[i];
+			ui_handle_t *hatlas                 = ui_nest(ui_handle(__ID__), i);
+			hatlas->i                           = g_project->atlas_objects->buffer[i];
 			g_project->atlas_objects->buffer[i] = ui_combo(hatlas, g_project->atlas_names, tr("Atlas"), false, UI_ALIGN_LEFT, true);
 		}
 	}

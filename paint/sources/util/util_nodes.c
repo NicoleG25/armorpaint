@@ -249,7 +249,7 @@ void ui_viewnodes_on_canvas_released_duplicate(void *_) {
 
 void ui_viewnodes_on_canvas_delete_on_next_frame(void *_) {
 	ui_nodes_hwnd->redraws   = 2;
-	g_ui->is_delete_down       = true;
+	g_ui->is_delete_down     = true;
 	ui_nodes_is_node_menu_op = true;
 }
 

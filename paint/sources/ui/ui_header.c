@@ -438,7 +438,7 @@ void ui_header_draw_tool_properties() {
 				g_ui->_w *= 3;
 			}
 			g_context->text_tool_text = string_copy(ui_text_input(h, "", UI_ALIGN_LEFT, true, true));
-			g_ui->_w                    = w;
+			g_ui->_w                  = w;
 			if (h->changed) {
 				gpu_texture_t *current = _draw_current;
 				draw_end();
@@ -516,23 +516,23 @@ void ui_header_draw_tool_properties() {
 
 			if (g_config->layout->buffer[LAYOUT_SIZE_HEADER] == 1) {
 				if (g_config->touch_ui) {
-					g_ui->_w           = math_floor(19 * sc);
+					g_ui->_w         = math_floor(19 * sc);
 					g_context->sym_x = ui_check(sym_x_handle, "", "");
 					g_ui->_x -= 4 * sc;
 					g_context->sym_y = ui_check(sym_y_handle, "", "");
 					g_ui->_x -= 4 * sc;
 					g_context->sym_z = ui_check(sym_z_handle, "", "");
 					g_ui->_x -= 4 * sc;
-					g_ui->_w  = math_floor(40 * sc);
-					char *x = tr("X");
-					char *y = tr("Y");
-					char *z = tr("Z");
+					g_ui->_w = math_floor(40 * sc);
+					char *x  = tr("X");
+					char *y  = tr("Y");
+					char *z  = tr("Z");
 					ui_text(string("%s%s%s", x, y, z), UI_ALIGN_LEFT, 0x00000000);
 				}
 				else {
 					g_ui->_w = math_floor(56 * sc);
 					ui_text(tr("Symmetry"), UI_ALIGN_LEFT, 0x00000000);
-					g_ui->_w           = math_floor(25 * sc);
+					g_ui->_w         = math_floor(25 * sc);
 					g_context->sym_x = ui_check(sym_x_handle, tr("X"), "");
 					g_context->sym_y = ui_check(sym_y_handle, tr("Y"), "");
 					g_context->sym_z = ui_check(sym_z_handle, tr("Z"), "");
@@ -541,7 +541,7 @@ void ui_header_draw_tool_properties() {
 			}
 			else {
 				// Popup
-				g_ui->_w           = _w;
+				g_ui->_w         = _w;
 				g_context->sym_x = ui_check(sym_x_handle, string("%s %s", tr("Symmetry"), tr("X")), "");
 				g_context->sym_y = ui_check(sym_y_handle, string("%s %s", tr("Symmetry"), tr("Y")), "");
 				g_context->sym_z = ui_check(sym_z_handle, string("%s %s", tr("Symmetry"), tr("Z")), "");

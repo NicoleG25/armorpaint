@@ -239,8 +239,9 @@ void tab_materials_draw_slots(bool mini) {
 				ui_fill(-1, -2, 2, imgw_val + 4, g_ui->ops->theme->HIGHLIGHT_COL);
 			}
 
-			ui_state_t state = g_project->_->materials->buffer[i]->preview_ready ? ui_image(img, 0xffffffff, imgh)
-			                                                               : ui_sub_image(resource_get("icons.k"), 0xffffffff, -1.0, tile, tile, tile, tile);
+			ui_state_t state = g_project->_->materials->buffer[i]->preview_ready
+			                       ? ui_image(img, 0xffffffff, imgh)
+			                       : ui_sub_image(resource_get("icons.k"), 0xffffffff, -1.0, tile, tile, tile, tile);
 
 			if (state == UI_STATE_HOVERED && base_drag_material != NULL) {
 				tab_materials_drag_pos = (mouse_x > uix + g_ui->_window_x + imgw_val / 2.0) ? i + 1 : i;

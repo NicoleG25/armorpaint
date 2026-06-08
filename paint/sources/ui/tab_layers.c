@@ -1,9 +1,9 @@
 
 #include "../global.h"
 
-i32           tab_layers_layer_name_edit   = -1;
-bool          tab_layers_show_context_menu = false;
-bool          tab_layers_mini;
+i32  tab_layers_layer_name_edit   = -1;
+bool tab_layers_show_context_menu = false;
+bool tab_layers_mini;
 
 void tab_layers_button_2d_view() {
 	if (ui_button(tr("2D View"), UI_ALIGN_CENTER, "")) {
@@ -365,8 +365,8 @@ void tab_layers_draw_layer_slot_full(slot_layer_t *l, i32 i) {
 	ui_row(row);
 	gpu_texture_t *icons = resource_get("icons.k");
 	rect_t        *r     = resource_tile18(icons, l->visible ? ICON18_EYE_ON : ICON18_EYE_OFF);
-	g_ui->_x               = uix + 4;
-	g_ui->_y               = uiy + 3 + center;
+	g_ui->_x             = uix + 4;
+	g_ui->_y             = uiy + 3 + center;
 	i32  col             = g_ui->ops->theme->HOVER_COL + 0x00282828;
 	bool parent_hidden   = l->parent != NULL && (!l->parent->visible || (l->parent->parent != NULL && !l->parent->parent->visible));
 	if (parent_hidden) {
@@ -387,9 +387,9 @@ void tab_layers_draw_layer_slot_full(slot_layer_t *l, i32 i) {
 
 	// Layer icon
 	i32 icon_h       = (UI_ELEMENT_H() - 3) * 2;
-	g_ui->_x           = uix + uiw * 0.08 + offx;
-	g_ui->_y           = uiy + 3;
-	g_ui->_w           = math_max(uiw * 0.16, icon_h);
+	g_ui->_x         = uix + uiw * 0.08 + offx;
+	g_ui->_y         = uiy + 3;
+	g_ui->_w         = math_max(uiw * 0.16, icon_h);
 	ui_state_t state = tab_layers_draw_layer_icon(l, i, uix, uiy, false);
 	tab_layers_handle_layer_icon_state(l, i, state, uix, uiy);
 
@@ -397,9 +397,9 @@ void tab_layers_draw_layer_slot_full(slot_layer_t *l, i32 i) {
 	bool has_blending = !slot_layer_is_group(l) && !slot_layer_is_mask(l) && !slot_layer_is_filter(l);
 	f32  name_x       = math_max(uix + uiw * 0.25 + offx, uix + uiw * 0.08 + offx + icon_h + 4 * UI_SCALE());
 	f32  name_right   = has_blending ? uix + uiw * 0.60 : (has_children ? uix + uiw * 0.90 : uix + uiw); // Blending combo / panel / window edge
-	g_ui->_x            = name_x;
-	g_ui->_y            = uiy + center;
-	g_ui->_w            = name_right - name_x;
+	g_ui->_x          = name_x;
+	g_ui->_y          = uiy + center;
+	g_ui->_w          = name_right - name_x;
 	if (tab_layers_layer_name_edit == l->id) {
 		tab_layers_layer_name_handle->text = string_copy(l->name);
 		l->name                            = string_copy(ui_text_input(tab_layers_layer_name_handle, "", UI_ALIGN_LEFT, true, false));
@@ -464,9 +464,9 @@ void tab_layers_draw_layer_slot_full(slot_layer_t *l, i32 i) {
 
 	// Panel
 	if (has_children) {
-		g_ui->_x                   = uix + uiw * 0.90;
-		g_ui->_y                   = uiy + center;
-		g_ui->_w                   = uiw * 0.15;
+		g_ui->_x                 = uix + uiw * 0.90;
+		g_ui->_y                 = uiy + center;
+		g_ui->_w                 = uiw * 0.15;
 		ui_handle_t *layer_panel = ui_nest(ui_handle(__ID__), l->id);
 		layer_panel->b           = l->show_panel;
 		l->show_panel            = ui_panel(layer_panel, "", false, false, true);
@@ -541,7 +541,8 @@ bool tab_layers_can_merge_down(slot_layer_t *l) {
 		return false;
 	}
 	// The lowest toplevel layer is a group
-	if (slot_layer_is_group(l) && slot_layer_is_in_group(g_project->_->layers->buffer[0]) && slot_layer_get_containing_group(g_project->_->layers->buffer[0]) == l) {
+	if (slot_layer_is_group(l) && slot_layer_is_in_group(g_project->_->layers->buffer[0]) &&
+	    slot_layer_get_containing_group(g_project->_->layers->buffer[0]) == l) {
 		return false;
 	}
 	// Masks must be merged down to masks
@@ -1155,7 +1156,7 @@ void tab_layers_combo_filter() {
 void tab_layers_draw_mini(ui_handle_t *htab) {
 	ui_set_hovered_tab_name(tr("Layers"));
 
-	i32 _ELEMENT_H            = g_ui->ops->theme->ELEMENT_H;
+	i32 _ELEMENT_H              = g_ui->ops->theme->ELEMENT_H;
 	g_ui->ops->theme->ELEMENT_H = math_floor(ui_sidebar_w_mini / 2.0 / (float)UI_SCALE());
 
 	ui_begin_sticky();

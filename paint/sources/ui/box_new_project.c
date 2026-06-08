@@ -7,7 +7,7 @@ void project_fetch_default_meshes() {
 		project_default_mesh_list = file_read_directory(string("%s%smeshes", path_data(), PATH_SEP));
 		gc_root(project_default_mesh_list);
 		for (i32 i = 0; i < project_default_mesh_list->length; ++i) {
-			char *s                      = project_default_mesh_list->buffer[i];
+			char *s                              = project_default_mesh_list->buffer[i];
 			project_default_mesh_list->buffer[i] = substring(project_default_mesh_list->buffer[i], 0, string_length(s) - 4); // Trim .arm
 		}
 		any_array_push(project_default_mesh_list, "plane");

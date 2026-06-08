@@ -124,7 +124,7 @@ void box_projects_tab() {
 					i32 state = ui_image(icon, 0xffffffff, 128 * UI_SCALE());
 					if (state == UI_STATE_RELEASED) {
 						i32 _uix = g_ui->_x;
-						g_ui->_x   = uix;
+						g_ui->_x = uix;
 						ui_fill(0, 0, 128, 128, 0x66000000);
 						g_ui->_x = _uix;
 #if defined(IRON_ANDROID) || defined(IRON_IOS)
@@ -239,9 +239,9 @@ void box_projects_recent_tab() {
 
 		box_projects_draw_badge();
 
-		g_ui->enabled                = g_config->recent_projects->length > 0;
+		g_ui->enabled              = g_config->recent_projects->length > 0;
 		box_projects_hsearch->text = string_copy(ui_text_input(box_projects_hsearch, tr("Search"), UI_ALIGN_LEFT, true, true));
-		g_ui->enabled                = true;
+		g_ui->enabled              = true;
 		for (i32 i = 0; i < g_config->recent_projects->length; ++i) {
 			char *path = g_config->recent_projects->buffer[i];
 #ifdef IRON_WINDOWS

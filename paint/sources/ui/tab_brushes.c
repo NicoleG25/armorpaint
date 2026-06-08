@@ -134,8 +134,9 @@ void tab_brushes_draw(ui_handle_t *htab) {
 					ui_fill(-1, -2, 2, imgw_val + 4, g_ui->ops->theme->HIGHLIGHT_COL);
 				}
 
-				ui_state_t state = g_project->_->brushes->buffer[i]->preview_ready ? ui_image(img, 0xffffffff, -1.0)
-				                                                             : ui_sub_image(resource_get("icons.k"), -1, -1.0, tile * 5, tile, tile, tile);
+				ui_state_t state = g_project->_->brushes->buffer[i]->preview_ready
+				                       ? ui_image(img, 0xffffffff, -1.0)
+				                       : ui_sub_image(resource_get("icons.k"), -1, -1.0, tile * 5, tile, tile, tile);
 
 				if (state == UI_STATE_HOVERED && base_drag_brush != NULL) {
 					tab_brushes_drag_pos = (mouse_x > uix + g_ui->_window_x + imgw_val / 2.0) ? i + 1 : i;

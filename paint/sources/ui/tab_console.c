@@ -124,11 +124,11 @@ void tab_console_draw(ui_handle_t *htab) {
 
 		ui_end_sticky();
 
-		draw_font_t *_font             = g_ui->ops->font;
-		i32          _font_size        = g_ui->font_size;
-		i32          _element_offset   = g_ui->ops->theme->ELEMENT_OFFSET;
+		draw_font_t *_font               = g_ui->ops->font;
+		i32          _font_size          = g_ui->font_size;
+		i32          _element_offset     = g_ui->ops->theme->ELEMENT_OFFSET;
 		g_ui->ops->theme->ELEMENT_OFFSET = 0;
-		draw_font_t *f                 = data_get_font("font_mono.ttf");
+		draw_font_t *f                   = data_get_font("font_mono.ttf");
 		ui_set_font(g_ui, f);
 		g_ui->font_size = math_floor(15 * UI_SCALE());
 		for (i32 i = 0; i < console_last_traces->length; ++i) {

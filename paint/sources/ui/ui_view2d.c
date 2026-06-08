@@ -181,8 +181,8 @@ void ui_view2d_update(void *_) {
 
 	if (ui_view2d_type == VIEW_2D_TYPE_LAYER && !ui_view2d_text_input_hover &&
 	    (operator_shortcut(any_map_get(g_keymap, "action_paint"), SHORTCUT_TYPE_DOWN) ||
-	     operator_shortcut(string("%s+%s", any_map_get(g_keymap, "brush_ruler"), any_map_get(g_keymap, "action_paint")), SHORTCUT_TYPE_DOWN) ||
-	     decal_mask || set_clone_source || g_config->brush_live)) {
+	     operator_shortcut(string("%s+%s", any_map_get(g_keymap, "brush_ruler"), any_map_get(g_keymap, "action_paint")), SHORTCUT_TYPE_DOWN) || decal_mask ||
+	     set_clone_source || g_config->brush_live)) {
 
 		if (g_config->touch_ui) {
 			// Paint only when clicking on the layer rect
@@ -305,8 +305,8 @@ void ui_view2d_update(void *_) {
 
 	ui_begin(g_ui);
 
-	headerh = g_config->layout->buffer[LAYOUT_SIZE_HEADER] == 1 ? ui_header_h * 2 : ui_header_h;
-	i32 apph    = iron_window_height() - g_config->layout->buffer[LAYOUT_SIZE_STATUS_H] + headerh;
+	headerh  = g_config->layout->buffer[LAYOUT_SIZE_HEADER] == 1 ? ui_header_h * 2 : ui_header_h;
+	i32 apph = iron_window_height() - g_config->layout->buffer[LAYOUT_SIZE_STATUS_H] + headerh;
 	if (!base_view3d_show) {
 		apph = base_h();
 	}
@@ -492,9 +492,9 @@ void ui_view2d_update(void *_) {
 		draw_set_color(0xffffffff);
 
 		f32 start_y = top_y + UI_ELEMENT_OFFSET();
-		g_ui->_x      = 2;
-		g_ui->_y      = 2 + start_y;
-		g_ui->_w      = ew;
+		g_ui->_x    = 2;
+		g_ui->_y    = 2 + start_y;
+		g_ui->_w    = ew;
 
 		// Editable layer name
 		ui_handle_t *h    = ui_handle(__ID__);
@@ -576,7 +576,7 @@ void ui_view2d_update(void *_) {
 			ui_handle_t *h_zoom        = ui_handle(__ID__);
 			i32          scale_percent = math_round((tw / (float)tex->width) * 100);
 			h_zoom->f                  = scale_percent;
-			g_ui->_w                     = math_floor(ew + 3);
+			g_ui->_w                   = math_floor(ew + 3);
 			f32 new_percent            = ui_slider(h_zoom, string("%d%%", scale_percent), 1, 100, true, 1, false, UI_ALIGN_LEFT, true);
 			if (h_zoom->changed) {
 				ui_view2d_pan_scale     = new_percent / 100.0 * tex->width / (wm * 0.9);

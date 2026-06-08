@@ -8,7 +8,7 @@ void ui_base_operator_search_menu_draw() {
 	ui_menu_h                  = UI_ELEMENT_H() * 8;
 	ui_handle_t *search_handle = ui_handle(__ID__);
 	char        *search        = ui_text_input(search_handle, "", UI_ALIGN_LEFT, true, true);
-	g_ui->changed                = false;
+	g_ui->changed              = false;
 	if (_ui_base_operator_search_first) {
 		_ui_base_operator_search_first = false;
 		search_handle->text            = "";
@@ -39,7 +39,7 @@ void ui_base_operator_search_menu_draw() {
 			if (ui_button(n, UI_ALIGN_LEFT, any_map_get(g_keymap, n)) || (enter && count == ui_base_operator_search_offset)) {
 				if (enter) {
 					g_ui->changed = true;
-					count       = 6; // Trigger break
+					count         = 6; // Trigger break
 				}
 				operator_run(n);
 			}
@@ -50,7 +50,7 @@ void ui_base_operator_search_menu_draw() {
 	}
 
 	if (enter && count == 0) { // Hide popup on enter when command is not found
-		g_ui->changed         = true;
+		g_ui->changed       = true;
 		search_handle->text = "";
 	}
 	g_ui->ops->theme->BUTTON_COL = BUTTON_COL;

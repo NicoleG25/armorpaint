@@ -27,9 +27,9 @@ void viewport_reset() {
 		if (string_equals(o->type, "camera_object")) {
 			cam->base->transform->local = mat4_from_f32_array(o->transform, 0);
 			transform_decompose(cam->base->transform);
-			cam->data->fov           = g_config->camera_fov;
-			g_context->camera_type   = 0;
-			cam->data->ortho         = NULL;
+			cam->data->fov         = g_config->camera_fov;
+			g_context->camera_type = 0;
+			cam->data->ortho       = NULL;
 			camera_object_build_proj(cam, -1.0);
 			g_context->ddirty = 2;
 			camera_reset(-1);

@@ -6,8 +6,7 @@ static f32 util_shortcut_redo_tap_time = 0.0;
 
 void util_shortcut_undo_redo() {
 	bool undo_pressed = operator_shortcut(any_map_get(g_keymap, "edit_undo"), SHORTCUT_TYPE_STARTED);
-	bool redo_pressed =
-	    operator_shortcut(any_map_get(g_keymap, "edit_redo"), SHORTCUT_TYPE_STARTED) || (keyboard_down("control") && keyboard_started("y"));
+	bool redo_pressed = operator_shortcut(any_map_get(g_keymap, "edit_redo"), SHORTCUT_TYPE_STARTED) || (keyboard_down("control") && keyboard_started("y"));
 
 	// Two-finger tap to undo, three-finger tap to redo
 	if (context_in_3d_view() && g_config->touch_ui) {
@@ -111,11 +110,11 @@ void util_shortcut_brush() {
 
 	bool decal_mask = context_is_decal_mask();
 
-	bool adjusting = operator_shortcut(any_map_get(g_keymap, "brush_radius"), SHORTCUT_TYPE_DOWN) ||
-	                 operator_shortcut(any_map_get(g_keymap, "brush_opacity"), SHORTCUT_TYPE_DOWN) ||
-	                 operator_shortcut(any_map_get(g_keymap, "brush_angle"), SHORTCUT_TYPE_DOWN) ||
-	                 (decal_mask && operator_shortcut(string("%s+%s", any_map_get(g_keymap, "decal_mask"), any_map_get(g_keymap, "brush_radius")),
-	                                                  SHORTCUT_TYPE_DOWN));
+	bool adjusting =
+	    operator_shortcut(any_map_get(g_keymap, "brush_radius"), SHORTCUT_TYPE_DOWN) ||
+	    operator_shortcut(any_map_get(g_keymap, "brush_opacity"), SHORTCUT_TYPE_DOWN) ||
+	    operator_shortcut(any_map_get(g_keymap, "brush_angle"), SHORTCUT_TYPE_DOWN) ||
+	    (decal_mask && operator_shortcut(string("%s+%s", any_map_get(g_keymap, "decal_mask"), any_map_get(g_keymap, "brush_radius")), SHORTCUT_TYPE_DOWN));
 
 	if (!adjusting) {
 		iron_mouse_unlock();
@@ -142,9 +141,7 @@ void util_shortcut_brush() {
 			g_context->brush_angle += 360;
 		make_material_parse_paint_material(true);
 	}
-	else if (decal_mask &&
-	         operator_shortcut(string("%s+%s", any_map_get(g_keymap, "decal_mask"), any_map_get(g_keymap, "brush_radius")),
-	                           SHORTCUT_TYPE_DOWN)) {
+	else if (decal_mask && operator_shortcut(string("%s+%s", any_map_get(g_keymap, "decal_mask"), any_map_get(g_keymap, "brush_radius")), SHORTCUT_TYPE_DOWN)) {
 		g_context->brush_decal_mask_radius += mouse_movement_x / 150.0;
 		g_context->brush_decal_mask_radius = math_max(0.01, math_min(4.0, g_context->brush_decal_mask_radius));
 		g_context->brush_decal_mask_radius = math_round(g_context->brush_decal_mask_radius * 100) / 100.0;
@@ -235,8 +232,8 @@ void util_shortcut_viewport() {
 			if (operator_shortcut(any_map_get(g_keymap, "brush_radius"), SHORTCUT_TYPE_STARTED) ||
 			    operator_shortcut(any_map_get(g_keymap, "brush_opacity"), SHORTCUT_TYPE_STARTED) ||
 			    operator_shortcut(any_map_get(g_keymap, "brush_angle"), SHORTCUT_TYPE_STARTED) ||
-			    (decal_mask && operator_shortcut(string("%s+%s", any_map_get(g_keymap, "decal_mask"), any_map_get(g_keymap, "brush_radius")),
-			                                     SHORTCUT_TYPE_STARTED))) {
+			    (decal_mask &&
+			     operator_shortcut(string("%s+%s", any_map_get(g_keymap, "decal_mask"), any_map_get(g_keymap, "brush_radius")), SHORTCUT_TYPE_STARTED))) {
 				g_context->brush_locked = true;
 				if (!pen_connected) {
 					iron_mouse_lock();
@@ -259,8 +256,7 @@ void util_shortcut_viewport() {
 					g_context->brush_decal_mask_radius = math_max(math_round(g_context->brush_decal_mask_radius * 100) / 100.0, 0.01);
 					ui_header_handle->redraws          = 2;
 				}
-				else if (operator_shortcut(string("%s+%s", any_map_get(g_keymap, "decal_mask"),
-				                                  any_map_get(g_keymap, "brush_radius_increase")),
+				else if (operator_shortcut(string("%s+%s", any_map_get(g_keymap, "decal_mask"), any_map_get(g_keymap, "brush_radius_increase")),
 				                           SHORTCUT_TYPE_REPEAT)) {
 					g_context->brush_decal_mask_radius += ui_base_get_radius_increment();
 					g_context->brush_decal_mask_radius = math_round(g_context->brush_decal_mask_radius * 100) / 100.0;

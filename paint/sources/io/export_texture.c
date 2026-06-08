@@ -41,7 +41,7 @@ static void export_texture_write_texture(char *file, buffer_t *pixels, i32 type,
 			g_project->assets = any_array_create_from_raw((void *[]){}, 0);
 		}
 		any_array_push(g_project->assets, asset->file);
-		asset->image = image;
+		asset->image            = image;
 		asset_t_array_t *assets = any_array_create_from_raw(
 		    (void *[]){
 		        asset,

@@ -675,10 +675,10 @@ void render_path_paint_draw_cursor_decal(f32 mx, f32 my, f32 radius, f32 opacity
 
 	// Prevent cursor jumping constantly if randomness is used in brush nodes
 	f32 brush_nodes_opacity = g_context->brush_nodes_opacity;
-	f32 brush_nodes_angle = g_context->brush_nodes_angle;
+	f32 brush_nodes_angle   = g_context->brush_nodes_angle;
 	if (g_context->brush_nodes_uses_random) {
 		brush_nodes_opacity = 1.0;
-		brush_nodes_angle = 0.0;
+		brush_nodes_angle   = 0.0;
 	}
 
 	render_path_set_target("", NULL, NULL, GPU_CLEAR_NONE, 0, 0.0);
@@ -725,8 +725,8 @@ void render_path_paint_commands_cursor() {
 		return;
 	}
 
-	f32 mx                 = g_context->paint_vec.x;
-	f32 my                 = 1.0 - g_context->paint_vec.y;
+	f32 mx = g_context->paint_vec.x;
+	f32 my = 1.0 - g_context->paint_vec.y;
 
 	// Prevent cursor jumping constantly if randomness is used in brush nodes
 	f32 brush_nodes_radius = g_context->brush_nodes_radius;

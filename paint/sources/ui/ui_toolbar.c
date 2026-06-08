@@ -128,16 +128,16 @@ void ui_toolbar_draw_show_3d_view() {
 		}
 
 		if (ui_window(ui_toolbar_handle, ui_toolbar_x(), y, toolbar_w, toolbar_w, false)) {
-			i32 _ELEMENT_H             = g_ui->ops->theme->ELEMENT_H;
-			i32 _BUTTON_H              = g_ui->ops->theme->BUTTON_H;
-			i32 _BUTTON_COL            = g_ui->ops->theme->BUTTON_COL;
-			i32 _fontOffsetY           = g_ui->font_offset_y;
+			i32 _ELEMENT_H               = g_ui->ops->theme->ELEMENT_H;
+			i32 _BUTTON_H                = g_ui->ops->theme->BUTTON_H;
+			i32 _BUTTON_COL              = g_ui->ops->theme->BUTTON_COL;
+			i32 _fontOffsetY             = g_ui->font_offset_y;
 			g_ui->ops->theme->ELEMENT_H  = math_floor(g_ui->ops->theme->ELEMENT_H * 1.5);
 			g_ui->ops->theme->BUTTON_H   = g_ui->ops->theme->ELEMENT_H;
 			g_ui->ops->theme->BUTTON_COL = g_ui->ops->theme->WINDOW_BG_COL;
-			i32 font_height            = draw_font_height(g_ui->ops->font, g_ui->font_size);
+			i32 font_height              = draw_font_height(g_ui->ops->font, g_ui->font_size);
 			g_ui->font_offset_y          = (UI_ELEMENT_H() - font_height) / 2.0;
-			i32 _w                     = g_ui->_w;
+			i32 _w                       = g_ui->_w;
 			g_ui->_w                     = toolbar_w;
 			if (ui_icon_button("", ICON_CUBE, UI_ALIGN_CENTER)) {
 				ui_base_show_3d_view();
@@ -174,7 +174,7 @@ void ui_toolbar_render_ui() {
 	if (context_is_floating_toolbar()) {
 		x += ui_toolbar_x();
 		y += ui_toolbar_x() + 3 * UI_SCALE();
-		h                             = (ui_toolbar_tool_names->length + 1) * (ui_toolbar_w(false) + 2);
+		h                               = (ui_toolbar_tool_names->length + 1) * (ui_toolbar_w(false) + 2);
 		g_ui->ops->theme->WINDOW_BG_COL = g_ui->ops->theme->SEPARATOR_COL;
 		if (!base_view3d_show && ui_view2d_show && !g_config->touch_ui) {
 			y += ui_toolbar_w(false);
@@ -189,7 +189,7 @@ void ui_toolbar_render_ui() {
 
 	if (ui_window(ui_toolbar_handle, x, y, ui_toolbar_w(false), h, false)) {
 		g_ui->_y -= 4 * UI_SCALE();
-		g_ui->image_scroll_align     = false;
+		g_ui->image_scroll_align   = false;
 		gpu_texture_t *img         = resource_get("icons.k");
 		u32            col         = g_ui->ops->theme->WINDOW_BG_COL;
 		bool           light       = col > 0xff666666;
@@ -204,16 +204,16 @@ void ui_toolbar_render_ui() {
 		}
 		// Draw ">" button if header is hidden
 		else {
-			i32 _ELEMENT_H             = g_ui->ops->theme->ELEMENT_H;
-			i32 _BUTTON_H              = g_ui->ops->theme->BUTTON_H;
-			i32 _BUTTON_COL            = g_ui->ops->theme->BUTTON_COL;
-			i32 _fontOffsetY           = g_ui->font_offset_y;
+			i32 _ELEMENT_H               = g_ui->ops->theme->ELEMENT_H;
+			i32 _BUTTON_H                = g_ui->ops->theme->BUTTON_H;
+			i32 _BUTTON_COL              = g_ui->ops->theme->BUTTON_COL;
+			i32 _fontOffsetY             = g_ui->font_offset_y;
 			g_ui->ops->theme->ELEMENT_H  = math_floor(g_ui->ops->theme->ELEMENT_H * 1.5);
 			g_ui->ops->theme->BUTTON_H   = g_ui->ops->theme->ELEMENT_H;
 			g_ui->ops->theme->BUTTON_COL = g_ui->ops->theme->WINDOW_BG_COL;
-			i32 font_height            = draw_font_height(g_ui->ops->font, g_ui->font_size);
+			i32 font_height              = draw_font_height(g_ui->ops->font, g_ui->font_size);
 			g_ui->font_offset_y          = (UI_ELEMENT_H() - font_height) / 2.0;
-			i32 _w                     = g_ui->_w;
+			i32 _w                       = g_ui->_w;
 			g_ui->_w                     = ui_toolbar_w(false);
 
 			if (ui_button(">", UI_ALIGN_CENTER, "")) {
@@ -244,7 +244,7 @@ void ui_toolbar_render_ui() {
 
 	if (g_config->touch_ui) {
 		// Hide scrollbar
-		i32 _SCROLL_W            = g_ui->ops->theme->SCROLL_W;
+		i32 _SCROLL_W              = g_ui->ops->theme->SCROLL_W;
 		g_ui->ops->theme->SCROLL_W = 0;
 		ui_end_window();
 		g_ui->ops->theme->SCROLL_W = _SCROLL_W;

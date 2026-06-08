@@ -187,7 +187,7 @@ void ui_base_menu_draw_viewport_mode() {
 	i32 index = string_array_index_of(shortcuts, keyboard_key_code(g_ui->key_code));
 	if (g_ui->is_key_pressed && index != -1) {
 		mode_handle->i = index;
-		g_ui->changed    = true;
+		g_ui->changed  = true;
 		context_set_viewport_mode(mode_handle->i);
 	}
 	else if (mode_handle->changed) {

@@ -39,9 +39,9 @@ void project_import_mesh_box_draw() {
 	if (ends_with(to_lower_case(path), ".fbx") || ends_with(to_lower_case(path), ".gltf") || ends_with(to_lower_case(path), ".glb")) {
 		ui_row2();
 		bool b                 = ui_check(ui_handle(__ID__), tr("Apply Skinning"), "");
-		g_ui->enabled            = b;
+		g_ui->enabled          = b;
 		plugins_skinning_frame = ui_slider(ui_handle(__ID__), tr("Frame"), 1, 99, false, 1, true, UI_ALIGN_RIGHT, true);
-		g_ui->enabled            = true;
+		g_ui->enabled          = true;
 		if (!b) {
 			plugins_skinning_frame = -1;
 		}
