@@ -564,6 +564,12 @@ MN(transform_up) {
 	RET4(transform_up(AP(0)));
 }
 
+// raycast
+vec4_t raycast_aabb(object_t *object);
+MN(raycast_aabb) {
+	RET4(raycast_aabb((object_t *)AP(0)));
+}
+
 // iron_shape / iron_draw
 MN(line_draw_render) {
 	line_draw_render(M4(0));
@@ -877,10 +883,6 @@ void minic_register_builtins() {
 	static const char *ui_state_names[]  = {"UI_STATE_IDLE", "UI_STATE_STARTED", "UI_STATE_DOWN", "UI_STATE_RELEASED", "UI_STATE_HOVERED"};
 	static const int   ui_state_values[] = {0, 1, 2, 3, 4};
 	minic_register_enum("ui_state_t", ui_state_names, ui_state_values, 5);
-
-	static const char *ui_node_flag_names[]  = {"UI_NODE_FLAG_NONE", "UI_NODE_FLAG_COLLAPSED", "UI_NODE_FLAG_PREVIEW"};
-	static const int   ui_node_flag_values[] = {0, 1, 2};
-	minic_register_enum("ui_node_flag_t", ui_node_flag_names, ui_node_flag_values, 3);
 
 	static const char *gpu_texture_format_names[]  = {"GPU_TEXTURE_FORMAT_RGBA32", "GPU_TEXTURE_FORMAT_RGBA64",    "GPU_TEXTURE_FORMAT_RGBA128",
 	                                                  "GPU_TEXTURE_FORMAT_R8",     "GPU_TEXTURE_FORMAT_R16",       "GPU_TEXTURE_FORMAT_R32",
@@ -1243,23 +1245,6 @@ void minic_register_builtins() {
 	minic_struct_field_set_type("camera_object_t", "data", "camera_data_t");
 	minic_struct_field_set_type("camera_object_t", "frustum_planes", "frustum_plane_array_t");
 
-	// frustum_plane_t
-	static const char        *fp_fields[]      = {"constant"};
-	static const int          fp_offsets[]     = {(int)offsetof(frustum_plane_t, constant)};
-	static const minic_type_t fp_types[]       = {MINIC_T_FLOAT};
-	static const minic_type_t fp_deref_types[] = {MINIC_T_FLOAT};
-	minic_register_struct_native("frustum_plane_t", fp_fields, fp_offsets, fp_types, fp_deref_types, 1);
-	minic_struct_set_size("frustum_plane_t", (int)sizeof(frustum_plane_t));
-
-	// cached_shader_context_t
-	static const char        *csc_fields[]      = {"context"};
-	static const int          csc_offsets[]     = {(int)offsetof(cached_shader_context_t, context)};
-	static const minic_type_t csc_types[]       = {MINIC_T_PTR};
-	static const minic_type_t csc_deref_types[] = {MINIC_T_PTR};
-	minic_register_struct_native("cached_shader_context_t", csc_fields, csc_offsets, csc_types, csc_deref_types, 1);
-	minic_struct_set_size("cached_shader_context_t", (int)sizeof(cached_shader_context_t));
-	minic_struct_field_set_type("cached_shader_context_t", "context", "shader_context_t");
-
 	// config_t
 	static const char *config_fields[]  = {"window_w",      "window_h",      "window_scale", "rp_supersample", "recent_projects", "plugins",
 	                                       "keymap",        "theme",         "undo_steps",   "camera_fov",     "layer_res",       "brush_live",
@@ -1438,7 +1423,6 @@ void minic_register_builtins() {
 	// object
 	R(object_create, "p(i)");
 	R(object_set_parent, "v(p,p)");
-	R(object_remove_super, "v(p)");
 	R(object_remove, "v(p)");
 	R(object_get_child, "p(p,p)");
 
@@ -1448,69 +1432,42 @@ void minic_register_builtins() {
 	R(transform_update, "v(p)");
 	R(transform_build_matrix, "v(p)");
 	R(transform_decompose, "v(p)");
-	R(transform_compute_radius, "v(p)");
-	R(transform_compute_dim, "v(p)");
 	R(transform_world_x, "f(p)");
 	R(transform_world_y, "f(p)");
 	R(transform_world_z, "f(p)");
-
-	// camera_data
-	R(camera_data_parse, "p(p,p)");
-	R(camera_data_get_raw_by_name, "p(p,p)");
 
 	// camera_object
 	R(camera_object_create, "p(p)");
 	R(camera_object_build_proj, "v(p,f)");
 	R(camera_object_remove, "v(p)");
-	R(camera_object_proj_jitter, "v(p)");
 	R(camera_object_build_mat, "v(p)");
-	R(camera_object_sphere_in_frustum, "b(p,p,f,f,f,f)");
-
-	// frustum_plane
-	R(frustum_plane_create, "p()");
-	R(frustum_plane_normalize, "v(p)");
-	R(frustum_plane_set_components, "v(p,f,f,f,f)");
 
 	// world_data
 	R(world_data_parse, "p(p,p)");
-	R(world_data_get_raw_by_name, "p(p,p)");
-	R(world_data_get_empty_irradiance, "p()");
-	R(world_data_set_irradiance, "p(p)");
 	R(world_data_load_envmap, "v(p)");
 
 	// material_data
 	R(material_data_create, "p(p,p)");
 	R(material_data_parse, "p(p,p)");
-	R(material_data_get_raw_by_name, "p(p,p)");
 	R(material_data_get_context, "p(p,p)");
 	R(material_context_load, "v(p)");
 
 	// shader_data
 	R(shader_data_create, "p(p)");
-	R(shader_data_ext, "p()");
 	R(shader_data_parse, "p(p,p)");
-	R(shader_data_get_raw_by_name, "p(p,p)");
 	R(shader_data_delete, "v(p)");
 	R(shader_data_get_context, "p(p,p)");
 
 	// shader_context
 	R(shader_context_load, "v(p)");
 	R(shader_context_compile, "v(p)");
-	R(shader_context_type_size, "i(p)");
-	R(shader_context_type_pad, "i(i,i)");
 	R(shader_context_finish_compile, "v(p)");
-	R(shader_context_parse_vertex_struct, "v(p)");
 	R(shader_context_delete, "v(p)");
-	R(shader_context_get_compare_mode, "i(p)");
-	R(shader_context_get_cull_mode, "i(p)");
-	R(shader_context_get_blend_fac, "i(p)");
-	R(shader_context_get_tex_format, "i(p)");
 	R(shader_context_add_const, "v(p,i)");
 	R(shader_context_add_tex, "v(p,i)");
 
 	// mesh_data
 	R(mesh_data_parse, "p(p,p)");
-	R(mesh_data_get_raw_by_name, "p(p,p)");
 	R(mesh_data_create, "p(p)");
 	R(mesh_data_get_vertex_size, "i(p)");
 	R(mesh_data_build_vertices, "v(p,p)");
@@ -1523,20 +1480,7 @@ void minic_register_builtins() {
 	R(mesh_object_create, "p(p,p)");
 	R(mesh_object_set_data, "v(p,p)");
 	R(mesh_object_remove, "v(p)");
-	R(mesh_object_cull_material, "b(p,p)");
-	R(mesh_object_cull_mesh, "b(p,p,p)");
 	R(mesh_object_render, "v(p,p,p)");
-	R(mesh_object_valid_context, "b(p,p,p)");
-
-	// uniforms
-	R(uniforms_set_context_consts, "v(p,p)");
-	R(uniforms_set_obj_consts, "v(p,p)");
-	R(uniforms_bind_render_target, "v(p,p,p)");
-	R(uniforms_set_context_const, "b(i,p)");
-	R(uniforms_set_obj_const, "v(p,i,p)");
-	R(uniforms_set_material_consts, "v(p,p)");
-	R(current_material, "p(p)");
-	R(uniforms_set_material_const, "v(i,p,p)");
 
 	// data
 	R(data_get_mesh, "p(p,p)");
@@ -1555,36 +1499,24 @@ void minic_register_builtins() {
 	R(data_delete_video, "v(p)");
 	R(data_delete_font, "v(p)");
 	R(data_is_abs, "b(p)");
-	R(data_is_up, "b(p)");
-	R(data_resolve_path, "p(p)");
 	R(data_path, "p()");
 
 	// scene
 	R(scene_create, "p(p)");
 	R(scene_remove, "v()");
 	R(scene_set_active, "p(p)");
-	R(scene_render_frame, "v()");
 	R(scene_add_object, "p(p)");
 	R(scene_get_child, "p(p)");
 	R(scene_add_mesh_object, "p(p,p,p)");
 	R(scene_add_camera_object, "p(p,p)");
-	R(scene_traverse_objects, "v(p,p,p)");
 	R(scene_add_scene, "p(p,p)");
-	R(scene_get_objects_count, "i(p)");
 	R(scene_spawn_object, "p(p,p,i)");
 	R(scene_get_raw_object_by_name, "p(p,p)");
-	R(scene_traverse_objs, "p(p,p)");
 	R(scene_create_object, "p(p,p,p)");
 	R(scene_create_mesh_object, "p(p,p,p,p)");
-	R(scene_return_mesh_object, "p(p,p,p,p,p)");
-	R(scene_return_object, "p(p,p)");
 	R(scene_gen_transform, "v(p,p)");
-	R(scene_load_embedded_data, "v(p)");
-	R(scene_embed_data, "v(p)");
 
 	// render_path
-	R(render_path_ready, "b()");
-	R(render_path_render_frame, "v()");
 	R(render_path_set_target, "v(p,p,p,i,i,f)");
 	R(render_path_end, "v()");
 	R(render_path_draw_meshes, "v(p)");
@@ -1594,12 +1526,9 @@ void minic_register_builtins() {
 	R(render_path_load_shader, "v(p)");
 	R(render_path_resize, "v()");
 	R(render_path_create_render_target, "p(p)");
-	R(render_path_create_image, "p(p)");
-	R(render_path_get_tex_format, "i(p)");
 	R(render_target_create, "p()");
 
 	// ui
-	R(ui_init, "v(p,p)");
 	R(ui_begin, "v(p)");
 	R(ui_begin_sticky, "v()");
 	R(ui_end_sticky, "v()");
@@ -1629,24 +1558,13 @@ void minic_register_builtins() {
 	R(ui_tooltip_image, "v(p,i)");
 	R(ui_end, "v()");
 	R(ui_end_window, "v()");
-	R(ui_hovered_tab_name, "p()");
-	R(ui_set_hovered_tab_name, "v(p)");
 	R(ui_mouse_down, "v(p,i,i,i)");
 	R(ui_mouse_move, "v(p,i,i,i,i)");
 	R(ui_mouse_up, "v(p,i,i,i)");
 	R(ui_mouse_wheel, "v(p,f)");
-	R(ui_pen_down, "v(p,i,i,f)");
-	R(ui_pen_up, "v(p,i,i,f)");
-	R(ui_pen_move, "v(p,i,i,f)");
 	R(ui_key_down, "v(p,i)");
 	R(ui_key_up, "v(p,i)");
 	R(ui_key_press, "v(p,i)");
-	R(ui_copy, "p()");
-	R(ui_cut, "p()");
-	R(ui_paste, "v(p)");
-	R(ui_theme_default, "v(p)");
-	R(ui_get_current, "p()");
-	R(ui_set_current, "v(p)");
 	R(ui_handle_create, "p()");
 	R(ui_nest, "p(p,i)");
 	R(ui_set_scale, "v(f)");
@@ -1655,24 +1573,14 @@ void minic_register_builtins() {
 	R(ui_input_in_rect, "b(f,f,f,f)");
 	R(ui_fill, "v(f,f,f,f,i)");
 	R(ui_rect, "v(f,f,f,f,i,f)");
-	R(ui_line_count, "i(p)");
-	R(ui_extract_line, "p(p,i)");
-	R(ui_extract_line_off, "p(p,i,p)");
 	R(ui_is_visible, "b(f)");
 	R(ui_end_element, "v()");
 	R(ui_end_element_of_size, "v(f)");
-	R(ui_end_input, "v()");
-	R(ui_end_frame, "v()");
 	R(ui_fade_color, "v(f)");
 	R(ui_draw_string, "v(p,f,f,i,i)");
 	R(ui_draw_shadow, "v(f,f,f,f)");
 	R(ui_draw_rect, "v(i,f,f,f,f)");
-	R(ui_draw_round_bottom, "v(f,f,f)");
 	R(ui_start_text_edit, "v(p,i)");
-	R(ui_remove_char_at, "v(p,i)");
-	R(ui_remove_chars_at, "v(p,i,i)");
-	R(ui_insert_char_at, "v(p,i,i)");
-	R(ui_insert_chars_at, "v(p,i,p)");
 	R(UI_SCALE, "f()");
 	R(UI_ELEMENT_W, "f()");
 	R(UI_ELEMENT_H, "f()");
@@ -1694,8 +1602,6 @@ void minic_register_builtins() {
 	R(ui_begin_menu, "v()");
 	R(ui_end_menu, "v()");
 	R(ui_menubar_button, "b(p)");
-	R(ui_hsv_to_rgb, "v(f,f,f,p)");
-	R(ui_rgb_to_hsv, "v(f,f,f,p)");
 	R(ui_color_r, "i(i)");
 	R(ui_color_g, "i(i)");
 	R(ui_color_b, "i(i)");
@@ -1710,9 +1616,6 @@ void minic_register_builtins() {
 	R(UI_NODES_SCALE, "f()");
 	R(UI_NODES_PAN_X, "f()");
 	R(UI_NODES_PAN_Y, "f()");
-	R(ui_node_canvas_encode, "v(p)");
-	R(ui_node_canvas_encoded_size, "i(p)");
-	R(ui_node_canvas_to_json, "p(p)");
 	R(UI_NODE_X, "f(p)");
 	R(UI_NODE_Y, "f(p)");
 	R(UI_NODE_W, "f(p)");
@@ -1722,7 +1625,6 @@ void minic_register_builtins() {
 	R(UI_OUTPUTS_H, "f(p,i)");
 	R(UI_BUTTONS_H, "f(p)");
 	R(UI_LINE_H, "f()");
-	R(ui_p, "f(f)");
 	R(ui_get_socket_id, "i(p)");
 	R(ui_get_link, "p(p,i)");
 	R(ui_next_link_id, "i(p)");
@@ -1739,22 +1641,8 @@ void minic_register_builtins() {
 	R(sys_y, "i()");
 	R(sys_title, "p()");
 	R(sys_title_set, "v(p)");
-	R(sys_display_primary_id, "i()");
-	R(sys_display_width, "i()");
-	R(sys_display_height, "i()");
-	R(sys_display_frequency, "i()");
-	R(sys_display_ppi, "i()");
-	R(sys_shader_ext, "p()");
 	R(sys_get_shader, "p(p)");
-	R(sys_notify_on_app_state, "v(p,p,p,p,p)");
-	R(sys_notify_on_drop_files, "v(p)");
-	R(sys_notify_on_update, "v(p,p)");
-	R(sys_notify_on_next_frame, "v(p,p)");
-	R(sys_notify_on_end_frame, "v(p,p)");
-	R(sys_remove_update, "v(p)");
-	R(sys_remove_end_frame, "v(p)");
 	R(data_path, "p()");
-	R(video_unload, "v(p)");
 	R(sys_buffer_to_string, "p(p)");
 	R(sys_string_to_buffer, "p(p)");
 
@@ -1787,14 +1675,6 @@ void minic_register_builtins() {
 	R(draw_set_pipeline, "v(p)");
 	minic_register_native("draw_set_transform", mn_draw_set_transform);
 	R(draw_set_font, "b(p,i)");
-	R(draw_font_init, "v(p)");
-	R(draw_font_destroy, "v(p)");
-	R(draw_font_13, "v(p)");
-	R(draw_font_has_glyph, "b(i)");
-	R(draw_font_add_glyph, "v(i)");
-	R(draw_font_init_glyphs, "v(i,i)");
-	R(draw_font_count, "i(p)");
-	R(draw_font_height, "i(p,i)");
 	R(draw_sub_string_width, "f(p,i,p,i,i)");
 	R(draw_string_width, "i(p,i,p)");
 	R(draw_filled_circle, "v(f,f,f,i)");
@@ -1851,8 +1731,6 @@ void minic_register_builtins() {
 	R(file_copy, "v(p,p)");
 	R(file_start, "v(p)");
 	R(file_download_to, "v(p,p,p,i)");
-	R(file_cache_cloud, "v(p,p,p)");
-	R(file_init_cloud, "v(p,p)");
 
 	// iron_gc
 	R(gc_alloc, "p(i)");
@@ -1978,34 +1856,19 @@ void minic_register_builtins() {
 	R(half_to_u8_fast, "i(i)");
 
 	// iron_input
-	R(input_reset, "v()");
-	R(input_end_frame, "v()");
-	R(input_on_foreground, "v()");
-	R(input_register, "v()");
-	R(mouse_end_frame, "v()");
-	R(mouse_reset, "v()");
-	R(mouse_button_index, "i(p)");
 	R(mouse_down, "b(p)");
 	R(mouse_down_any, "b()");
 	R(mouse_started, "b(p)");
 	R(mouse_started_any, "b()");
 	R(mouse_released, "b(p)");
-	R(mouse_down_listener, "v(i,i,i)");
-	R(mouse_up_listener, "v(i,i,i)");
-	R(mouse_move_listener, "v(i,i,i,i)");
-	R(mouse_wheel_listener, "v(f)");
 	R(mouse_view_x, "f()");
 	R(mouse_view_y, "f()");
-	R(keyboard_end_frame, "v()");
-	R(keyboard_reset, "v()");
 	R(keyboard_down, "b(p)");
 	R(keyboard_started, "b(p)");
 	R(keyboard_started_any, "b()");
 	R(keyboard_released, "b(p)");
 	R(keyboard_repeat, "b(p)");
 	R(keyboard_key_code, "p(i)");
-	R(keyboard_down_listener, "v(i)");
-	R(keyboard_up_listener, "v(i)");
 
 	// paint
 	R(plugin_create, "p()");
@@ -2103,6 +1966,9 @@ void minic_register_builtins() {
 	R(armpack_size_bool, "i()");
 	R(armpack_map_get_f32, "f(p,p)");
 	R(armpack_map_get_i32, "i(p,p)");
+
+	// raycast
+	minic_register_native("raycast_aabb", mn_raycast_aabb);
 }
 
 #undef R
