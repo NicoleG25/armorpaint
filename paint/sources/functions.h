@@ -490,6 +490,7 @@ void      util_render_make_node_preview(ui_node_canvas_t *canvas, ui_node_t *nod
 void      util_render_pick_pos_nor_tex();
 mat4_t    util_render_get_decal_mat();
 void      util_brush_update();
+vec4_t    raycast_aabb(object_t *object);
 void      util_resize_borders();
 void      util_select_update();
 void      util_shortcut_brush();
