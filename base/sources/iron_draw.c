@@ -185,9 +185,8 @@ void draw_flush(void) {
 	draw_batch_texture  = NULL;
 }
 
-static void draw_push(gpu_pipeline_t *pipeline, gpu_texture_t *tex,
-                      float x0, float y0, float u0, float v0, float x1, float y1, float u1, float v1, float x2, float y2, float u2, float v2, float x3,
-                      float y3, float u3, float v3, float r, float g, float b, float a) {
+static void draw_push(gpu_pipeline_t *pipeline, gpu_texture_t *tex, float x0, float y0, float u0, float v0, float x1, float y1, float u1, float v1, float x2,
+                      float y2, float u2, float v2, float x3, float y3, float u3, float v3, float r, float g, float b, float a) {
 
 	if (draw_batch_pipeline != NULL && (draw_batch_pipeline != pipeline || draw_batch_texture != tex)) {
 		draw_flush();
@@ -327,26 +326,26 @@ void draw_image(gpu_texture_t *tex, float x, float y) {
 
 void draw_filled_triangle(float x0, float y0, float x1, float y1, float x2, float y2) {
 	gpu_pipeline_t *pipe = draw_custom_pipeline != NULL ? draw_custom_pipeline : &tris_pipeline;
-	float r   = _draw_color_r(draw_color) / 255.0f;
-	float g   = _draw_color_g(draw_color) / 255.0f;
-	float b   = _draw_color_b(draw_color) / 255.0f;
-	float a   = _draw_color_a(draw_color) / 255.0f;
-	float nx0 = x0 / vw() * 2.0f - 1.0f, ny0 = -(y0 / vh() * 2.0f - 1.0f);
-	float nx1 = x1 / vw() * 2.0f - 1.0f, ny1 = -(y1 / vh() * 2.0f - 1.0f);
-	float nx2 = x2 / vw() * 2.0f - 1.0f, ny2 = -(y2 / vh() * 2.0f - 1.0f);
+	float           r    = _draw_color_r(draw_color) / 255.0f;
+	float           g    = _draw_color_g(draw_color) / 255.0f;
+	float           b    = _draw_color_b(draw_color) / 255.0f;
+	float           a    = _draw_color_a(draw_color) / 255.0f;
+	float           nx0 = x0 / vw() * 2.0f - 1.0f, ny0 = -(y0 / vh() * 2.0f - 1.0f);
+	float           nx1 = x1 / vw() * 2.0f - 1.0f, ny1 = -(y1 / vh() * 2.0f - 1.0f);
+	float           nx2 = x2 / vw() * 2.0f - 1.0f, ny2 = -(y2 / vh() * 2.0f - 1.0f);
 	draw_push(pipe, NULL, nx0, ny0, 0, 0, nx1, ny1, 0, 0, nx2, ny2, 0, 0, nx2, ny2, 0, 0, r, g, b, a);
 }
 
 void draw_filled_rect(float x, float y, float width, float height) {
 	gpu_pipeline_t *pipe = draw_custom_pipeline != NULL ? draw_custom_pipeline : &rect_pipeline;
-	float r  = _draw_color_r(draw_color) / 255.0f;
-	float g  = _draw_color_g(draw_color) / 255.0f;
-	float b  = _draw_color_b(draw_color) / 255.0f;
-	float a  = _draw_color_a(draw_color) / 255.0f;
-	float xl = (int)x / vw(), yt = (int)y / vh();
-	float xr = xl + (int)width / vw(), yb = yt + (int)height / vh();
-	float nx_l = xl * 2.0f - 1.0f, nx_r = xr * 2.0f - 1.0f;
-	float ny_t = -(yt * 2.0f - 1.0f), ny_b = -(yb * 2.0f - 1.0f);
+	float           r    = _draw_color_r(draw_color) / 255.0f;
+	float           g    = _draw_color_g(draw_color) / 255.0f;
+	float           b    = _draw_color_b(draw_color) / 255.0f;
+	float           a    = _draw_color_a(draw_color) / 255.0f;
+	float           xl = (int)x / vw(), yt = (int)y / vh();
+	float           xr = xl + (int)width / vw(), yb = yt + (int)height / vh();
+	float           nx_l = xl * 2.0f - 1.0f, nx_r = xr * 2.0f - 1.0f;
+	float           ny_t = -(yt * 2.0f - 1.0f), ny_b = -(yb * 2.0f - 1.0f);
 	draw_push(pipe, NULL, nx_l, ny_b, 0, 0, nx_l, ny_t, 0, 0, nx_r, ny_t, 0, 0, nx_r, ny_b, 0, 0, r, g, b, a);
 }
 

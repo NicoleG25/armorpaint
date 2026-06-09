@@ -441,14 +441,14 @@ void *gpu_bc7_compress(void *data, int width, int height) {
 	}
 	volatile int32_t    next_block = 0;
 	bc7_thread_params_t tp         = {
-	    .src          = (uint8_t *)data,
-	    .dst          = (uint8_t *)bc7_data,
-	    .width        = width,
-	    .height       = height,
-	    .blocks_x     = blocks_x,
-	    .total_blocks = blocks_x * blocks_y,
-	    .next_block   = &next_block,
-	};
+	            .src          = (uint8_t *)data,
+	            .dst          = (uint8_t *)bc7_data,
+	            .width        = width,
+	            .height       = height,
+	            .blocks_x     = blocks_x,
+	            .total_blocks = blocks_x * blocks_y,
+	            .next_block   = &next_block,
+    };
 	bc7enc_compress_block_params_init(&tp.params);
 	tp.params.m_max_partitions_mode = 0;
 	tp.params.m_try_least_squares   = false;
