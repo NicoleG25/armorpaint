@@ -533,7 +533,7 @@ buffer_t *util_encode_project(project_t *raw) {
 	armpack_encode_string("stages");
 	if (raw->stages != NULL) {
 		armpack_encode_array(raw->stages->length);
-		for (i32 i = 0; i < raw->timeline_meshes->length; ++i) {
+		for (i32 i = 0; i < raw->stages->length; ++i) {
 			armpack_encode_map(3);
 			armpack_encode_string("name");
 			armpack_encode_string(raw->stages->buffer[i]->name);
