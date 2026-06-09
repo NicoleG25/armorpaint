@@ -274,9 +274,11 @@ void tab_meshes_draw_context_menu() {
 	    2);
 	ui_row(row);
 	ui_text("Name", UI_ALIGN_LEFT, 0x00000000);
-	h             = ui_handle(__ID__);
-	h->text       = string_copy(o->base->name);
-	o->base->name = string_copy(ui_text_input(h, "", UI_ALIGN_LEFT, true, false));
+	h              = ui_handle(__ID__);
+	h->text        = string_copy(o->base->name);
+	char *new_name = string_copy(ui_text_input(h, "", UI_ALIGN_LEFT, true, false));
+	tab_stages_rename_object(o->base->name, new_name);
+	o->base->name = new_name;
 	o->data->name = string_copy(o->base->name);
 
 	// Material override

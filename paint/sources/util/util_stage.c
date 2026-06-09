@@ -34,6 +34,34 @@ void tab_stages_apply(stage_t *stage) {
 	g_context->ddirty = 2;
 }
 
+void tab_stages_rename_object(char *old_name, char *new_name) {
+	if (g_project->stages == NULL || string_equals(old_name, new_name)) {
+		return;
+	}
+	for (i32 i = 0; i < g_project->stages->length; ++i) {
+		stage_t *s = g_project->stages->buffer[i];
+		for (i32 j = 0; j < s->objects->length; ++j) {
+			if (string_equals(s->objects->buffer[j], old_name)) {
+				s->objects->buffer[j] = string_copy(new_name);
+			}
+		}
+	}
+}
+
+void tab_stages_rename_layer(char *old_name, char *new_name) {
+	if (g_project->stages == NULL || string_equals(old_name, new_name)) {
+		return;
+	}
+	for (i32 i = 0; i < g_project->stages->length; ++i) {
+		stage_t *s = g_project->stages->buffer[i];
+		for (i32 j = 0; j < s->layers->length; ++j) {
+			if (string_equals(s->layers->buffer[j], old_name)) {
+				s->layers->buffer[j] = string_copy(new_name);
+			}
+		}
+	}
+}
+
 void tab_stages_prune() {
 	if (g_project->stages == NULL) {
 		return;

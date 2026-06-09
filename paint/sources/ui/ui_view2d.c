@@ -512,8 +512,10 @@ void ui_view2d_update(void *_) {
 			ui_text(g_context->node_preview_name, UI_ALIGN_LEFT, 0x00000000);
 		}
 		else if (ui_view2d_type == VIEW_2D_TYPE_LAYER) {
-			h->text                    = string_copy(l->name);
-			l->name                    = string_copy(ui_text_input(h, "", UI_ALIGN_LEFT, true, false));
+			h->text        = string_copy(l->name);
+			char *new_name = string_copy(ui_text_input(h, "", UI_ALIGN_LEFT, true, false));
+			tab_stages_rename_layer(l->name, new_name);
+			l->name                    = new_name;
 			ui_view2d_text_input_hover = g_ui->is_hovered;
 		}
 		else if (ui_view2d_type == VIEW_2D_TYPE_FONT) {

@@ -403,7 +403,9 @@ void tab_layers_draw_layer_slot_full(slot_layer_t *l, i32 i) {
 	g_ui->_w          = name_right - name_x;
 	if (tab_layers_layer_name_edit == l->id) {
 		tab_layers_layer_name_handle->text = string_copy(l->name);
-		l->name                            = string_copy(ui_text_input(tab_layers_layer_name_handle, "", UI_ALIGN_LEFT, true, false));
+		char *new_name                     = string_copy(ui_text_input(tab_layers_layer_name_handle, "", UI_ALIGN_LEFT, true, false));
+		tab_stages_rename_layer(l->name, new_name);
+		l->name = new_name;
 		if (g_ui->text_selected_handle != tab_layers_layer_name_handle) {
 			tab_layers_layer_name_edit = -1;
 		}
