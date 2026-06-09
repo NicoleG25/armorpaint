@@ -89,6 +89,7 @@ typedef struct config {
 	f32   rp_vignette;
 	f32   rp_grain;
 	char *lut_path; // .cube
+	bool  texture_filter;
 	// Application
 	struct string_array *recent_projects; // Recently opened projects
 	struct string_array *bookmarks;       // Bookmarked folders in browser
@@ -207,7 +208,6 @@ typedef struct context {
 	f32                         envmap_angle;
 	f32                         light_angle;
 	bool                        cull_backfaces;
-	bool                        texture_filter;
 	texture_ldr_format_t        format_type;
 	f32                         format_quality;
 	export_destination_t        layers_destination;

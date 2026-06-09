@@ -454,13 +454,6 @@ void ui_menubar_draw_category_items() {
 			make_material_parse_mesh_material();
 		}
 
-		ui_handle_t *filter_handle = ui_handle(__ID__);
-		filter_handle->b           = g_context->texture_filter;
-		g_context->texture_filter  = ui_check(filter_handle, string(" %s", tr("Filter Textures")), "");
-		if (filter_handle->changed) {
-			gpu_use_linear_sampling(g_context->texture_filter);
-		}
-
 		ui_handle_t *wireframe_handle = ui_handle(__ID__);
 		wireframe_handle->b           = g_context->draw_wireframe;
 		g_context->draw_wireframe     = ui_check(wireframe_handle, string(" %s", tr("Wireframe")), "");

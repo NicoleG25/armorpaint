@@ -76,6 +76,7 @@ void config_save() {
 	json_encode_f32("rp_vignette", g_config->rp_vignette);
 	json_encode_f32("rp_grain", g_config->rp_grain);
 	json_encode_string("lut_path", g_config->lut_path);
+	json_encode_bool("texture_filter", g_config->texture_filter);
 	json_encode_string_array("recent_projects", g_config->recent_projects);
 	json_encode_string_array("bookmarks", g_config->bookmarks);
 	json_encode_string_array("plugins", g_config->plugins);
@@ -181,6 +182,7 @@ void config_init() {
 		g_config->rp_vignette      = 0.2;
 		g_config->rp_grain         = 0.09;
 		g_config->lut_path         = "";
+		g_config->texture_filter   = true;
 #if defined(IRON_ANDROID) || defined(IRON_IOS)
 		g_config->rp_ssao = false;
 #else

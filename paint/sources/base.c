@@ -513,6 +513,10 @@ void base_init() {
 		}
 	}
 
+	if (!g_config->texture_filter) {
+		gpu_use_linear_sampling(false);
+	}
+
 	args_parse();
 	camera_init();
 	ui_base_init();

@@ -23,7 +23,6 @@ void context_init() {
 	g_context->envmap_angle                 = 0.0;
 	g_context->light_angle                  = 0.0;
 	g_context->cull_backfaces               = true;
-	g_context->texture_filter               = true;
 	g_context->format_type                  = TEXTURE_LDR_FORMAT_PNG;
 	g_context->format_quality               = 100.0;
 	g_context->layers_destination           = EXPORT_DESTINATION_DISK;

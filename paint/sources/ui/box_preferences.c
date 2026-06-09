@@ -752,6 +752,13 @@ void box_preferences_viewport_tab() {
 	if (ui_icon_button("", ICON_FOLDER_OPEN, UI_ALIGN_CENTER)) {
 		ui_files_show("cube", false, false, &box_preferences_lut_picked);
 	}
+
+	ui_handle_t *filter_handle = ui_handle(__ID__);
+	filter_handle->b           = g_config->texture_filter;
+	g_config->texture_filter   = ui_check(filter_handle, string(" %s", tr("Filter Textures")), "");
+	if (filter_handle->changed) {
+		gpu_use_linear_sampling(g_config->texture_filter);
+	}
 }
 
 // ██╗  ██╗███████╗██╗   ██╗███╗   ███╗ █████╗ ██████╗
