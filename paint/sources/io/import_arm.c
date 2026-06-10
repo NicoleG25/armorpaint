@@ -295,7 +295,7 @@ void import_arm_run_project(char *path) {
 	gc_unroot(g_project);
 	g_project = project;
 	gc_root(g_project);
-	layer_data_t *l0                     = project->layer_datas->buffer[0];
+	layer_data_t *l0                     = g_project->layer_datas->buffer[0];
 	base_res_handle->i                   = config_get_texture_res_pos(l0->res);
 	base_res_x_handle->f                 = (f32)l0->res;
 	base_res_y_handle->f                 = (f32)l0->res;
@@ -323,8 +323,8 @@ void import_arm_run_project(char *path) {
 		camera_origins[0]   = (vec4_t){origin->buffer[0], origin->buffer[1], origin->buffer[2], 1.0};
 	}
 
-	for (i32 i = 0; i < project->assets->length; ++i) {
-		char *file = project->assets->buffer[i];
+	for (i32 i = 0; i < g_project->assets->length; ++i) {
+		char *file = g_project->assets->buffer[i];
 #ifdef IRON_WINDOWS
 		file = string_copy(string_replace_all(file, "/", "\\"));
 #else
@@ -332,9 +332,9 @@ void import_arm_run_project(char *path) {
 #endif
 		// Convert image path from relative to absolute
 		char *abs = data_is_abs(file) ? file : string("%s%s", base, file);
-		if (project->packed_assets != NULL) {
+		if (g_project->packed_assets != NULL) {
 			abs = string_copy(path_normalize(abs));
-			import_arm_unpack_asset(project, abs, file, false);
+			import_arm_unpack_asset(g_project, abs, file, false);
 		}
 		if (any_map_get(data_cached_images, abs) == NULL && !iron_file_exists(abs)) {
 			import_arm_make_pink(abs);
@@ -343,9 +343,9 @@ void import_arm_run_project(char *path) {
 		import_texture_run(abs, hdr_as_envmap);
 	}
 
-	if (project->font_assets != NULL) {
-		for (i32 i = 0; i < project->font_assets->length; ++i) {
-			char *file = project->font_assets->buffer[i];
+	if (g_project->font_assets != NULL) {
+		for (i32 i = 0; i < g_project->font_assets->length; ++i) {
+			char *file = g_project->font_assets->buffer[i];
 #ifdef IRON_WINDOWS
 			file = string_copy(string_replace_all(file, "/", "\\"));
 #else
@@ -359,7 +359,7 @@ void import_arm_run_project(char *path) {
 		}
 	}
 
-	mesh_data_t *md = mesh_data_create(project->mesh_datas->buffer[0]);
+	mesh_data_t *md = mesh_data_create(g_project->mesh_datas->buffer[0]);
 
 	mesh_object_set_data(g_context->paint_object, md);
 	g_context->paint_object->base->transform->scale = (vec4_t){1, 1, 1, 1.0};
@@ -371,8 +371,8 @@ void import_arm_run_project(char *path) {
         },
         1);
 
-	for (i32 i = 1; i < project->mesh_datas->length; ++i) {
-		mesh_data_t   *raw    = project->mesh_datas->buffer[i];
+	for (i32 i = 1; i < g_project->mesh_datas->length; ++i) {
+		mesh_data_t   *raw    = g_project->mesh_datas->buffer[i];
 		mesh_data_t   *md     = mesh_data_create(raw);
 		mesh_object_t *object = scene_add_mesh_object(md, g_context->paint_object->material, g_context->paint_object->base);
 		object->base->name    = md->name;
@@ -380,14 +380,14 @@ void import_arm_run_project(char *path) {
 		any_array_push(g_project->_->paint_objects, object);
 	}
 
-	transform_set_matrix(g_context->paint_object->base->transform, mat4_from_f32_array(project->mesh_transforms->buffer[0], 0));
-	for (i32 i = 1; i < project->mesh_datas->length; ++i) {
+	transform_set_matrix(g_context->paint_object->base->transform, mat4_from_f32_array(g_project->mesh_transforms->buffer[0], 0));
+	for (i32 i = 1; i < g_project->mesh_datas->length; ++i) {
 		mesh_object_t *o = g_project->_->paint_objects->buffer[i];
-		transform_set_matrix(o->base->transform, mat4_from_f32_array(project->mesh_transforms->buffer[i], 0));
+		transform_set_matrix(o->base->transform, mat4_from_f32_array(g_project->mesh_transforms->buffer[i], 0));
 	}
 
-	if (project->mesh_assets != NULL && project->mesh_assets->length > 0) {
-		char *file             = project->mesh_assets->buffer[0];
+	if (g_project->mesh_assets != NULL && g_project->mesh_assets->length > 0) {
+		char *file             = g_project->mesh_assets->buffer[0];
 		char *abs              = data_is_abs(file) ? file : string("%s%s", base, file);
 		g_project->mesh_assets = any_array_create_from_raw(
 		    (void *[]){
@@ -436,8 +436,8 @@ void import_arm_run_project(char *path) {
 		slot_layer_unload(l);
 	}
 	g_project->_->layers = any_array_create_from_raw((void *[]){}, 0);
-	for (i32 i = 0; i < project->layer_datas->length; ++i) {
-		layer_data_t *ld       = project->layer_datas->buffer[i];
+	for (i32 i = 0; i < g_project->layer_datas->length; ++i) {
+		layer_data_t *ld       = g_project->layer_datas->buffer[i];
 		bool          is_group = ld->texpaint == NULL;
 		bool          is_mask  = ld->texpaint != NULL && ld->texpaint_nor == NULL;
 		slot_layer_t *l        = slot_layer_create("", is_group ? LAYER_SLOT_TYPE_GROUP : is_mask ? LAYER_SLOT_TYPE_MASK : LAYER_SLOT_TYPE_LAYER, NULL);
@@ -455,7 +455,7 @@ void import_arm_run_project(char *path) {
 				_texpaint = gpu_create_texture_from_bytes(lz4_decode(ld->texpaint, ld->res * ld->res * 4), ld->res, ld->res, GPU_TEXTURE_FORMAT_RGBA32);
 				draw_begin(l->texpaint, false, 0);
 				// draw_set_pipeline(pipes_copy8);
-				draw_set_pipeline(project->is_bgra ? pipes_copy_bgra : pipes_copy); // Full bits for undo support, R8 is used
+				draw_set_pipeline(g_project->is_bgra ? pipes_copy_bgra : pipes_copy); // Full bits for undo support, R8 is used
 				draw_image(_texpaint, 0, 0);
 				draw_set_pipeline(NULL);
 				draw_end();
@@ -464,14 +464,14 @@ void import_arm_run_project(char *path) {
 				// TODO: create render target from bytes
 				_texpaint = gpu_create_texture_from_bytes(lz4_decode(ld->texpaint, ld->res * ld->res * 4 * bytes_per_pixel), ld->res, ld->res, format);
 				draw_begin(l->texpaint, false, 0);
-				draw_set_pipeline(project->is_bgra ? pipes_copy_bgra : pipes_copy);
+				draw_set_pipeline(g_project->is_bgra ? pipes_copy_bgra : pipes_copy);
 				draw_image(_texpaint, 0, 0);
 				draw_set_pipeline(NULL);
 				draw_end();
 
 				_texpaint_nor = gpu_create_texture_from_bytes(lz4_decode(ld->texpaint_nor, ld->res * ld->res * 4 * bytes_per_pixel), ld->res, ld->res, format);
 				draw_begin(l->texpaint_nor, false, 0);
-				draw_set_pipeline(project->is_bgra ? pipes_copy_bgra : pipes_copy);
+				draw_set_pipeline(g_project->is_bgra ? pipes_copy_bgra : pipes_copy);
 				draw_image(_texpaint_nor, 0, 0);
 				draw_set_pipeline(NULL);
 				draw_end();
@@ -479,7 +479,7 @@ void import_arm_run_project(char *path) {
 				_texpaint_pack =
 				    gpu_create_texture_from_bytes(lz4_decode(ld->texpaint_pack, ld->res * ld->res * 4 * bytes_per_pixel), ld->res, ld->res, format);
 				draw_begin(l->texpaint_pack, false, 0);
-				draw_set_pipeline(project->is_bgra ? pipes_copy_bgra : pipes_copy);
+				draw_set_pipeline(g_project->is_bgra ? pipes_copy_bgra : pipes_copy);
 				draw_image(_texpaint_pack, 0, 0);
 				draw_set_pipeline(NULL);
 				draw_end();
@@ -526,8 +526,8 @@ void import_arm_run_project(char *path) {
 	}
 
 	// Assign parents to groups and masks
-	for (i32 i = 0; i < project->layer_datas->length; ++i) {
-		layer_data_t *ld = project->layer_datas->buffer[i];
+	for (i32 i = 0; i < g_project->layer_datas->length; ++i) {
+		layer_data_t *ld = g_project->layer_datas->buffer[i];
 		if (ld->parent >= 0) {
 			g_project->_->layers->buffer[i]->parent = g_project->_->layers->buffer[ld->parent];
 		}
@@ -538,12 +538,12 @@ void import_arm_run_project(char *path) {
 	// Materials
 	material_data_t *m0     = data_get_material("Scene", "Material");
 	g_project->_->materials = any_array_create_from_raw((void *[]){}, 0);
-	for (i32 i = 0; i < project->material_nodes->length; ++i) {
-		ui_node_canvas_t *n = project->material_nodes->buffer[i];
+	for (i32 i = 0; i < g_project->material_nodes->length; ++i) {
+		ui_node_canvas_t *n = g_project->material_nodes->buffer[i];
 		import_arm_init_nodes(n->nodes);
 		g_context->material = slot_material_create(m0, n);
 
-		material_data2_t *md                 = project->material_datas->buffer[i];
+		material_data2_t *md                 = g_project->material_datas->buffer[i];
 		g_context->material->paint_base      = md->paint_base;
 		g_context->material->paint_opac      = md->paint_opac;
 		g_context->material->paint_occ       = md->paint_occ;
@@ -563,9 +563,9 @@ void import_arm_run_project(char *path) {
 	ui_nodes_group_stack = any_array_create_from_raw((void *[]){}, 0);
 	gc_root(ui_nodes_group_stack);
 	g_project->_->material_groups = any_array_create_from_raw((void *[]){}, 0);
-	if (project->material_groups != NULL) {
-		for (i32 i = 0; i < project->material_groups->length; ++i) {
-			ui_node_canvas_t *g  = project->material_groups->buffer[i];
+	if (g_project->material_groups != NULL) {
+		for (i32 i = 0; i < g_project->material_groups->length; ++i) {
+			ui_node_canvas_t *g  = g_project->material_groups->buffer[i];
 			node_group_t     *ng = GC_ALLOC_INIT(node_group_t, {.canvas = g, .nodes = ui_nodes_create()});
 			any_array_push(g_project->_->material_groups, ng);
 		}
@@ -579,8 +579,8 @@ void import_arm_run_project(char *path) {
 	}
 
 	g_project->_->brushes = any_array_create_from_raw((void *[]){}, 0);
-	for (i32 i = 0; i < project->brush_nodes->length; ++i) {
-		ui_node_canvas_t *n = project->brush_nodes->buffer[i];
+	for (i32 i = 0; i < g_project->brush_nodes->length; ++i) {
+		ui_node_canvas_t *n = g_project->brush_nodes->buffer[i];
 		import_arm_init_nodes(n->nodes);
 		g_context->brush = slot_brush_create(n);
 		any_array_push(g_project->_->brushes, g_context->brush);
@@ -590,8 +590,8 @@ void import_arm_run_project(char *path) {
 	}
 
 	// Fill layers and path layers materials
-	for (i32 i = 0; i < project->layer_datas->length; ++i) {
-		layer_data_t *ld       = project->layer_datas->buffer[i];
+	for (i32 i = 0; i < g_project->layer_datas->length; ++i) {
+		layer_data_t *ld       = g_project->layer_datas->buffer[i];
 		slot_layer_t *l        = g_project->_->layers->buffer[i];
 		bool          is_group = ld->texpaint == NULL;
 		if (!is_group) {
@@ -600,16 +600,24 @@ void import_arm_run_project(char *path) {
 		}
 	}
 
-	if (project->mesh_materials != NULL) {
-		for (i32 i = 0; i < g_project->_->paint_objects->length && i < project->mesh_materials->length; ++i) {
-			i32 mat_index = project->mesh_materials->buffer[i];
+	if (g_project->mesh_materials != NULL) {
+		for (i32 i = 0; i < g_project->_->paint_objects->length && i < g_project->mesh_materials->length; ++i) {
+			i32 mat_index = g_project->mesh_materials->buffer[i];
 			if (mat_index >= 0) {
 				tab_meshes_set_override(g_project->_->paint_objects->buffer[i], mat_index);
 			}
 		}
 	}
 
-	tab_timeline_import(project);
+	if (g_project->mesh_parents != NULL) {
+		for (i32 i = 0; i < g_project->_->paint_objects->length && i < g_project->mesh_parents->length; ++i) {
+			i32       parent_index = g_project->mesh_parents->buffer[i];
+			object_t *parent       = parent_index >= 0 ? g_project->_->paint_objects->buffer[parent_index]->base : NULL;
+			object_set_parent(g_project->_->paint_objects->buffer[i]->base, parent);
+		}
+	}
+
+	tab_timeline_import(g_project);
 
 	sys_notify_on_next_frame(&import_arm_run_project_on_next_frame, NULL);
 

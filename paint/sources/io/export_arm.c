@@ -259,11 +259,28 @@ void export_arm_run_project() {
 	}
 	g_project->mesh_transforms = mesh_transforms;
 
-	i32_array_t *mesh_materials = i32_array_create(g_project->_->paint_objects->length);
-	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
-		mesh_materials->buffer[i] = tab_meshes_get_override(g_project->_->paint_objects->buffer[i]);
+	if (g_project->mesh_materials != NULL) {
+		g_project->mesh_materials = i32_array_create(g_project->_->paint_objects->length);
+		for (i32 i = 0; i < g_project->mesh_materials->length; ++i) {
+			g_project->mesh_materials->buffer[i] = tab_meshes_get_override(g_project->_->paint_objects->buffer[i]);
+		}
 	}
-	g_project->mesh_materials = mesh_materials;
+
+	if (g_project->mesh_parents != NULL) {
+		g_project->mesh_parents = i32_array_create(g_project->_->paint_objects->length);
+		for (i32 i = 0; i < g_project->mesh_parents->length; ++i) {
+			object_t *parent                   = g_project->_->paint_objects->buffer[i]->base->parent;
+			g_project->mesh_parents->buffer[i] = -1; // No parent
+			if (parent != NULL && parent != _scene_scene_parent) {
+				for (i32 j = 0; j < g_project->mesh_parents->length; ++j) {
+					if (g_project->_->paint_objects->buffer[j]->base == parent) {
+						g_project->mesh_parents->buffer[i] = j;
+						break;
+					}
+				}
+			}
+		}
+	}
 
 	g_project->material_nodes = mnodes;
 	g_project->brush_nodes    = bnodes;

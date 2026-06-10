@@ -294,6 +294,28 @@ void tab_meshes_draw_context_menu() {
 	if (hmat->changed) {
 		tab_meshes_set_override(o, hmat->i - 1);
 		g_context->ddirty = 2;
+		g_project->mesh_materials = i32_array_create(0);
+	}
+
+	// Parent
+	string_array_t *parent_combo = string_array_create(0);
+	string_array_push(parent_combo, ""); // Empty = no parent
+	i32 parent_idx = 0;
+	for (i32 pi = 0; pi < g_project->_->paint_objects->length; ++pi) {
+		mesh_object_t *p = g_project->_->paint_objects->buffer[pi];
+		string_array_push(parent_combo, p->base->name);
+		if (o->base->parent == p->base) {
+			parent_idx = pi + 1;
+		}
+	}
+
+	ui_handle_t *hparent = ui_handle(__ID__);
+	hparent->i           = parent_idx;
+	ui_combo(hparent, parent_combo, tr("Parent"), true, UI_ALIGN_LEFT, false);
+	if (hparent->changed) {
+		object_t *new_parent = hparent->i == 0 ? NULL : g_project->_->paint_objects->buffer[hparent->i - 1]->base;
+		object_set_parent(o->base, new_parent);
+		g_project->mesh_parents = i32_array_create(0);
 	}
 
 	if (g_ui->changed || g_ui->is_typing) {

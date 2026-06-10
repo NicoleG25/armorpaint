@@ -231,6 +231,7 @@ project_t *import_arm_from_map_to_arm(any_map_t *old) {
 	project->mesh_icons          = any_map_get(old, "mesh_icons");
 	project->mesh_transforms     = any_map_get(old, "mesh_transforms");
 	project->mesh_materials      = any_map_get(old, "mesh_materials");
+	project->mesh_parents        = any_map_get(old, "mesh_parents");
 	project->atlas_objects       = any_map_get(old, "atlas_objects");
 	project->atlas_names         = any_map_get(old, "atlas_names");
 	project->script_datas        = any_map_get(old, "script_datas");
@@ -290,6 +291,7 @@ project_t *import_arm_from_map_to_arm(any_map_t *old) {
 
 project_t *import_arm_from_version_8(any_map_t *old) {
 	any_map_set(old, "mesh_materials", NULL);
+	any_map_set(old, "mesh_parents", NULL);
 	any_map_set(old, "script_names", NULL);
 	any_map_set(old, "stages", NULL);
 	return import_arm_from_map_to_arm(old);
