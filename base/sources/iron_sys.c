@@ -402,14 +402,16 @@ static void _sys_run_callbacks(any_array_t *cbs, i32 len) {
 }
 
 void sys_render(void) {
-	_sys_run_callbacks(_sys_on_next_frames, _sys_on_next_frames->length);
-	array_splice(_sys_on_next_frames, 0, _sys_on_next_frames->length);
+	i32 len = _sys_on_next_frames->length;
+	_sys_run_callbacks(_sys_on_next_frames, len);
+	array_splice(_sys_on_next_frames, 0, len);
 
 	scene_render_frame();
 	_sys_run_callbacks(_sys_on_updates, _sys_on_updates->length);
 
-	_sys_run_callbacks(_sys_on_end_frames, _sys_on_end_frames->length);
-	array_splice(_sys_on_end_frames, 0, _sys_on_end_frames->length);
+	len = _sys_on_end_frames->length;
+	_sys_run_callbacks(_sys_on_end_frames, len);
+	array_splice(_sys_on_end_frames, 0, len);
 
 	input_end_frame();
 
