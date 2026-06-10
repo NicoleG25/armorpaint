@@ -317,6 +317,7 @@ bool            ui_box_click_to_hide = true;
 i32             ui_box_modalw        = 400;
 i32             ui_box_modalh        = 170;
 ui_handle_t    *tab_layers_layer_name_handle;
+ui_handle_t    *tab_meshes_mesh_name_handle;
 slot_layer_t   *tab_layers_l;
 gpu_texture_t  *util_uv_uvmap                    = NULL;
 bool            util_uv_uvmap_cached             = false;

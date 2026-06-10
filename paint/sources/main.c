@@ -528,6 +528,9 @@ void _kickstart() {
 	tab_layers_layer_name_handle = ui_handle_create();
 	gc_root(tab_layers_layer_name_handle);
 
+	tab_meshes_mesh_name_handle = ui_handle_create();
+	gc_root(tab_meshes_mesh_name_handle);
+
 	render_path_raytrace_f32a = f32_array_create(24);
 	gc_root(render_path_raytrace_f32a);
 	render_path_raytrace_help_mat = mat4_identity();

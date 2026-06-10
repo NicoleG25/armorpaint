@@ -4,8 +4,9 @@
 extern buffer_t *slot_material_default_canvas;
 
 i32        _tab_meshes_draw_i;
-any_map_t *tab_meshes_preview_map  = NULL;
-any_map_t *tab_meshes_override_map = NULL; // object uid -> overridden material index
+i32        tab_meshes_mesh_name_edit = -1;
+any_map_t *tab_meshes_preview_map    = NULL;
+any_map_t *tab_meshes_override_map   = NULL; // object uid -> overridden material index
 
 void tab_meshes_set_override(mesh_object_t *o, i32 mat_index) {
 	// Render an object with a chosen material instead of the painted layers
@@ -265,21 +266,6 @@ void tab_meshes_draw_context_menu() {
 
 	// script = string_copy(hscript->text);
 	// any_map_set(sim_object_script_map, g_context->selected_object, script);
-
-	f32_array_t *row = f32_array_create_from_raw(
-	    (f32[]){
-	        1 / 4.0,
-	        3 / 4.0,
-	    },
-	    2);
-	ui_row(row);
-	ui_text("Name", UI_ALIGN_LEFT, 0x00000000);
-	h              = ui_handle(__ID__);
-	h->text        = string_copy(o->base->name);
-	char *new_name = string_copy(ui_text_input(h, "", UI_ALIGN_LEFT, true, false));
-	tab_stages_rename_object(o->base->name, new_name);
-	o->base->name = new_name;
-	o->data->name = string_copy(o->base->name);
 
 	// Material override
 	string_array_t *mat_combo = string_array_create(0);
@@ -701,30 +687,53 @@ void tab_meshes_draw_mesh_slot(mesh_object_t *o, i32 i) {
 	g_ui->_x   = name_x;
 	g_ui->_y   = uiy + center;
 	g_ui->_w   = name_right - name_x;
-	ui_text(o->base->name, UI_ALIGN_LEFT, 0x00000000);
 
-	// Row interaction
-	f32  row_left = uix + uiw * 0.08;
-	bool hovered  = g_ui->enabled && g_ui->input_enabled && g_ui->input_x > g_ui->_window_x + row_left && g_ui->input_x < g_ui->_window_x + uix + uiw &&
-	               g_ui->input_y > g_ui->_window_y + uiy && g_ui->input_y < g_ui->_window_y + uiy + step * 2 * UI_SCALE();
-	if (hovered) {
-		ui_tooltip(o->base->name);
-		if (g_ui->input_started) {
-			g_context->paint_object = o;
+	bool over_name = g_ui->input_x > g_ui->_window_x + name_x && g_ui->input_x < g_ui->_window_x + name_right;
+
+	if (tab_meshes_mesh_name_edit == o->base->uid) {
+		tab_meshes_mesh_name_handle->text = string_copy(o->base->name);
+		char *new_name                    = string_copy(ui_text_input(tab_meshes_mesh_name_handle, "", UI_ALIGN_LEFT, true, false));
+		tab_stages_rename_object(o->base->name, new_name);
+		o->base->name = new_name;
+		o->data->name = string_copy(o->base->name);
+		if (g_ui->text_selected_handle != tab_meshes_mesh_name_handle) {
+			tab_meshes_mesh_name_edit = -1;
 		}
-		// Double click to show only this mesh
-		if (g_ui->input_released) {
-			if (sys_time() - g_context->select_time < 0.2) {
-				tab_layers_apply_filter(i + 1);
+	}
+	else {
+		ui_text(o->base->name, UI_ALIGN_LEFT, 0x00000000);
+
+		// Row interaction
+		f32  row_left = uix + uiw * 0.08;
+		bool hovered  = g_ui->enabled && g_ui->input_enabled && g_ui->input_x > g_ui->_window_x + row_left && g_ui->input_x < g_ui->_window_x + uix + uiw &&
+		               g_ui->input_y > g_ui->_window_y + uiy && g_ui->input_y < g_ui->_window_y + uiy + step * 2 * UI_SCALE();
+		if (hovered) {
+			ui_tooltip(o->base->name);
+			if (g_ui->input_started) {
+				g_context->paint_object = o;
 			}
-			if (sys_time() - g_context->select_time > 0.2) {
-				g_context->select_time = sys_time();
+			if (g_ui->input_released) {
+				if (sys_time() - g_context->select_time < 0.2) {
+					if (over_name) {
+						// Double click name to rename
+						tab_meshes_mesh_name_edit         = o->base->uid;
+						tab_meshes_mesh_name_handle->text = string_copy(o->base->name);
+						ui_start_text_edit(tab_meshes_mesh_name_handle, UI_ALIGN_LEFT);
+					}
+					else {
+						// Double click to show only this mesh
+						tab_layers_apply_filter(i + 1);
+					}
+				}
+				if (sys_time() - g_context->select_time > 0.2) {
+					g_context->select_time = sys_time();
+				}
 			}
-		}
-		if (g_ui->input_released_r) {
-			g_context->paint_object = o;
-			_tab_meshes_draw_i      = i;
-			ui_menu_draw(&tab_meshes_draw_context_menu, -1, -1);
+			if (g_ui->input_released_r) {
+				g_context->paint_object = o;
+				_tab_meshes_draw_i      = i;
+				ui_menu_draw(&tab_meshes_draw_context_menu, -1, -1);
+			}
 		}
 	}
 
