@@ -62,6 +62,34 @@ void ui_view2d_draw_edit() {
 
 	ui_menu_separator();
 
+	ui_handle_t *h_view2d_grid_show = ui_handle(__ID__);
+	h_view2d_grid_show->b           = g_config->view2d_grid_show;
+	g_config->view2d_grid_show      = ui_check(h_view2d_grid_show, tr("Show Grid"), "");
+	if (h_view2d_grid_show->changed) {
+		ui_view2d_hwnd->redraws = 2;
+		ui_menu_keep_open       = true;
+	}
+
+	ui_handle_t *h_view2d_grid_cell = ui_handle(__ID__);
+	h_view2d_grid_cell->f           = g_config->view2d_grid_cell;
+	g_config->view2d_grid_cell      = ui_slider(h_view2d_grid_cell, tr("Grid Cell"), 1.0, 256.0, true, 1, true, UI_ALIGN_RIGHT, true);
+	if (g_ui->is_hovered) {
+		ui_tooltip(tr("Cell size in pixels"));
+	}
+	if (h_view2d_grid_cell->changed) {
+		ui_view2d_hwnd->redraws = 2;
+		ui_menu_keep_open       = true;
+	}
+
+	ui_handle_t *h_view2d_grid_snap = ui_handle(__ID__);
+	h_view2d_grid_snap->b           = g_config->view2d_grid_snap;
+	g_config->view2d_grid_snap      = ui_check(h_view2d_grid_snap, tr("Grid Snap"), any_map_get(g_keymap, "grid_snap"));
+	if (h_view2d_grid_snap->changed) {
+		ui_menu_keep_open       = true;
+	}
+
+	ui_menu_separator();
+
 	if (ui_menu_button(tr("Zoom to Fit"), "", ICON_NONE)) {
 		ui_view2d_pan_x         = 0.0;
 		ui_view2d_pan_y         = 0.0;

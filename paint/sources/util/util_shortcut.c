@@ -90,7 +90,7 @@ void util_shortcut_global() {
 	if (keyboard_started(any_map_get(g_keymap, "view_distract_free")) || (keyboard_started("escape") && !ui_base_show && !ui_box_show)) {
 		ui_base_toggle_distract_free();
 	}
-	if (g_config->experimental && keyboard_started("f5") && g_config->workspace != WORKSPACE_PLAYER) {
+	if (keyboard_started("f5") && g_config->workspace != WORKSPACE_PLAYER) {
 		// g_config->workspace = WORKSPACE_PLAYER;
 		// base_update_workspace();
 		base_run_in_player();

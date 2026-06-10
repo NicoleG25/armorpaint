@@ -302,10 +302,18 @@ void tab_meshes_draw_context_menu() {
 }
 
 void tab_meshes_draw_edit() {
-	if (ui_menu_button(tr("Flip Normals"), "", ICON_NONE)) {
-		util_mesh_flip_normals();
-		g_context->ddirty = 2;
+
+#ifdef WITH_PLUGINS
+	if (ui_menu_button(tr("UV Unwrap"), "", ICON_NONE)) {
+		plugin_uv_unwrap_button();
 	}
+#endif
+
+	if (ui_menu_button(tr("Edit UV Map"), "", ICON_NONE)) {
+		ui_base_show_2d_view(VIEW_2D_TYPE_UVMAP);
+	}
+
+	ui_menu_separator();
 
 	if (ui_menu_sub_button(ui_handle(__ID__), tr("Calculate Normals"))) {
 		ui_menu_sub_begin(2);
@@ -318,6 +326,11 @@ void tab_meshes_draw_edit() {
 			g_context->ddirty = 2;
 		}
 		ui_menu_sub_end();
+	}
+
+	if (ui_menu_button(tr("Flip Normals"), "", ICON_NONE)) {
+		util_mesh_flip_normals();
+		g_context->ddirty = 2;
 	}
 
 	if (ui_menu_button(tr("Geometry to Origin"), "", ICON_NONE)) {
@@ -336,41 +349,36 @@ void tab_meshes_draw_edit() {
 		if (ui_menu_button(tr("X"), "", ICON_NONE)) {
 			util_mesh_swap_axis(1, 2);
 			g_context->ddirty = 2;
+			ui_menu_keep_open = true;
 		}
 		if (ui_menu_button(tr("Y"), "", ICON_NONE)) {
 			util_mesh_swap_axis(2, 0);
 			g_context->ddirty = 2;
+			ui_menu_keep_open = true;
 		}
 		if (ui_menu_button(tr("Z"), "", ICON_NONE)) {
 			util_mesh_swap_axis(0, 1);
 			g_context->ddirty = 2;
+			ui_menu_keep_open = true;
 		}
 		ui_menu_sub_end();
 	}
 
-	if (ui_menu_button(tr("Edit UV Map"), "", ICON_NONE)) {
-		ui_base_show_2d_view(VIEW_2D_TYPE_UVMAP);
-	}
+	ui_menu_separator();
 
-#ifdef WITH_PLUGINS
-	if (ui_menu_button(tr("UV Unwrap"), "", ICON_NONE)) {
-		plugin_uv_unwrap_button();
-	}
-#endif
-
-	if (g_config->experimental && ui_menu_button(tr("Decimate"), "", ICON_NONE)) {
+	if (ui_menu_button(tr("Decimate"), "", ICON_NONE)) {
 		util_mesh_decimate(0.5);
 	}
 
-	if (g_config->experimental && ui_menu_button(tr("Smooth"), "", ICON_NONE)) {
+	if (ui_menu_button(tr("Smooth"), "", ICON_NONE)) {
 		util_mesh_smooth();
 	}
 
-	if (g_config->experimental && ui_menu_button(tr("Subdivide"), "", ICON_NONE)) {
+	if (ui_menu_button(tr("Subdivide"), "", ICON_NONE)) {
 		util_mesh_subdivide();
 	}
 
-	if (g_config->experimental && ui_menu_button(tr("Bevel"), "", ICON_NONE)) {
+	if (ui_menu_button(tr("Bevel"), "", ICON_NONE)) {
 		util_mesh_bevel(0.1);
 	}
 }
@@ -420,11 +428,9 @@ void tab_meshes_draw_import() {
 		project_append_mesh();
 	}
 
-	if (g_config->experimental) {
+	if (ui_menu_button(tr("Append Shape"), "", ICON_NONE)) {
 		project_fetch_default_meshes();
-		if (ui_menu_button(tr("Append Shape"), "", ICON_NONE)) {
-			ui_menu_draw(&tab_meshes_draw_append_shape, -1, -1);
-		}
+		ui_menu_draw(&tab_meshes_draw_append_shape, -1, -1);
 	}
 }
 

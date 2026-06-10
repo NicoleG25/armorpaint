@@ -494,13 +494,11 @@ void ui_menubar_draw_category_items() {
 			g_context->ddirty = 2;
 		}
 
-		if (g_config->experimental) {
-			ui_handle_t *show_envmap_spheres_handle = ui_handle(__ID__);
-			show_envmap_spheres_handle->b           = g_context->show_envmap_spheres;
-			g_context->show_envmap_spheres          = ui_check(show_envmap_spheres_handle, string(" %s", tr("Envmap Spheres")), "");
-			if (show_envmap_spheres_handle->changed) {
-				g_context->ddirty = 2;
-			}
+		ui_handle_t *show_envmap_spheres_handle = ui_handle(__ID__);
+		show_envmap_spheres_handle->b           = g_context->show_envmap_spheres;
+		g_context->show_envmap_spheres          = ui_check(show_envmap_spheres_handle, string(" %s", tr("Envmap Spheres")), "");
+		if (show_envmap_spheres_handle->changed) {
+			g_context->ddirty = 2;
 		}
 
 		if (ui_menu_button(tr("Reset Envmap"), "", ICON_NONE)) {
