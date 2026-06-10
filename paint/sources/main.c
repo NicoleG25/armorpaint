@@ -542,8 +542,8 @@ void _kickstart() {
 
 	iron_set_app_name(manifest_title); // Used to locate external application data folder
 	config_load();
-	context_init();
 	config_init();
+	context_init();
 	sys_start(config_get_options());
 
 #ifdef is_debug
