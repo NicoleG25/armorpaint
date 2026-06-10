@@ -192,6 +192,7 @@
 #include "util/util_raycast.c"
 #include "util/util_render.c"
 #include "util/util_resize.c"
+#include "util/util_script.c"
 #include "util/util_select.c"
 #include "util/util_shortcut.c"
 #include "util/util_stage.c"

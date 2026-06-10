@@ -14,7 +14,6 @@
 #include "iron_shape.h"
 #include "iron_string.h"
 #include "iron_sys.h"
-#include "iron_tilesheet.h"
 #include "iron_ui.h"
 #include "minic.h"
 #include <math.h>
@@ -365,6 +364,9 @@ config_t *script_get_config() {
 project_t *script_get_project() {
 	return g_project;
 }
+
+void script_set_stage(char *name);
+void script_set_tilesheet_anim(object_t *o, char *anim);
 
 object_t *script_get_object(char *s) {
 	for (int i = 0; i < g_project->_->paint_objects->length; ++i) {
@@ -791,6 +793,8 @@ void minic_register_builtins() {
 
 	MINIC_STRUCT(transform_t);
 	MINIC_E(loc, vec4_t);
+	MINIC_E(rot, quat_t);
+	MINIC_E(scale, vec4_t);
 	MINIC_F(scale_world);
 	MINIC_I(dirty);
 	MINIC_O(object, object_t);
@@ -1339,6 +1343,8 @@ void minic_register_builtins() {
 	R(script_get_config, "p()");
 	R(script_get_project, "p()");
 	R(script_get_object, "p(p)");
+	R(script_set_stage, "v(p)");
+	R(script_set_tilesheet_anim, "v(p,p)");
 	R(context_set_viewport_shader, "v(p)");
 	R(context_set_viewport_mode, "v(i)");
 	R(context_set_camera_controls, "v(i)");
