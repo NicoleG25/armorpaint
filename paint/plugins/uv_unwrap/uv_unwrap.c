@@ -11,6 +11,7 @@
 // Cosine of 66 degrees - angle threshold for chart grouping
 #define UV_ANGLE_THRESHOLD 0.4067f
 #define UV_PACK_MARGIN     0.001f
+#define UV_PACK_EPS        1e-6f
 
 // Position hash map entry for canonical vertex deduplication
 typedef struct {
@@ -26,6 +27,17 @@ typedef struct {
 	bool occupied;
 } uv_edge_entry_t;
 
+// 2D point for convex hull / min-area rectangle
+typedef struct {
+	float u, v;
+} uv_pt_t;
+
+// Chart sort key for packing order
+typedef struct {
+	float key;
+	int   id;
+} uv_sort_t;
+
 static uint32_t uv_hash_pos(int16_t x, int16_t y, int16_t z) {
 	uint32_t h = (uint32_t)(x + 32768);
 	h          = h * 2654435761u ^ (uint32_t)(y + 32768);
@@ -35,6 +47,262 @@ static uint32_t uv_hash_pos(int16_t x, int16_t y, int16_t z) {
 
 static uint32_t uv_hash_edge(int v0, int v1) {
 	return (uint32_t)v0 * 2654435761u ^ (uint32_t)v1 * 2246822519u;
+}
+
+static int uv_pt_cmp(const void *a, const void *b) {
+	const uv_pt_t *p = (const uv_pt_t *)a;
+	const uv_pt_t *q = (const uv_pt_t *)b;
+	if (p->u != q->u) {
+		return p->u < q->u ? -1 : 1;
+	}
+	if (p->v != q->v) {
+		return p->v < q->v ? -1 : 1;
+	}
+	return 0;
+}
+
+static int uv_sort_cmp(const void *a, const void *b) {
+	float ka = ((const uv_sort_t *)a)->key;
+	float kb = ((const uv_sort_t *)b)->key;
+	if (ka != kb) {
+		return ka > kb ? -1 : 1; // Descending
+	}
+	return 0;
+}
+
+static float uv_cross(uv_pt_t o, uv_pt_t a, uv_pt_t b) {
+	return (a.u - o.u) * (b.v - o.v) - (a.v - o.v) * (b.u - o.u);
+}
+
+// Reduce hull candidates for large point sets: keep only per-column v-extremes.
+// All discarded points are interior in v within their column, so the hull of the
+// kept points closely matches the true hull. Returns new count.
+#define UV_HULL_COLS 256
+static int uv_hull_prefilter(uv_pt_t *pts, int n) {
+	if (n <= UV_HULL_COLS * 2) {
+		return n;
+	}
+	float min_u = FLT_MAX;
+	float max_u = -FLT_MAX;
+	for (int i = 0; i < n; i++) {
+		if (pts[i].u < min_u)
+			min_u = pts[i].u;
+		if (pts[i].u > max_u)
+			max_u = pts[i].u;
+	}
+	if (max_u - min_u < 1e-12f) {
+		return n;
+	}
+	float   col_scale = (UV_HULL_COLS - 1) / (max_u - min_u);
+	uv_pt_t col_min[UV_HULL_COLS];
+	uv_pt_t col_max[UV_HULL_COLS];
+	bool    col_used[UV_HULL_COLS];
+	memset(col_used, 0, sizeof(col_used));
+	for (int i = 0; i < n; i++) {
+		int col = (int)((pts[i].u - min_u) * col_scale);
+		if (!col_used[col]) {
+			col_used[col] = true;
+			col_min[col]  = pts[i];
+			col_max[col]  = pts[i];
+		}
+		else {
+			if (pts[i].v < col_min[col].v || (pts[i].v == col_min[col].v && pts[i].u < col_min[col].u))
+				col_min[col] = pts[i];
+			if (pts[i].v > col_max[col].v || (pts[i].v == col_max[col].v && pts[i].u > col_max[col].u))
+				col_max[col] = pts[i];
+		}
+	}
+	int k = 0;
+	for (int col = 0; col < UV_HULL_COLS; col++) {
+		if (col_used[col]) {
+			pts[k++] = col_min[col];
+			pts[k++] = col_max[col];
+		}
+	}
+	return k;
+}
+
+// Monotone chain convex hull; sorts pts in place, out must hold 2 * n + 1 points
+static int uv_convex_hull(uv_pt_t *pts, int n, uv_pt_t *out) {
+	n = uv_hull_prefilter(pts, n);
+	qsort(pts, n, sizeof(uv_pt_t), uv_pt_cmp);
+	int k = 0;
+	for (int i = 0; i < n; i++) {
+		while (k >= 2 && uv_cross(out[k - 2], out[k - 1], pts[i]) <= 0.0f) {
+			k--;
+		}
+		out[k++] = pts[i];
+	}
+	int lower = k + 1;
+	for (int i = n - 2; i >= 0; i--) {
+		while (k >= lower && uv_cross(out[k - 2], out[k - 1], pts[i]) <= 0.0f) {
+			k--;
+		}
+		out[k++] = pts[i];
+	}
+	return k - 1; // Last point repeats the first
+}
+
+// Find rotation (cos, sin) that aligns the hull's minimal bounding rectangle with the axes.
+// The optimal rectangle has an edge collinear with a hull edge, so sweep hull edges.
+// Minimizes rectangle area, or the larger side when by_max_dim is set (best for a lone chart,
+// where the fit scale is limited by the larger dimension).
+static void uv_min_rect_dir(const uv_pt_t *hull, int hn, bool by_max_dim, float *out_cx, float *out_cy) {
+	float best_area = FLT_MAX;
+	int   step      = hn > 360 ? hn / 360 : 1;
+	for (int i = -1; i < hn; i += step) {
+		float dx, dy;
+		if (i == -1) {
+			// Identity orientation as baseline candidate
+			dx = 1.0f;
+			dy = 0.0f;
+		}
+		else {
+			uv_pt_t a = hull[i];
+			uv_pt_t b = hull[(i + 1) % hn];
+			dx        = b.u - a.u;
+			dy        = b.v - a.v;
+			float len = sqrtf(dx * dx + dy * dy);
+			if (len < 1e-12f) {
+				continue;
+			}
+			dx /= len;
+			dy /= len;
+		}
+		float min_d = FLT_MAX;
+		float max_d = -FLT_MAX;
+		float min_p = FLT_MAX;
+		float max_p = -FLT_MAX;
+		for (int j = 0; j < hn; j++) {
+			float d = hull[j].u * dx + hull[j].v * dy;
+			float p = hull[j].v * dx - hull[j].u * dy;
+			if (d < min_d)
+				min_d = d;
+			if (d > max_d)
+				max_d = d;
+			if (p < min_p)
+				min_p = p;
+			if (p > max_p)
+				max_p = p;
+		}
+		float side_d = max_d - min_d;
+		float side_p = max_p - min_p;
+		float area   = by_max_dim ? (side_d > side_p ? side_d : side_p) : side_d * side_p;
+		if (area < best_area) {
+			best_area = area;
+			*out_cx   = dx;
+			*out_cy   = dy;
+		}
+	}
+}
+
+// Find the lowest (then leftmost) skyline position where a cw x ch rectangle fits in [0,1]
+static bool uv_sky_find(const float *sky_x, const float *sky_y, int sky_len, float cw, float ch, float *out_x, float *out_y) {
+	bool found = false;
+	for (int j = 0; j < sky_len; j++) {
+		float x0    = sky_x[j];
+		float x_end = x0 + cw;
+		if (x_end > 1.0f + UV_PACK_EPS) {
+			break; // Segments are sorted by x, later ones only extend further right
+		}
+		// Find max y across skyline segments this rectangle spans
+		float max_y = 0.0f;
+		for (int k = j; k < sky_len; k++) {
+			if (sky_x[k] >= x_end - UV_PACK_EPS) {
+				break;
+			}
+			if (sky_y[k] > max_y) {
+				max_y = sky_y[k];
+			}
+		}
+		if (max_y + ch <= 1.0f + UV_PACK_EPS && (!found || max_y < *out_y)) {
+			*out_x = x0;
+			*out_y = max_y;
+			found  = true;
+		}
+	}
+	return found;
+}
+
+// Replace the skyline over [x0, x1) with height y; returns new segment count
+static int uv_sky_insert(float *sky_x, float *sky_y, int sky_len, float *tmp_x, float *tmp_y, float x0, float x1, float y) {
+	int  tmp_len  = 0;
+	bool inserted = false;
+	for (int k = 0; k < sky_len; k++) {
+		float seg_x0 = sky_x[k];
+		float seg_x1 = (k + 1 < sky_len) ? sky_x[k + 1] : 1.0f;
+		float seg_y  = sky_y[k];
+		if (seg_x1 <= x0 + UV_PACK_EPS || seg_x0 >= x1 - UV_PACK_EPS) {
+			// Segment fully outside the new rectangle
+			tmp_x[tmp_len] = seg_x0;
+			tmp_y[tmp_len] = seg_y;
+			tmp_len++;
+		}
+		else {
+			if (seg_x0 < x0 - UV_PACK_EPS) {
+				tmp_x[tmp_len] = seg_x0;
+				tmp_y[tmp_len] = seg_y;
+				tmp_len++;
+			}
+			if (!inserted) {
+				tmp_x[tmp_len] = x0;
+				tmp_y[tmp_len] = y;
+				tmp_len++;
+				inserted = true;
+			}
+			if (seg_x1 > x1 + UV_PACK_EPS) {
+				tmp_x[tmp_len] = x1;
+				tmp_y[tmp_len] = seg_y;
+				tmp_len++;
+			}
+		}
+	}
+	// Merge adjacent segments at the same height
+	sky_len = 0;
+	for (int k = 0; k < tmp_len; k++) {
+		if (sky_len > 0 && fabsf(tmp_y[k] - sky_y[sky_len - 1]) < UV_PACK_EPS) {
+			continue;
+		}
+		sky_x[sky_len] = tmp_x[k];
+		sky_y[sky_len] = tmp_y[k];
+		sky_len++;
+	}
+	return sky_len;
+}
+
+// Pack all charts at the given scale; tries both orientations per chart and keeps
+// the lower placement. Returns false if any chart does not fit in [0,1].
+static bool uv_pack_run(int chart_count, const int *order, const float *chart_w, const float *chart_h, float scale, float margin, float *sky_x, float *sky_y,
+                        float *tmp_x, float *tmp_y, float *off_u, float *off_v, bool *rotated) {
+	int sky_len = 1;
+	sky_x[0]    = 0.0f;
+	sky_y[0]    = 0.0f;
+
+	for (int i = 0; i < chart_count; i++) {
+		int   c  = order[i];
+		float cw = chart_w[c] * scale + margin;
+		float ch = chart_h[c] * scale + margin;
+
+		float x0 = 0.0f, y0 = 0.0f, x1 = 0.0f, y1 = 0.0f;
+		bool  fit0 = uv_sky_find(sky_x, sky_y, sky_len, cw, ch, &x0, &y0);
+		bool  fit1 = cw != ch && uv_sky_find(sky_x, sky_y, sky_len, ch, cw, &x1, &y1);
+		if (!fit0 && !fit1) {
+			return false;
+		}
+
+		bool  rot = fit1 && (!fit0 || y1 < y0 || (y1 == y0 && x1 < x0));
+		float px  = rot ? x1 : x0;
+		float py  = rot ? y1 : y0;
+		float pw  = rot ? ch : cw;
+		float ph  = rot ? cw : ch;
+
+		off_u[c]   = px + margin * 0.5f;
+		off_v[c]   = py + margin * 0.5f;
+		rotated[c] = rot;
+
+		sky_len = uv_sky_insert(sky_x, sky_y, sky_len, tmp_x, tmp_y, px, px + pw, py + ph);
+	}
+	return true;
 }
 
 void proc_uv_unwrap(raw_mesh_t *mesh) {
@@ -270,20 +538,8 @@ void proc_uv_unwrap(raw_mesh_t *mesh) {
 	free(chart_ny);
 	free(chart_nz);
 
-	// Project vertices onto chart planes and compute per-chart bounding boxes
-	float *uv_out  = (float *)malloc(sizeof(float) * index_count * 2);
-	float *c_min_u = (float *)malloc(sizeof(float) * chart_count);
-	float *c_min_v = (float *)malloc(sizeof(float) * chart_count);
-	float *c_max_u = (float *)malloc(sizeof(float) * chart_count);
-	float *c_max_v = (float *)malloc(sizeof(float) * chart_count);
-
-	for (int c = 0; c < chart_count; c++) {
-		c_min_u[c] = FLT_MAX;
-		c_min_v[c] = FLT_MAX;
-		c_max_u[c] = -FLT_MAX;
-		c_max_v[c] = -FLT_MAX;
-	}
-
+	// Project vertices onto chart planes
+	float *uv_out = (float *)malloc(sizeof(float) * index_count * 2);
 	for (int f = 0; f < face_count; f++) {
 		int c = chart_id[f];
 		for (int k = 0; k < 3; k++) {
@@ -291,19 +547,9 @@ void proc_uv_unwrap(raw_mesh_t *mesh) {
 			float px        = pa[vi * 3];
 			float py        = pa[vi * 3 + 1];
 			float pz        = pa[vi * 3 + 2];
-			float u         = px * chart_ux[c] + py * chart_uy[c] + pz * chart_uz[c];
-			float v         = px * chart_vx[c] + py * chart_vy[c] + pz * chart_vz[c];
 			int   idx       = (f * 3 + k) * 2;
-			uv_out[idx]     = u;
-			uv_out[idx + 1] = v;
-			if (u < c_min_u[c])
-				c_min_u[c] = u;
-			if (v < c_min_v[c])
-				c_min_v[c] = v;
-			if (u > c_max_u[c])
-				c_max_u[c] = u;
-			if (v > c_max_v[c])
-				c_max_v[c] = v;
+			uv_out[idx]     = px * chart_ux[c] + py * chart_uy[c] + pz * chart_uz[c];
+			uv_out[idx + 1] = px * chart_vx[c] + py * chart_vy[c] + pz * chart_vz[c];
 		}
 	}
 	free(chart_ux);
@@ -313,76 +559,165 @@ void proc_uv_unwrap(raw_mesh_t *mesh) {
 	free(chart_vy);
 	free(chart_vz);
 
-	// Normalize UVs per chart to origin
+	// Equalize texel density: scale each chart so its UV area matches its 3D surface
+	// area, compensating the shrink from planar projection of curved charts
+	float *chart_area3d = (float *)calloc(chart_count, sizeof(float));
+	float *chart_areauv = (float *)calloc(chart_count, sizeof(float));
+	for (int f = 0; f < face_count; f++) {
+		int   i0  = indices[f * 3];
+		int   i1  = indices[f * 3 + 1];
+		int   i2  = indices[f * 3 + 2];
+		float e1x = pa[i1 * 3] - pa[i0 * 3];
+		float e1y = pa[i1 * 3 + 1] - pa[i0 * 3 + 1];
+		float e1z = pa[i1 * 3 + 2] - pa[i0 * 3 + 2];
+		float e2x = pa[i2 * 3] - pa[i0 * 3];
+		float e2y = pa[i2 * 3 + 1] - pa[i0 * 3 + 1];
+		float e2z = pa[i2 * 3 + 2] - pa[i0 * 3 + 2];
+		float cx  = e1y * e2z - e1z * e2y;
+		float cy  = e1z * e2x - e1x * e2z;
+		float cz  = e1x * e2y - e1y * e2x;
+		chart_area3d[chart_id[f]] += 0.5f * sqrtf(cx * cx + cy * cy + cz * cz);
+
+		int   b   = f * 3 * 2;
+		float u0  = uv_out[b];
+		float v0  = uv_out[b + 1];
+		float du1 = uv_out[b + 2] - u0;
+		float dv1 = uv_out[b + 3] - v0;
+		float du2 = uv_out[b + 4] - u0;
+		float dv2 = uv_out[b + 5] - v0;
+		chart_areauv[chart_id[f]] += 0.5f * fabsf(du1 * dv2 - du2 * dv1);
+	}
+	for (int c = 0; c < chart_count; c++) {
+		float s = chart_areauv[c] > 1e-12f ? sqrtf(chart_area3d[c] / chart_areauv[c]) : 1.0f;
+		// Projection only shrinks, so s >= 1 up to noise; cap pathological slivers
+		if (s < 0.5f)
+			s = 0.5f;
+		if (s > 4.0f)
+			s = 4.0f;
+		chart_area3d[c] = s; // Reuse as per-chart scale
+	}
+	for (int f = 0; f < face_count; f++) {
+		float s = chart_area3d[chart_id[f]];
+		for (int k = 0; k < 3; k++) {
+			int idx = (f * 3 + k) * 2;
+			uv_out[idx] *= s;
+			uv_out[idx + 1] *= s;
+		}
+	}
+	free(chart_area3d);
+	free(chart_areauv);
+
+	// Group face corners by chart
+	int *c_start = (int *)calloc(chart_count + 1, sizeof(int));
+	for (int f = 0; f < face_count; f++) {
+		c_start[chart_id[f] + 1] += 3;
+	}
+	int max_corners = 0;
+	for (int c = 0; c < chart_count; c++) {
+		if (c_start[c + 1] > max_corners) {
+			max_corners = c_start[c + 1];
+		}
+		c_start[c + 1] += c_start[c];
+	}
+	int *c_corner = (int *)malloc(sizeof(int) * index_count);
+	int *c_fill   = (int *)malloc(sizeof(int) * chart_count);
+	memcpy(c_fill, c_start, sizeof(int) * chart_count);
 	for (int f = 0; f < face_count; f++) {
 		int c = chart_id[f];
 		for (int k = 0; k < 3; k++) {
-			int idx = (f * 3 + k) * 2;
-			uv_out[idx] -= c_min_u[c];
-			uv_out[idx + 1] -= c_min_v[c];
+			c_corner[c_fill[c]++] = f * 3 + k;
 		}
 	}
+	free(c_fill);
 
-	// Compute chart sizes and total area for scaling
-	float *chart_w    = (float *)malloc(sizeof(float) * chart_count);
-	float *chart_h    = (float *)malloc(sizeof(float) * chart_count);
-	float  total_area = 0.0f;
+	// Rotate each chart to its minimal-area bounding rectangle, normalize to origin
+	// and compute chart sizes and total area for scaling
+	uv_pt_t *pts        = (uv_pt_t *)malloc(sizeof(uv_pt_t) * max_corners);
+	uv_pt_t *hull       = (uv_pt_t *)malloc(sizeof(uv_pt_t) * (max_corners * 2 + 1));
+	float   *chart_w    = (float *)malloc(sizeof(float) * chart_count);
+	float   *chart_h    = (float *)malloc(sizeof(float) * chart_count);
+	float    total_area = 0.0f;
 
 	for (int c = 0; c < chart_count; c++) {
-		chart_w[c] = c_max_u[c] - c_min_u[c];
-		chart_h[c] = c_max_v[c] - c_min_v[c];
+		int   m  = c_start[c + 1] - c_start[c];
+		float cx = 1.0f;
+		float cy = 0.0f;
+		if (m >= 3) {
+			for (int i = 0; i < m; i++) {
+				int idx  = c_corner[c_start[c] + i] * 2;
+				pts[i].u = uv_out[idx];
+				pts[i].v = uv_out[idx + 1];
+			}
+			int hn = uv_convex_hull(pts, m, hull);
+			if (hn >= 3) {
+				uv_min_rect_dir(hull, hn, chart_count == 1, &cx, &cy);
+			}
+		}
+
+		float min_u = FLT_MAX;
+		float min_v = FLT_MAX;
+		float max_u = -FLT_MAX;
+		float max_v = -FLT_MAX;
+		for (int i = 0; i < m; i++) {
+			int   idx       = c_corner[c_start[c] + i] * 2;
+			float u         = uv_out[idx];
+			float v         = uv_out[idx + 1];
+			float ru        = u * cx + v * cy;
+			float rv        = v * cx - u * cy;
+			uv_out[idx]     = ru;
+			uv_out[idx + 1] = rv;
+			if (ru < min_u)
+				min_u = ru;
+			if (rv < min_v)
+				min_v = rv;
+			if (ru > max_u)
+				max_u = ru;
+			if (rv > max_v)
+				max_v = rv;
+		}
+		for (int i = 0; i < m; i++) {
+			int idx = c_corner[c_start[c] + i] * 2;
+			uv_out[idx] -= min_u;
+			uv_out[idx + 1] -= min_v;
+		}
+
+		chart_w[c] = max_u - min_u;
+		chart_h[c] = max_v - min_v;
 		if (chart_w[c] < 1e-10f)
 			chart_w[c] = 1e-6f;
 		if (chart_h[c] < 1e-10f)
 			chart_h[c] = 1e-6f;
 		total_area += chart_w[c] * chart_h[c];
 	}
-	free(c_min_u);
-	free(c_min_v);
-	free(c_max_u);
-	free(c_max_v);
+	free(pts);
+	free(hull);
+	free(c_corner);
+	free(c_start);
 
-	// Sort charts by area (descending) for packing
+	// Sort charts by largest dimension (descending) for packing
+	uv_sort_t *chart_sort = (uv_sort_t *)malloc(sizeof(uv_sort_t) * chart_count);
+	for (int c = 0; c < chart_count; c++) {
+		chart_sort[c].key = chart_w[c] > chart_h[c] ? chart_w[c] : chart_h[c];
+		chart_sort[c].id  = c;
+	}
+	qsort(chart_sort, chart_count, sizeof(uv_sort_t), uv_sort_cmp);
 	int *chart_order = (int *)malloc(sizeof(int) * chart_count);
 	for (int i = 0; i < chart_count; i++) {
-		chart_order[i] = i;
+		chart_order[i] = chart_sort[i].id;
 	}
-	for (int i = 1; i < chart_count; i++) {
-		int   key = chart_order[i];
-		float ka  = chart_w[key] * chart_h[key];
-		int   j   = i - 1;
-		while (j >= 0 && chart_w[chart_order[j]] * chart_h[chart_order[j]] < ka) {
-			chart_order[j + 1] = chart_order[j];
-			j--;
-		}
-		chart_order[j + 1] = key;
-	}
-
-	// Determine per-chart rotation: if width > height, rotate 90 degrees for tighter packing
-	bool  *chart_rotated = (bool *)calloc(chart_count, sizeof(bool));
-	float *pack_w        = (float *)malloc(sizeof(float) * chart_count);
-	float *pack_h        = (float *)malloc(sizeof(float) * chart_count);
-	for (int c = 0; c < chart_count; c++) {
-		if (chart_w[c] > chart_h[c]) {
-			chart_rotated[c] = true;
-			pack_w[c]        = chart_h[c];
-			pack_h[c]        = chart_w[c];
-		}
-		else {
-			pack_w[c] = chart_w[c];
-			pack_h[c] = chart_h[c];
-		}
-	}
+	free(chart_sort);
 
 	// Skyline packing with binary search for optimal scale
-	float *chart_off_u = (float *)malloc(sizeof(float) * chart_count);
-	float *chart_off_v = (float *)malloc(sizeof(float) * chart_count);
+	float *chart_off_u   = (float *)calloc(chart_count, sizeof(float));
+	float *chart_off_v   = (float *)calloc(chart_count, sizeof(float));
+	bool  *chart_rotated = (bool *)calloc(chart_count, sizeof(bool));
 
 	// Skyline: array of (x, y) pairs representing the top edge of placed islands
-	int    sky_cap = chart_count + 1;
+	int    sky_cap = chart_count * 2 + 4;
 	float *sky_x   = (float *)malloc(sizeof(float) * sky_cap);
 	float *sky_y   = (float *)malloc(sizeof(float) * sky_cap);
-	int    sky_len;
+	float *tmp_x   = (float *)malloc(sizeof(float) * sky_cap);
+	float *tmp_y   = (float *)malloc(sizeof(float) * sky_cap);
 
 	float margin   = UV_PACK_MARGIN;
 	float scale_lo = 0.0f;
@@ -390,118 +725,9 @@ void proc_uv_unwrap(raw_mesh_t *mesh) {
 	float scale    = 0.0f;
 
 	// Binary search: find largest scale where all islands fit in [0,1]
-	for (int iter = 0; iter < 40; iter++) {
+	for (int iter = 0; iter < 24; iter++) {
 		float try_scale = (scale_lo + scale_hi) * 0.5f;
-
-		// Reset skyline
-		sky_len  = 1;
-		sky_x[0] = 0.0f;
-		sky_y[0] = 0.0f;
-
-		bool fits = true;
-		for (int i = 0; i < chart_count; i++) {
-			int   c  = chart_order[i];
-			float cw = pack_w[c] * try_scale + margin;
-			float ch = pack_h[c] * try_scale + margin;
-
-			// Find best skyline position (lowest y where island fits)
-			float best_x = 0.0f;
-			float best_y = FLT_MAX;
-			int   best_j = -1;
-
-			for (int j = 0; j < sky_len; j++) {
-				float x0    = sky_x[j];
-				float x_end = sky_x[j] + cw;
-				if (x_end > 1.0f + 1e-6f) {
-					continue;
-				}
-
-				// Find max y across skyline segments this island spans
-				float max_y = 0.0f;
-				for (int k = j; k < sky_len; k++) {
-					float seg_end = (k + 1 < sky_len) ? sky_x[k + 1] : 1.0f;
-					if (sky_x[k] >= x_end - 1e-6f) {
-						break;
-					}
-					if (sky_y[k] > max_y) {
-						max_y = sky_y[k];
-					}
-				}
-
-				if (max_y + ch <= 1.0f + 1e-6f && max_y < best_y) {
-					best_y = max_y;
-					best_x = x0;
-					best_j = j;
-				}
-			}
-
-			if (best_j == -1) {
-				fits = false;
-				break;
-			}
-
-			chart_off_u[c] = best_x + margin * 0.5f;
-			chart_off_v[c] = best_y + margin * 0.5f;
-
-			// Update skyline: insert new segment for this island
-			float new_x0 = best_x;
-			float new_x1 = best_x + cw;
-			float new_y  = best_y + ch;
-
-			// Collect segments that are NOT fully covered by the new island
-			float tmp_x[1024];
-			float tmp_y[1024];
-			int   tmp_len = 0;
-
-			for (int k = 0; k < sky_len; k++) {
-				float seg_x0 = sky_x[k];
-				float seg_x1 = (k + 1 < sky_len) ? sky_x[k + 1] : 1.0f;
-				float seg_y  = sky_y[k];
-
-				if (seg_x1 <= new_x0 + 1e-6f || seg_x0 >= new_x1 - 1e-6f) {
-					// Segment fully outside new island
-					if (tmp_len < 1024) {
-						tmp_x[tmp_len] = seg_x0;
-						tmp_y[tmp_len] = seg_y;
-						tmp_len++;
-					}
-				}
-				else {
-					// Segment overlaps with new island
-					if (seg_x0 < new_x0 - 1e-6f && tmp_len < 1024) {
-						tmp_x[tmp_len] = seg_x0;
-						tmp_y[tmp_len] = seg_y;
-						tmp_len++;
-					}
-					// Insert the new island segment at its left edge
-					if (tmp_len == 0 || tmp_x[tmp_len - 1] < new_x0 - 1e-6f || tmp_y[tmp_len - 1] != new_y) {
-						if (tmp_len < 1024) {
-							tmp_x[tmp_len] = new_x0;
-							tmp_y[tmp_len] = new_y;
-							tmp_len++;
-						}
-					}
-					if (seg_x1 > new_x1 + 1e-6f && tmp_len < 1024) {
-						tmp_x[tmp_len] = new_x1;
-						tmp_y[tmp_len] = seg_y;
-						tmp_len++;
-					}
-				}
-			}
-
-			// Deduplicate and copy back
-			sky_len = 0;
-			for (int k = 0; k < tmp_len && sky_len < sky_cap; k++) {
-				if (sky_len > 0 && fabsf(tmp_y[k] - sky_y[sky_len - 1]) < 1e-6f) {
-					continue; // Merge segments at same height
-				}
-				sky_x[sky_len] = tmp_x[k];
-				sky_y[sky_len] = tmp_y[k];
-				sky_len++;
-			}
-		}
-
-		if (fits) {
+		if (uv_pack_run(chart_count, chart_order, chart_w, chart_h, try_scale, margin, sky_x, sky_y, tmp_x, tmp_y, chart_off_u, chart_off_v, chart_rotated)) {
 			scale    = try_scale;
 			scale_lo = try_scale;
 		}
@@ -511,96 +737,13 @@ void proc_uv_unwrap(raw_mesh_t *mesh) {
 	}
 
 	// Final pass with best scale to get definitive offsets
-	sky_len  = 1;
-	sky_x[0] = 0.0f;
-	sky_y[0] = 0.0f;
-
-	for (int i = 0; i < chart_count; i++) {
-		int   c  = chart_order[i];
-		float cw = pack_w[c] * scale + margin;
-		float ch = pack_h[c] * scale + margin;
-
-		float best_x = 0.0f;
-		float best_y = FLT_MAX;
-		int   best_j = -1;
-
-		for (int j = 0; j < sky_len; j++) {
-			float x_end = sky_x[j] + cw;
-			if (x_end > 1.0f + 1e-6f) {
-				continue;
-			}
-			float max_y = 0.0f;
-			for (int k = j; k < sky_len; k++) {
-				if (sky_x[k] >= x_end - 1e-6f) {
-					break;
-				}
-				if (sky_y[k] > max_y) {
-					max_y = sky_y[k];
-				}
-			}
-			if (max_y + ch <= 1.0f + 1e-6f && max_y < best_y) {
-				best_y = max_y;
-				best_x = sky_x[j];
-				best_j = j;
-			}
-		}
-
-		chart_off_u[c] = best_x + margin * 0.5f;
-		chart_off_v[c] = best_y + margin * 0.5f;
-
-		float new_x0 = best_x;
-		float new_x1 = best_x + cw;
-		float new_y  = best_y + ch;
-
-		float tmp_x[1024];
-		float tmp_y[1024];
-		int   tmp_len = 0;
-
-		for (int k = 0; k < sky_len; k++) {
-			float seg_x0 = sky_x[k];
-			float seg_x1 = (k + 1 < sky_len) ? sky_x[k + 1] : 1.0f;
-			float seg_y  = sky_y[k];
-
-			if (seg_x1 <= new_x0 + 1e-6f || seg_x0 >= new_x1 - 1e-6f) {
-				if (tmp_len < 1024) {
-					tmp_x[tmp_len] = seg_x0;
-					tmp_y[tmp_len] = seg_y;
-					tmp_len++;
-				}
-			}
-			else {
-				if (seg_x0 < new_x0 - 1e-6f && tmp_len < 1024) {
-					tmp_x[tmp_len] = seg_x0;
-					tmp_y[tmp_len] = seg_y;
-					tmp_len++;
-				}
-				if (tmp_len == 0 || tmp_x[tmp_len - 1] < new_x0 - 1e-6f || tmp_y[tmp_len - 1] != new_y) {
-					if (tmp_len < 1024) {
-						tmp_x[tmp_len] = new_x0;
-						tmp_y[tmp_len] = new_y;
-						tmp_len++;
-					}
-				}
-				if (seg_x1 > new_x1 + 1e-6f && tmp_len < 1024) {
-					tmp_x[tmp_len] = new_x1;
-					tmp_y[tmp_len] = seg_y;
-					tmp_len++;
-				}
-			}
-		}
-
-		sky_len = 0;
-		for (int k = 0; k < tmp_len && sky_len < sky_cap; k++) {
-			if (sky_len > 0 && fabsf(tmp_y[k] - sky_y[sky_len - 1]) < 1e-6f) {
-				continue;
-			}
-			sky_x[sky_len] = tmp_x[k];
-			sky_y[sky_len] = tmp_y[k];
-			sky_len++;
-		}
+	if (scale > 0.0f) {
+		uv_pack_run(chart_count, chart_order, chart_w, chart_h, scale, margin, sky_x, sky_y, tmp_x, tmp_y, chart_off_u, chart_off_v, chart_rotated);
 	}
 	free(sky_x);
 	free(sky_y);
+	free(tmp_x);
+	free(tmp_y);
 	free(chart_order);
 
 	// Apply packing offsets, scale, and rotation to all UVs
@@ -624,8 +767,6 @@ void proc_uv_unwrap(raw_mesh_t *mesh) {
 	free(chart_off_u);
 	free(chart_off_v);
 	free(chart_rotated);
-	free(pack_w);
-	free(pack_h);
 	free(chart_w);
 	free(chart_h);
 
