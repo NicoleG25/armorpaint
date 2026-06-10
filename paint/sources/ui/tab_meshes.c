@@ -388,20 +388,21 @@ void tab_meshes_draw_edit() {
 
 	ui_menu_separator();
 
-	if (ui_menu_button(tr("Decimate"), "", ICON_NONE)) {
-		util_mesh_decimate(0.5);
-	}
-
-	if (ui_menu_button(tr("Smooth"), "", ICON_NONE)) {
-		util_mesh_smooth();
-	}
-
-	if (ui_menu_button(tr("Subdivide"), "", ICON_NONE)) {
-		util_mesh_subdivide();
-	}
-
-	if (ui_menu_button(tr("Bevel"), "", ICON_NONE)) {
-		util_mesh_bevel(0.1);
+	if (ui_menu_sub_button(ui_handle(__ID__), tr("Modifiers"))) {
+		ui_menu_sub_begin(4);
+		if (ui_menu_button(tr("Decimate"), "", ICON_NONE)) {
+			util_mesh_decimate(0.5);
+		}
+		if (ui_menu_button(tr("Smooth"), "", ICON_NONE)) {
+			util_mesh_smooth();
+		}
+		if (ui_menu_button(tr("Subdivide"), "", ICON_NONE)) {
+			util_mesh_subdivide();
+		}
+		if (ui_menu_button(tr("Bevel"), "", ICON_NONE)) {
+			util_mesh_bevel(0.1);
+		}
+		ui_menu_sub_end();
 	}
 }
 
