@@ -791,8 +791,15 @@ static void write_functions(char *code, size_t *offset) {
 			}
 			case OPCODE_MOD: {
 				indent(code, offset, indentation);
-				*offset += sprintf(&code[*offset], "%s _%" PRIu64 " = fmod(_%" PRIu64 ", _%" PRIu64 ");\n", type_string(o->op_binary.result.type.type),
-				                   o->op_binary.result.index, o->op_binary.left.index, o->op_binary.right.index);
+				type_id base_type = vector_base_type(o->op_binary.result.type.type);
+				if (base_type == int_id || base_type == uint_id) {
+					*offset += sprintf(&code[*offset], "%s _%" PRIu64 " = _%" PRIu64 " %% _%" PRIu64 ";\n", type_string(o->op_binary.result.type.type),
+					                   o->op_binary.result.index, o->op_binary.left.index, o->op_binary.right.index);
+				}
+				else {
+					*offset += sprintf(&code[*offset], "%s _%" PRIu64 " = fmod(_%" PRIu64 ", _%" PRIu64 ");\n", type_string(o->op_binary.result.type.type),
+					                   o->op_binary.result.index, o->op_binary.left.index, o->op_binary.right.index);
+				}
 				break;
 			}
 			default:
