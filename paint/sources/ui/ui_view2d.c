@@ -85,7 +85,7 @@ void ui_view2d_draw_edit() {
 	h_view2d_grid_snap->b           = g_config->view2d_grid_snap;
 	g_config->view2d_grid_snap      = ui_check(h_view2d_grid_snap, tr("Grid Snap"), any_map_get(g_keymap, "grid_snap"));
 	if (h_view2d_grid_snap->changed) {
-		ui_menu_keep_open       = true;
+		ui_menu_keep_open = true;
 	}
 
 	ui_menu_separator();

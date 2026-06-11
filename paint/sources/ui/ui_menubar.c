@@ -812,12 +812,9 @@ void ui_menubar_draw_category_items() {
 		    (void *[]){
 		        tr("PBR"),
 		        tr("Base"),
+		        tr("Sculpt"),
 		    },
-		    2);
-
-		if (g_config->experimental) {
-			any_array_push(workflow_items, tr("Sculpt"));
-		}
+		    3);
 
 		g_config->workflow = ui_inline_radio(workflow_handle, workflow_items, UI_ALIGN_LEFT);
 		if (workflow_handle->changed) {

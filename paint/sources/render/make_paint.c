@@ -92,7 +92,9 @@ string_array_t *make_paint_color_attachments() {
 }
 
 node_shader_context_t *make_paint_run(material_t *data, material_context_t *matcon) {
-	if (g_context->layer->texpaint_sculpt != NULL) {
+	bool picking_tool = g_context->tool == TOOL_TYPE_COLORID || g_context->tool == TOOL_TYPE_PICKER || g_context->tool == TOOL_TYPE_MATERIAL ||
+	                    g_context->tool == TOOL_TYPE_CURSOR;
+	if (g_context->layer->texpaint_sculpt != NULL && !picking_tool) {
 		return sculpt_make_sculpt_run(data, matcon);
 	}
 
@@ -594,44 +596,7 @@ node_shader_context_t *make_paint_run(material_t *data, material_context_t *matc
 	parser_material_triplanar          = false;
 	parser_material_sample_keep_aspect = false;
 
-	{
-		slot_layer_t_array_t *sculpt_layers  = any_array_create_from_raw((void *[]){}, 0);
-		i32_array_t          *sculpt_indices = i32_array_create(0);
-		for (i32 i = 0; i < g_project->_->layers->length; ++i) {
-			slot_layer_t *l = g_project->_->layers->buffer[i];
-			if (l->texpaint_sculpt != NULL && slot_layer_is_visible(l)) {
-				any_array_push(sculpt_layers, l);
-				i32_array_push(sculpt_indices, i);
-			}
-		}
-		i32 scount = sculpt_layers->length;
-		if (scount > 0) {
-			i32 idx0 = sculpt_indices->buffer[0];
-			node_shader_add_constant(kong, string("texpaint_sculpt_size%d: float2", idx0), string("_size(_texpaint_sculpt%d)", idx0));
-			for (i32 i = 0; i < scount; ++i) {
-				i32 idx = sculpt_indices->buffer[i];
-				node_shader_add_texture(kong, string("texpaint_sculpt%d", idx), string("_texpaint_sculpt%d", idx));
-			}
-			if (scount > 1) {
-				node_shader_add_texture(kong, "texpaint_sculpt_base", "_texpaint_sculpt_base");
-			}
-
-			node_shader_write_attrib_vert(kong, string("var sculpt_uv_paint: uint2 = uint2(uint(float(vertex_id()) %% constants.texpaint_sculpt_size%d.x), "
-			                                           "uint(float(vertex_id()) / constants.texpaint_sculpt_size%d.y));",
-			                                           idx0, idx0));
-
-			node_shader_write_attrib_vert(kong, string("var sculpt_pos_paint: float4 = texpaint_sculpt%d[sculpt_uv_paint];", idx0));
-			for (i32 i = 1; i < scount; ++i) {
-				i32 idx = sculpt_indices->buffer[i];
-				node_shader_write_attrib_vert(
-				    kong, string("sculpt_pos_paint = sculpt_pos_paint + texpaint_sculpt%d[sculpt_uv_paint] - texpaint_sculpt_base[sculpt_uv_paint];", idx));
-			}
-			node_shader_write_attrib_vert(kong, "output.ndc = constants.WVP * float4(sculpt_pos_paint.xyz, 1.0);");
-			if (kong->frag_wposition) {
-				node_shader_write_attrib_vert(kong, "output.wposition = (constants.W * float4(sculpt_pos_paint.xyz, 1.0)).xyz;");
-			}
-		}
-	}
+	sculpt_make_paint_run(kong);
 
 	con_paint->data->shader_from_source = true;
 	gpu_create_shaders_from_kong(node_shader_get(kong), &con_paint->data->vertex_shader, &con_paint->data->fragment_shader,

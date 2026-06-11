@@ -5,6 +5,9 @@ i32 uniforms_ext_i32_link(object_t *object, material_data_t *mat, char *link) {
 	if (string_equals(link, "_bloom_current_mip")) {
 		return render_path_base_bloom_current_mip;
 	}
+	else if (string_equals(link, "_sculpt_vertex_offset")) {
+		return sculpt_object_vertex_offset(object->ext);
+	}
 	return INT_MAX;
 }
 
@@ -72,6 +75,9 @@ f32 uniforms_ext_f32_link(object_t *object, material_data_t *mat, char *link) {
 			val *= pen_pressure * g_config->pressure_sensitivity;
 		}
 		val *= val;
+		if (g_config->workflow == WORKFLOW_SCULPT) {
+			val *= 0.8;
+		}
 		return val;
 	}
 	else if (string_equals(link, "_brush_scale")) {
@@ -87,6 +93,20 @@ f32 uniforms_ext_f32_link(object_t *object, material_data_t *mat, char *link) {
 	}
 	else if (string_equals(link, "_object_id")) {
 		return array_index_of(g_project->_->paint_objects, object->ext);
+	}
+	else if (string_equals(link, "_sculpt_mask_offset")) {
+		i32 om = slot_layer_get_object_mask(g_context->layer);
+		if (om <= 0 || om > g_project->_->paint_objects->length) {
+			return 0;
+		}
+		return sculpt_object_vertex_offset(g_project->_->paint_objects->buffer[om - 1]);
+	}
+	else if (string_equals(link, "_sculpt_mask_count")) {
+		i32 om = slot_layer_get_object_mask(g_context->layer);
+		if (om <= 0 || om > g_project->_->paint_objects->length) {
+			return config_get_texture_res_x() * config_get_texture_res_y();
+		}
+		return g_project->_->paint_objects->buffer[om - 1]->data->index_array->length;
 	}
 	else if (string_equals(link, "_dilate_radius")) {
 		return util_uv_dilatemap != NULL ? g_config->dilate_radius : 0.0;
@@ -289,9 +309,10 @@ vec4_t uniforms_ext_vec4_link(object_t *object, material_data_t *mat, char *link
 mat4_t uniforms_ext_mat4_link(object_t *object, material_data_t *mat, char *link) {
 	if (string_equals(link, "_decal_layer_matrix")) { // Decal layer
 		mat4_t m = mat4_inv(g_context->layer->decal_mat);
-		f32    f = object->parent->transform->scale.x * object->transform->scale_world;
-		m        = mat4_scale(m, (vec4_t){f, f, f, 1.0});
-		m        = mat4_mult_mat(m, uniforms_ext_ortho_p);
+		f32 parent_scale = object->parent != NULL ? object->parent->transform->scale.x : 1.0;
+		f32 f            = parent_scale * object->transform->scale_world;
+		m                = mat4_scale(m, (vec4_t){f, f, f, 1.0});
+		m                = mat4_mult_mat(m, uniforms_ext_ortho_p);
 		return m;
 	}
 
@@ -327,8 +348,8 @@ gpu_texture_t *uniforms_ext_tex_link(object_t *object, material_data_t *mat, cha
 		return rt->_image;
 	}
 	else if (string_equals(link, "_texpaint_sculpt_undo")) {
-		i32              i  = history_undo_i - 1 < 0 ? g_config->undo_steps - 1 : history_undo_i - 1;
-		render_target_t *rt = any_map_get(render_path_render_targets, string("texpaint_sculpt_undo%d", i));
+		// Per-frame accumulation reference
+		render_target_t *rt = any_map_get(render_path_render_targets, "texpaint_sculpt_ref");
 		return rt->_image;
 	}
 	else if (string_equals(link, "_texcolorid")) {
@@ -380,8 +401,13 @@ gpu_texture_t *uniforms_ext_tex_link(object_t *object, material_data_t *mat, cha
 		return rt->_image;
 	}
 	if (starts_with(link, "_texpaint_vert")) {
-		i32 tid = parse_int(substring(link, string_length(link) - 1, string_length(link)));
-		return tid < g_project->_->layers->length ? g_project->_->layers->buffer[tid]->texpaint : NULL;
+		i32 tid = parse_int(substring(link, string_length("_texpaint_vert"), string_length(link)));
+		for (i32 i = 0; i < g_project->_->layers->length; ++i) {
+			if (g_project->_->layers->buffer[i]->id == tid) {
+				return g_project->_->layers->buffer[i]->texpaint;
+			}
+		}
+		return NULL;
 	}
 	if (starts_with(link, "_texpaint_nor")) {
 		i32 tid = parse_int(substring(link, string_length(link) - 1, string_length(link)));

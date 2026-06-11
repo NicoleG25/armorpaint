@@ -286,6 +286,7 @@ void                      export_arm_pack_assets(project_t *raw, asset_t_array_t
 void                      export_arm_run_swatches(char *path);
 void                      import_asset_run(char *path, f32 drop_x, f32 drop_y, bool show_box, bool hdr_as_envmap, void (*done)(void));
 void                      make_particle_mask(node_shader_t *kong);
+material_data_t          *make_particle_get_bullet_material();
 void                      uniforms_ext_init();
 void                      render_path_deferred_init();
 void                      render_path_deferred_commands();
@@ -683,11 +684,18 @@ void                         render_path_raytrace_raytrace_init(char *shader_nam
 void                         render_path_raytrace_draw(bool use_live_layer);
 node_shader_context_t       *sculpt_make_sculpt_run(material_t *data, material_context_t *matcon);
 void                         sculpt_make_mesh_run(node_shader_t *kong, slot_layer_t_array_t *sculpt_layers, i32_array_t *sculpt_indices);
-void                         sculpt_import_mesh_pack_to_texture(mesh_data_t *mesh, gpu_texture_t *target);
-void                         sculpt_init_sculpt_texture(slot_layer_t *l, mesh_data_t *md);
+void                         sculpt_make_paint_run(node_shader_t *kong);
+bool                         sculpt_layer_has_visible_masks(slot_layer_t *l);
+bool                         sculpt_mask_value(node_shader_t *kong, slot_layer_t *l, char *out_var, bool attrib, slot_layer_t *skip);
+i32                          sculpt_object_vertex_offset(mesh_object_t *o);
+void                         sculpt_import_mesh_pack_to_texture(gpu_texture_t *target);
+void                         sculpt_init_sculpt_texture(slot_layer_t *l);
+void                         sculpt_init_meshes();
 void                         sculpt_init();
 void                         sculpt_layers_create_sculpt_layer();
+void                         render_path_sculpt_displace_pass(char *texpaint_sculpt);
 void                         render_path_sculpt_commands();
+void                         render_path_sculpt_snapshot_gbuffer();
 void                         render_path_sculpt_begin();
 void                         ui_statusbar_init();
 void                         ui_statusbar_render_ui();

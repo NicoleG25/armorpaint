@@ -184,6 +184,16 @@ void slot_layer_swap(slot_layer_t *raw, slot_layer_t *other) {
 		other->texpaint_preview          = _texpaint_preview;
 	}
 
+	if (raw->texpaint_sculpt != NULL && other->texpaint_sculpt != NULL) {
+		render_target_t *srt0           = any_map_get(render_path_render_targets, string("texpaint_sculpt%s", raw->ext));
+		render_target_t *srt1           = any_map_get(render_path_render_targets, string("texpaint_sculpt%s", other->ext));
+		srt0->_image                    = other->texpaint_sculpt;
+		srt1->_image                    = raw->texpaint_sculpt;
+		gpu_texture_t *_texpaint_sculpt = raw->texpaint_sculpt;
+		raw->texpaint_sculpt            = other->texpaint_sculpt;
+		other->texpaint_sculpt          = _texpaint_sculpt;
+	}
+
 	if (slot_layer_is_layer(raw) && slot_layer_is_layer(other)) {
 		render_target_t *nor0         = any_map_get(render_path_render_targets, string("texpaint_nor%s", raw->ext));
 		nor0->_image                  = other->texpaint_nor;
@@ -440,6 +450,19 @@ void slot_layer_resize_and_set_bits(slot_layer_t *raw) {
 
 		render_target_t *rt = any_map_get(rts, string("texpaint%s", raw->ext));
 		rt->_image          = raw->texpaint;
+	}
+
+	// Clear and repack the base mesh
+	if (raw->texpaint_sculpt != NULL) {
+		gpu_texture_t *_texpaint_sculpt = raw->texpaint_sculpt;
+		raw->texpaint_sculpt            = gpu_create_render_target(res_x, res_y, GPU_TEXTURE_FORMAT_RGBA128);
+		sculpt_import_mesh_pack_to_texture(raw->texpaint_sculpt);
+		gpu_delete_texture(_texpaint_sculpt);
+
+		render_target_t *srt = any_map_get(rts, string("texpaint_sculpt%s", raw->ext));
+		srt->width  = res_x;
+		srt->height = res_y;
+		srt->_image = raw->texpaint_sculpt;
 	}
 }
 

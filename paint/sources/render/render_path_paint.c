@@ -164,7 +164,9 @@ void render_path_paint_commands_particle(i32 tid, char *texpaint, bool is_mask) 
 void render_path_paint_commands_paint(bool dilation) {
 	i32 tid = g_context->layer->id;
 
-	if (g_context->layer->texpaint_sculpt != NULL) {
+	bool picking_tool = g_context->tool == TOOL_TYPE_COLORID || g_context->tool == TOOL_TYPE_PICKER || g_context->tool == TOOL_TYPE_MATERIAL ||
+	                    g_context->tool == TOOL_TYPE_CURSOR;
+	if (g_context->layer->texpaint_sculpt != NULL && !picking_tool) {
 		render_path_sculpt_commands();
 		return;
 	}

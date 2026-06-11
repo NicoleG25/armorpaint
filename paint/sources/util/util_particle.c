@@ -27,6 +27,7 @@ void util_particle_update() {
 	}
 
 	util_particle_init_physics();
+	make_particle_get_bullet_material();
 	physics_world_t *world = physics_world_active;
 	physics_world_update(world);
 
@@ -73,6 +74,7 @@ void util_particle_update() {
 			mesh_object_t *mo = o->ext;
 			mo->base->name    = ".Bullet";
 			mo->base->visible = true;
+			mo->material      = make_particle_get_bullet_material();
 
 			util_render_pick_pos_nor_tex();
 			f32 nx            = g_context->norx_picked;

@@ -115,6 +115,23 @@ void layers_resize() {
 	if (render_path_paint_live_layer != NULL) {
 		slot_layer_resize_and_set_bits(render_path_paint_live_layer);
 	}
+
+	render_target_t *sculpt_ref = any_map_get(rts, "texpaint_sculpt_ref");
+	if (sculpt_ref != NULL) {
+		gpu_delete_texture(sculpt_ref->_image);
+		sculpt_ref->width  = config_get_texture_res_x();
+		sculpt_ref->height = config_get_texture_res_y();
+		sculpt_ref->_image = gpu_create_render_target(config_get_texture_res_x(), config_get_texture_res_y(), GPU_TEXTURE_FORMAT_RGBA128);
+	}
+
+	render_target_t *sculpt_base = any_map_get(rts, "texpaint_sculpt_base");
+	if (sculpt_base != NULL) {
+		gpu_delete_texture(sculpt_base->_image);
+		sculpt_base->width  = config_get_texture_res_x();
+		sculpt_base->height = config_get_texture_res_y();
+		sculpt_base->_image = gpu_create_render_target(config_get_texture_res_x(), config_get_texture_res_y(), GPU_TEXTURE_FORMAT_RGBA128);
+	}
+
 	render_path_raytrace_ready = false; // Rebuild baketex
 	g_context->ddirty          = 2;
 }
@@ -344,7 +361,7 @@ void layers_update_fill_layers() {
 					if (l->texpaint_sculpt != NULL) {
 						i32 tid = l->id;
 						i32 hid = history_undo_i - 1 < 0 ? g_config->undo_steps - 1 : history_undo_i - 1;
-						sculpt_import_mesh_pack_to_texture(g_context->paint_object->data, l->texpaint_sculpt);
+						sculpt_import_mesh_pack_to_texture(l->texpaint_sculpt);
 						render_path_set_target(string("texpaint_sculpt_undo%d", hid), NULL, NULL, GPU_CLEAR_NONE, 0, 0.0);
 						render_path_bind_target(string("texpaint_sculpt%d", tid), "tex");
 						render_path_draw_shader("Scene/copy_pass/copyRGBA128_pass");
@@ -424,7 +441,7 @@ void layers_update_fill_layer(bool parse_paint) {
 	if (g_context->layer->texpaint_sculpt != NULL) {
 		i32 tid = g_context->layer->id;
 		i32 hid = history_undo_i - 1 < 0 ? g_config->undo_steps - 1 : history_undo_i - 1;
-		sculpt_import_mesh_pack_to_texture(g_context->paint_object->data, g_context->layer->texpaint_sculpt);
+		sculpt_import_mesh_pack_to_texture(g_context->layer->texpaint_sculpt);
 		render_path_set_target(string("texpaint_sculpt_undo%d", hid), NULL, NULL, GPU_CLEAR_NONE, 0, 0.0);
 		render_path_bind_target(string("texpaint_sculpt%d", tid), "tex");
 		render_path_draw_shader("Scene/copy_pass/copyRGBA128_pass");
@@ -637,6 +654,13 @@ slot_layer_t *layers_new_group() {
 	return l;
 }
 
+static slot_layer_t *_layers_path_sculpt_layer = NULL;
+
+void layers_new_path_layer_sculpt_init(void *_) {
+	sculpt_init();
+	sculpt_init_sculpt_texture(_layers_path_sculpt_layer);
+}
+
 slot_layer_t *layers_new_path_layer(bool curved) {
 	slot_layer_t *l = layers_new_layer(true, -1, NULL);
 	if (l == NULL) {
@@ -650,6 +674,12 @@ slot_layer_t *layers_new_path_layer(bool curved) {
 	l->path_curved        = curved;
 	l->path_material      = g_context->material;
 	l->name               = string(curved ? "Curve %d" : "Path %d", l->id + 1);
+
+	if (g_config->workflow == WORKFLOW_SCULPT) {
+		_layers_path_sculpt_layer = l;
+		sys_notify_on_next_frame(&layers_new_path_layer_sculpt_init, NULL);
+	}
+
 	return l;
 }
 
@@ -663,9 +693,8 @@ void layers_create_fill_layer_on_next_frame(void *_) {
 	l->object_mask = g_context->layer_filter;
 
 	if (g_config->workflow == WORKFLOW_SCULPT) {
-		mesh_data_t *md = g_context->paint_object->data;
 		sculpt_init();
-		sculpt_init_sculpt_texture(l, md);
+		sculpt_init_sculpt_texture(l);
 	}
 
 	history_to_fill_layer();

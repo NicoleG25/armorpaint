@@ -450,7 +450,7 @@ void tab_layers_draw_layer_slot_full(slot_layer_t *l, i32 i) {
 	}
 
 	// Blending combo
-	if (!slot_layer_is_group(l) && !slot_layer_is_mask(l) && !slot_layer_is_filter(l)) {
+	if (!slot_layer_is_group(l) && !slot_layer_is_mask(l) && !slot_layer_is_filter(l) && l->texpaint_sculpt == NULL) {
 		g_ui->_x = uix + uiw * 0.60;
 		g_ui->_y = uiy;
 		g_ui->_w = uiw * 0.30;
@@ -460,7 +460,7 @@ void tab_layers_draw_layer_slot_full(slot_layer_t *l, i32 i) {
 	// Object combo
 	if (!slot_layer_is_group(l) && !slot_layer_is_mask(l) && !slot_layer_is_filter(l)) {
 		g_ui->_x = uix + uiw * 0.60;
-		g_ui->_y = uiy + center * 2;
+		g_ui->_y = l->texpaint_sculpt != NULL ? uiy + center : uiy + center * 2;
 		g_ui->_w = uiw * 0.30;
 		tab_layers_combo_object(l, false);
 	}
@@ -632,7 +632,7 @@ void tab_layers_draw_layer_context_menu_draw() {
 			ui_menu_keep_open = true;
 		}
 
-		if (!slot_layer_is_group(l) && !slot_layer_is_mask(l) && !slot_layer_is_filter(l)) {
+		if (!slot_layer_is_group(l) && !slot_layer_is_mask(l) && !slot_layer_is_filter(l) && l->texpaint_sculpt == NULL) {
 			if (tab_layers_combo_blending(l, true)->changed) {
 				ui_menu_keep_open = true;
 			}
@@ -915,7 +915,7 @@ void tab_layers_draw_layer_slot(slot_layer_t *l, i32 i, bool mini) {
 	}
 
 	bool is_sculpt_layer = l->texpaint_sculpt != NULL;
-	if (g_config->workflow == WORKFLOW_SCULPT && !is_sculpt_layer) {
+	if (g_config->workflow == WORKFLOW_SCULPT && !is_sculpt_layer && !slot_layer_is_group(l) && !slot_layer_is_mask(l)) {
 		return;
 	}
 	if (g_config->workflow != WORKFLOW_SCULPT && is_sculpt_layer) {
