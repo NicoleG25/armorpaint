@@ -199,7 +199,7 @@ static void free_srv_index(int i) {
 	srv_free[srv_free_count++] = i;
 }
 
-void gpu_render_target_init2(gpu_texture_t *render_target, int width, int height, gpu_texture_format_t format, int framebuffer_index) {
+void gpu_render_target_init2(gpu_texture_t *render_target, uint32_t width, uint32_t height, gpu_texture_format_t format, int framebuffer_index) {
 	render_target->width     = width;
 	render_target->height    = height;
 	render_target->format    = format;
@@ -534,7 +534,7 @@ bool gpu_raytrace_supported() {
 	return false;
 }
 
-void gpu_set_constant_buffer(gpu_buffer_t *buffer, int offset, size_t size) {
+void gpu_set_constant_buffer(gpu_buffer_t *buffer, uint32_t offset, size_t size) {
 	command_list->lpVtbl->SetGraphicsRootConstantBufferView(command_list, 1, buffer->impl.buffer->lpVtbl->GetGPUVirtualAddress(buffer->impl.buffer) + offset);
 }
 
@@ -724,7 +724,7 @@ void gpu_get_render_target_pixels(gpu_texture_t *render_target, uint8_t *data) {
 	readback_buffer->lpVtbl->Unmap(readback_buffer, 0, NULL);
 }
 
-void gpu_set_texture(int unit, gpu_texture_t *texture) {
+void gpu_set_texture(uint32_t unit, gpu_texture_t *texture) {
 	current_textures[unit] = texture;
 }
 
@@ -861,7 +861,7 @@ void gpu_shader_destroy(gpu_shader_t *shader) {
 	free(shader->impl.data);
 }
 
-void gpu_texture_init_from_bytes(gpu_texture_t *texture, void *data, int width, int height, gpu_texture_format_t format) {
+void gpu_texture_init_from_bytes(gpu_texture_t *texture, void *data, uint32_t width, uint32_t height, gpu_texture_format_t format) {
 	texture->width            = width;
 	texture->height           = height;
 	texture->format           = format;
@@ -1035,11 +1035,11 @@ void gpu_texture_destroy_internal(gpu_texture_t *tex) {
 	}
 }
 
-void gpu_render_target_init(gpu_texture_t *target, int width, int height, gpu_texture_format_t format) {
+void gpu_render_target_init(gpu_texture_t *target, uint32_t width, uint32_t height, gpu_texture_format_t format) {
 	gpu_render_target_init2(target, width, height, format, -1);
 }
 
-void _gpu_buffer_init(ID3D12Resource **buffer, int size, D3D12_HEAP_TYPE heap_type) {
+void _gpu_buffer_init(ID3D12Resource **buffer, uint32_t size, D3D12_HEAP_TYPE heap_type) {
 	if (*buffer != NULL) {
 		assert(resources_to_destroy_count < 512);
 		resources_to_destroy[resources_to_destroy_count] = *buffer;
@@ -1081,7 +1081,7 @@ void _gpu_buffer_init(ID3D12Resource **buffer, int size, D3D12_HEAP_TYPE heap_ty
 	}
 }
 
-void gpu_vertex_buffer_init(gpu_buffer_t *buffer, int count, gpu_vertex_structure_t *structure) {
+void gpu_vertex_buffer_init(gpu_buffer_t *buffer, uint32_t count, gpu_vertex_structure_t *structure) {
 	buffer->count  = count;
 	buffer->stride = 0;
 	for (int i = 0; i < structure->size; ++i) {
@@ -1132,7 +1132,7 @@ void gpu_vertex_buffer_unlock(gpu_buffer_t *buffer) {
 	}
 }
 
-void gpu_index_buffer_init(gpu_buffer_t *buffer, int count) {
+void gpu_index_buffer_init(gpu_buffer_t *buffer, uint32_t count) {
 	buffer->count                              = count;
 	buffer->cpu_write                          = false;
 	buffer->impl.index_buffer_view.SizeInBytes = count * 4;
@@ -1168,7 +1168,7 @@ void gpu_index_buffer_unlock(gpu_buffer_t *buffer) {
 	buffer->impl.index_buffer_view.BufferLocation = buffer->impl.buffer->lpVtbl->GetGPUVirtualAddress(buffer->impl.buffer);
 }
 
-void gpu_constant_buffer_init(gpu_buffer_t *buffer, int size) {
+void gpu_constant_buffer_init(gpu_buffer_t *buffer, uint32_t size) {
 	buffer->count           = size;
 	buffer->data            = NULL;
 	buffer->cpu_write       = false;
@@ -1177,7 +1177,7 @@ void gpu_constant_buffer_init(gpu_buffer_t *buffer, int size) {
 	_gpu_buffer_init(&buffer->impl.buffer, size, D3D12_HEAP_TYPE_UPLOAD);
 }
 
-void gpu_constant_buffer_lock(gpu_buffer_t *buffer, int start, int count) {
+void gpu_constant_buffer_lock(gpu_buffer_t *buffer, uint32_t start, uint32_t count) {
 	buffer->impl.last_start = start;
 	buffer->impl.last_count = count;
 	D3D12_RANGE range       = {
