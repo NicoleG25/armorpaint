@@ -62,7 +62,11 @@ typedef enum spirv_opcode {
 	SPIRV_OPCODE_I_SUB                    = 130,
 	SPIRV_OPCODE_F_SUB                    = 131,
 	SPIRV_OPCODE_F_MUL                    = 133,
+	SPIRV_OPCODE_U_DIV                    = 134,
+	SPIRV_OPCODE_S_DIV                    = 135,
 	SPIRV_OPCODE_F_DIV                    = 136,
+	SPIRV_OPCODE_U_MOD                    = 137,
+	SPIRV_OPCODE_S_MOD                    = 139,
 	SPIRV_OPCODE_F_MOD                    = 141,
 	SPIRV_OPCODE_VECTOR_TIMES_MATRIX      = 144,
 	SPIRV_OPCODE_MATRIX_TIMES_VECTOR      = 145,
@@ -1261,6 +1265,46 @@ static spirv_id write_op_f_mod(instructions_buffer *instructions, spirv_id type,
 	uint32_t operands[] = {type.id, result.id, operand1.id, operand2.id};
 
 	write_instruction(instructions, WORD_COUNT(operands), SPIRV_OPCODE_F_MOD, operands);
+
+	return result;
+}
+
+static spirv_id write_op_u_div(instructions_buffer *instructions, spirv_id type, spirv_id operand1, spirv_id operand2) {
+	spirv_id result = allocate_index();
+
+	uint32_t operands[] = {type.id, result.id, operand1.id, operand2.id};
+
+	write_instruction(instructions, WORD_COUNT(operands), SPIRV_OPCODE_U_DIV, operands);
+
+	return result;
+}
+
+static spirv_id write_op_s_div(instructions_buffer *instructions, spirv_id type, spirv_id operand1, spirv_id operand2) {
+	spirv_id result = allocate_index();
+
+	uint32_t operands[] = {type.id, result.id, operand1.id, operand2.id};
+
+	write_instruction(instructions, WORD_COUNT(operands), SPIRV_OPCODE_S_DIV, operands);
+
+	return result;
+}
+
+static spirv_id write_op_u_mod(instructions_buffer *instructions, spirv_id type, spirv_id operand1, spirv_id operand2) {
+	spirv_id result = allocate_index();
+
+	uint32_t operands[] = {type.id, result.id, operand1.id, operand2.id};
+
+	write_instruction(instructions, WORD_COUNT(operands), SPIRV_OPCODE_U_MOD, operands);
+
+	return result;
+}
+
+static spirv_id write_op_s_mod(instructions_buffer *instructions, spirv_id type, spirv_id operand1, spirv_id operand2) {
+	spirv_id result = allocate_index();
+
+	uint32_t operands[] = {type.id, result.id, operand1.id, operand2.id};
+
+	write_instruction(instructions, WORD_COUNT(operands), SPIRV_OPCODE_S_MOD, operands);
 
 	return result;
 }
@@ -2986,18 +3030,42 @@ static void write_function(instructions_buffer *instructions, function *f, spirv
 			break;
 		}
 		case OPCODE_DIVIDE: {
-			spirv_id left   = get_var(instructions, o->op_binary.left);
-			spirv_id right  = get_var(instructions, o->op_binary.right);
-			spirv_id result = write_op_f_div(instructions, convert_type_to_spirv_id(o->op_binary.result.type.type), left, right);
+			spirv_id left      = get_var(instructions, o->op_binary.left);
+			spirv_id right     = get_var(instructions, o->op_binary.right);
+			spirv_id type      = convert_type_to_spirv_id(o->op_binary.result.type.type);
+			type_id  base_type = vector_base_type(o->op_binary.result.type.type);
+			spirv_id result;
+
+			if (base_type == uint_id) {
+				result = write_op_u_div(instructions, type, left, right);
+			}
+			else if (base_type == int_id) {
+				result = write_op_s_div(instructions, type, left, right);
+			}
+			else {
+				result = write_op_f_div(instructions, type, left, right);
+			}
 
 			hmput(index_map, o->op_binary.result.index, result);
 
 			break;
 		}
 		case OPCODE_MOD: {
-			spirv_id left   = get_var(instructions, o->op_binary.left);
-			spirv_id right  = get_var(instructions, o->op_binary.right);
-			spirv_id result = write_op_f_mod(instructions, convert_type_to_spirv_id(o->op_binary.result.type.type), left, right);
+			spirv_id left      = get_var(instructions, o->op_binary.left);
+			spirv_id right     = get_var(instructions, o->op_binary.right);
+			spirv_id type      = convert_type_to_spirv_id(o->op_binary.result.type.type);
+			type_id  base_type = vector_base_type(o->op_binary.result.type.type);
+			spirv_id result;
+
+			if (base_type == uint_id) {
+				result = write_op_u_mod(instructions, type, left, right);
+			}
+			else if (base_type == int_id) {
+				result = write_op_s_mod(instructions, type, left, right);
+			}
+			else {
+				result = write_op_f_mod(instructions, type, left, right);
+			}
 
 			hmput(index_map, o->op_binary.result.index, result);
 
