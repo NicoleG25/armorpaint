@@ -81,11 +81,8 @@ struct HWND__ *iron_windows_window_handle();
 void (*iron_update)(void);
 void (*iron_drop_files)(char *);
 void (*iron_foreground)(void);
-void (*iron_resume)(void);
-void (*iron_pause)(void);
 void (*iron_background)(void);
 void (*iron_shutdown)(void);
-void (*iron_pause)(void);
 void (*iron_key_down)(int);
 void (*iron_key_up)(int);
 void (*iron_mouse_down)(int, int, int);
@@ -265,14 +262,7 @@ void _paste(char *text, void *data) {
 void _foreground(void *data) {
 	iron_foreground();
 	in_background = false;
-}
-
-void _resume(void *data) {
-	iron_resume();
-}
-
-void _pause(void *data) {
-	iron_pause();
+	paused_frames = 0;
 }
 
 void _background(void *data) {
