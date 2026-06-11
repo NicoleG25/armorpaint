@@ -89,7 +89,7 @@ static MTLPixelFormat convert_texture_format(gpu_texture_format_t format) {
 	}
 }
 
-void gpu_render_target_init2(gpu_texture_t *target, int width, int height, gpu_texture_format_t format, int framebuffer_index) {
+void gpu_render_target_init2(gpu_texture_t *target, uint32_t width, uint32_t height, gpu_texture_format_t format, int framebuffer_index) {
 	target->width  = width;
 	target->height = height;
 	target->format = format;
@@ -380,7 +380,7 @@ void gpu_get_render_target_pixels(gpu_texture_t *render_target, uint8_t *data) {
 	memcpy(data, [buffer contents], render_target->width * render_target->height * gpu_texture_format_size(render_target->format));
 }
 
-void gpu_set_constant_buffer(gpu_buffer_t *buffer, int offset, size_t size) {
+void gpu_set_constant_buffer(gpu_buffer_t *buffer, uint32_t offset, size_t size) {
 	id<MTLBuffer> buf = (__bridge id<MTLBuffer>)buffer->impl.metal_buffer;
 	[argument_encoder setArgumentBuffer:argument_buffer offset:argument_buffer_step * constant_buffer_index];
 	[argument_encoder setBuffer:buf offset:offset atIndex:0];
@@ -398,7 +398,7 @@ void gpu_set_constant_buffer(gpu_buffer_t *buffer, int offset, size_t size) {
 	}
 }
 
-void gpu_set_texture(int unit, gpu_texture_t *texture) {
+void gpu_set_texture(uint32_t unit, gpu_texture_t *texture) {
 	current_textures[unit] = texture;
 }
 
@@ -531,7 +531,7 @@ void gpu_shader_init(gpu_shader_t *shader, const void *data, size_t length, gpu_
 	shader->impl.length = length;
 }
 
-void gpu_texture_init_from_bytes(gpu_texture_t *texture, void *data, int width, int height, gpu_texture_format_t format) {
+void gpu_texture_init_from_bytes(gpu_texture_t *texture, void *data, uint32_t width, uint32_t height, gpu_texture_format_t format) {
 	texture->width  = width;
 	texture->height = height;
 	texture->format = format;
@@ -595,11 +595,11 @@ void gpu_texture_destroy_internal(gpu_texture_t *target) {
 	target->impl._tex  = NULL;
 }
 
-void gpu_render_target_init(gpu_texture_t *target, int width, int height, gpu_texture_format_t format) {
+void gpu_render_target_init(gpu_texture_t *target, uint32_t width, uint32_t height, gpu_texture_format_t format) {
 	gpu_render_target_init2(target, width, height, format, -1);
 }
 
-void gpu_vertex_buffer_init(gpu_buffer_t *buffer, int count, gpu_vertex_structure_t *structure) {
+void gpu_vertex_buffer_init(gpu_buffer_t *buffer, uint32_t count, gpu_vertex_structure_t *structure) {
 	buffer->count = count;
 	for (int i = 0; i < structure->size; ++i) {
 		gpu_vertex_element_t element = structure->elements[i];
@@ -625,7 +625,7 @@ void *gpu_vertex_buffer_lock(gpu_buffer_t *buffer) {
 
 void gpu_vertex_buffer_unlock(gpu_buffer_t *buffer) {}
 
-void gpu_index_buffer_init(gpu_buffer_t *buffer, int count) {
+void gpu_index_buffer_init(gpu_buffer_t *buffer, uint32_t count) {
 	buffer->count = count;
 
 	id<MTLDevice>      device  = get_metal_device();
@@ -646,13 +646,13 @@ void *gpu_index_buffer_lock(gpu_buffer_t *buffer) {
 
 void gpu_index_buffer_unlock(gpu_buffer_t *buffer) {}
 
-void gpu_constant_buffer_init(gpu_buffer_t *buffer, int size) {
+void gpu_constant_buffer_init(gpu_buffer_t *buffer, uint32_t size) {
 	buffer->count             = size;
 	buffer->data              = NULL;
 	buffer->impl.metal_buffer = (__bridge_retained void *)[get_metal_device() newBufferWithLength:size options:MTLResourceOptionCPUCacheModeDefault];
 }
 
-void gpu_constant_buffer_lock(gpu_buffer_t *buffer, int start, int count) {
+void gpu_constant_buffer_lock(gpu_buffer_t *buffer, uint32_t start, uint32_t count) {
 	id<MTLBuffer> buf  = (__bridge id<MTLBuffer>)buffer->impl.metal_buffer;
 	uint8_t      *data = (uint8_t *)[buf contents];
 	buffer->data       = &data[start];
