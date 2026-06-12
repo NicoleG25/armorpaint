@@ -42,7 +42,7 @@ void ui_toolbar_tool_properties_menu() {
 void ui_toolbar_draw_highlight() {
 	i32 size = ui_toolbar_w(false) - 4;
 	draw_set_color(g_theme->HIGHLIGHT_COL);
-	ui_draw_rect(true, g_ui->_x + -1, g_ui->_y + 2, size + 2, size + 2);
+	ui_draw_rect(true, true, g_ui->_x + -1, g_ui->_y + 2, size + 2, size + 2);
 }
 
 void ui_toolbar_draw_tool(i32 tool, gpu_texture_t *img, i32 icon_accent) {

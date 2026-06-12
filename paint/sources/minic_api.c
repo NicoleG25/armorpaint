@@ -1038,7 +1038,7 @@ void minic_register_builtins() {
 	R(ui_fade_color, "v(f)");
 	R(ui_draw_string, "v(p,f,f,i,i)");
 	R(ui_draw_shadow, "v(f,f,f,f)");
-	R(ui_draw_rect, "v(i,f,f,f,f)");
+	R(ui_draw_rect, "v(i,i,f,f,f,f)");
 	R(ui_start_text_edit, "v(p,i)");
 	R(UI_SCALE, "f()");
 	R(UI_ELEMENT_W, "f()");

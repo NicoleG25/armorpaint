@@ -727,7 +727,7 @@ void tab_layers_draw_layer_context_menu_draw() {
 		    5);
 		ui_combo(base_res_handle, ar, tr("Resolution"), true, UI_ALIGN_LEFT, true);
 		if (base_res_handle->changed) {
-			ui_menu_keep_open = true;
+			ui_menu_show_first = true;
 			config_set_texture_res(base_res_handle->i);
 			layers_on_resized();
 		}

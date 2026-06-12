@@ -325,8 +325,7 @@ void box_preferences_theme_tab() {
 
 		g_ui->changed = false;
 
-		if (string_equals(key, "FILL_WINDOW_BG") || string_equals(key, "FILL_BUTTON_BG") || string_equals(key, "FULL_TABS") ||
-		    string_equals(key, "ROUND_CORNERS") || string_equals(key, "SHADOWS")) {
+		if (string_equals(key, "FILL_BUTTON_BG") || string_equals(key, "FULL_TABS") || string_equals(key, "SHADOWS")) {
 			h->b             = val > 0;
 			bool b           = ui_check(h, key, "");
 			*(u32_theme + i) = b;

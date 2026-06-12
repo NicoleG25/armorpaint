@@ -50,7 +50,8 @@ void ui_menu_render() {
 	}
 
 	// First draw out of screen, then align the menu based on menu height
-	if (ui_menu_show_first) {
+	bool out_of_screen = ui_menu_show_first;
+	if (out_of_screen) {
 		ui_menu_x -= iron_window_width() * 2;
 		ui_menu_y -= iron_window_height() * 2;
 	}
@@ -80,8 +81,10 @@ void ui_menu_render() {
 		ui_menu_show_first = false;
 		ui_menu_keep_open  = true;
 		ui_menu_h          = g_ui->_y - ui_menu_y;
-		ui_menu_x += iron_window_width() * 2;
-		ui_menu_y += iron_window_height() * 2;
+		if (out_of_screen) {
+			ui_menu_x += iron_window_width() * 2;
+			ui_menu_y += iron_window_height() * 2;
+		}
 		ui_menu_fit_to_screen();
 		ui_menu_render(); // Render at correct position now
 	}
@@ -245,7 +248,7 @@ void ui_menu_align() {
 void ui_menu_begin() {
 	ui_draw_shadow(g_ui->_x, g_ui->_y, g_ui->_w, ui_menu_h);
 	draw_set_color(g_theme->SEPARATOR_COL);
-	ui_draw_rect(true, g_ui->_x, g_ui->_y, g_ui->_w, ui_menu_h);
+	ui_draw_rect(true, true, g_ui->_x, g_ui->_y, g_ui->_w, ui_menu_h);
 	draw_set_color(0xffffffff);
 }
 
@@ -258,7 +261,7 @@ void ui_menu_sub_begin(i32 items) {
 	g_ui->_y -= UI_ELEMENT_H();
 	ui_draw_shadow(g_ui->_x, g_ui->_y, g_ui->_w, UI_ELEMENT_H() * items);
 	draw_set_color(g_theme->SEPARATOR_COL);
-	ui_draw_rect(true, g_ui->_x, g_ui->_y, g_ui->_w, UI_ELEMENT_H() * items);
+	ui_draw_rect(true, true, g_ui->_x, g_ui->_y, g_ui->_w, UI_ELEMENT_H() * items);
 	draw_set_color(0xffffffff);
 }
 

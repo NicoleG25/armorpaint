@@ -672,7 +672,7 @@ void         ui_end_element_of_size(float h);
 void         ui_fade_color(float amount);
 void         ui_draw_string(char *text, float x, float y, int align, int truncate);
 void         ui_draw_shadow(float x, float y, float w, float h);
-void         ui_draw_rect(int fill, float x, float y, float w, float h);
+void         ui_draw_rect(int fill, int shadows, float x, float y, float w, float h);
 void         ui_start_text_edit(ui_handle_t *handle, int align);
 float        UI_SCALE(void);
 float        UI_ELEMENT_W(void);

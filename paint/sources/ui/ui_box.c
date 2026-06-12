@@ -19,18 +19,6 @@ void ui_box_init() {
 	ui_box_click_to_hide = true;
 }
 
-void ui_box_window_border() {
-	if (g_ui->scissor) {
-		g_ui->scissor = false;
-		gpu_disable_scissor();
-	}
-	// Border
-	draw_set_color(g_theme->SEPARATOR_COL);
-	draw_filled_rect(0, 0, 1, g_ui->_window_h);
-	draw_filled_rect(0 + g_ui->_window_w - 1, 0, 1, g_ui->_window_h);
-	draw_filled_rect(0, 0 + g_ui->_window_h - 1, g_ui->_window_w, 1);
-}
-
 void ui_box_render() {
 	if (!ui_menu_show) {
 		bool in_use    = g_ui->combo_selected_handle != NULL;
@@ -124,7 +112,6 @@ void ui_box_render() {
 			if (ui_icon_button(tr("OK"), ICON_CHECK, UI_ALIGN_CENTER)) {
 				ui_box_hide();
 			}
-			ui_box_window_border();
 		}
 		ui_end();
 	}
@@ -134,7 +121,6 @@ void ui_box_render() {
 		if (ui_window(ui_box_hwnd, left, top, mw, mh, ui_box_draggable)) {
 			g_ui->_y += 10;
 			ui_box_commands();
-			ui_box_window_border();
 		}
 		g_ui->input_enabled = true;
 		ui_end();

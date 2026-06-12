@@ -474,8 +474,6 @@ void config_load_theme(char *theme, bool tag_redraw) {
 		gc_root(g_theme);
 	}
 
-	g_theme->FILL_WINDOW_BG = true;
-
 	if (tag_redraw) {
 		g_ui->ops->theme = g_theme;
 		base_redraw_ui();
