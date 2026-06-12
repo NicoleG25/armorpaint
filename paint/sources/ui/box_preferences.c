@@ -1003,9 +1003,12 @@ void box_preferences_plugins_tab_plugin_menu() {
 	}
 	if (ui_menu_button(tr("Edit in Script Tab"), "", ICON_NONE)) {
 		buffer_t *blob            = data_get_blob(string("plugins/%s", _box_preferences_f));
-		tab_scripts_hscript->text = string_copy(sys_buffer_to_string(blob));
+		tab_scripts_set(sys_buffer_to_string(blob));
 		data_delete_blob(string("plugins/%s", _box_preferences_f));
 		console_info(tr("Script opened"));
+		ui_base_htabs->buffer[TAB_AREA_SIDEBAR0]->i       = 2; // Scripts tab
+		ui_base_hwnds->buffer[TAB_AREA_SIDEBAR0]->redraws = 2;
+		g_config->layout_tabs->buffer[TAB_AREA_SIDEBAR0]  = 2;
 	}
 	if (ui_menu_button(tr("Export"), "", ICON_EXPORT)) {
 		ui_files_show("c", true, false, &box_preferences_plugins_tab_plugin_menu_export);
@@ -1056,7 +1059,7 @@ void main() {\n\
 		gc_unroot(box_preferences_files_plugin);
 		box_preferences_files_plugin = NULL; // Refresh file list
 		ui_box_hide();
-		box_preferences_htab->i = 6; // Plugins
+		box_preferences_htab->i = PREFERENCES_TAB_PLUGINS;
 		box_preferences_show();
 	}
 }
