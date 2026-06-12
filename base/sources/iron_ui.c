@@ -237,8 +237,8 @@ void ui_draw_rect_round_top(bool shadows, float x, float y, float w, float h) {
 	if (shadows) {
 		uint32_t color = draw_get_color();
 		draw_set_color(color + 0x00030303);
-		draw_filled_rect(x, y + r, 1, h - r * 2.0);
-		draw_filled_rect(x + w - 1, y + r, 1, h - r * 2.0);
+		draw_filled_rect(x, y + r, 1, h - r);
+		draw_filled_rect(x + w - 1, y + r, 1, h - r);
 		draw_set_color(color + 0x00080808);
 		draw_filled_rect(x + r, y, w - r * 2.0, 1);
 	}
