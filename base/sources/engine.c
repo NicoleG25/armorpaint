@@ -614,56 +614,26 @@ void shader_context_compile(shader_context_t *raw) {
 }
 
 i32 shader_context_type_size(char *t) {
+	if (strcmp(t, "int") == 0)
+		return 4;
+	if (strcmp(t, "float") == 0)
+		return 4;
+	if (strcmp(t, "float2") == 0)
+		return 8;
+	if (strcmp(t, "float4") == 0)
+		return 16;
+	if (strcmp(t, "float4x4") == 0)
+		return 64;
 #ifdef IRON_DIRECT3D12
-	if (strcmp(t, "int") == 0)
-		return 4;
-	if (strcmp(t, "float") == 0)
-		return 4;
-	if (strcmp(t, "vec2") == 0)
-		return 8;
-	if (strcmp(t, "vec3") == 0)
-		return 12;
-	if (strcmp(t, "vec4") == 0)
-		return 16;
-	if (strcmp(t, "mat3") == 0)
-		return 48;
-	if (strcmp(t, "mat4") == 0)
-		return 64;
-	if (strcmp(t, "float2") == 0)
-		return 8;
 	if (strcmp(t, "float3") == 0)
 		return 12;
-	if (strcmp(t, "float4") == 0)
-		return 16;
 	if (strcmp(t, "float3x3") == 0)
-		return 48;
-	if (strcmp(t, "float4x4") == 0)
-		return 64;
+		return 44; // 16 + 16 + 12
 #else
-	if (strcmp(t, "int") == 0)
-		return 4;
-	if (strcmp(t, "float") == 0)
-		return 4;
-	if (strcmp(t, "vec2") == 0)
-		return 8;
-	if (strcmp(t, "vec3") == 0)
-		return 16;
-	if (strcmp(t, "vec4") == 0)
-		return 16;
-	if (strcmp(t, "mat3") == 0)
-		return 48;
-	if (strcmp(t, "mat4") == 0)
-		return 64;
-	if (strcmp(t, "float2") == 0)
-		return 8;
 	if (strcmp(t, "float3") == 0)
 		return 16;
-	if (strcmp(t, "float4") == 0)
-		return 16;
 	if (strcmp(t, "float3x3") == 0)
-		return 48;
-	if (strcmp(t, "float4x4") == 0)
-		return 64;
+		return 48; // std140 array elements are padded to 16
 #endif
 	return 0;
 }
@@ -1351,7 +1321,7 @@ bool uniforms_set_context_const(i32 location, shader_const_t *c) {
 
 	camera_object_t *camera = scene_camera;
 
-	if (string_equals(c->type, "mat4")) {
+	if (string_equals(c->type, "float4x4")) {
 		mat4_t m = mat4_nan();
 		if (string_equals(c->link, "_view_matrix")) {
 			m = camera->v;
@@ -1385,7 +1355,7 @@ bool uniforms_set_context_const(i32 location, shader_const_t *c) {
 		gpu_set_mat4(location, m);
 		return true;
 	}
-	else if (string_equals(c->type, "vec4")) {
+	else if (string_equals(c->type, "float4")) {
 		vec4_t v = vec4_nan();
 		if (string_equals(c->link, "_envmap_irradiance0")) {
 			f32_array_t *fa = scene_world == NULL ? world_data_get_empty_irradiance() : scene_world->_->irradiance;
@@ -1448,7 +1418,7 @@ bool uniforms_set_context_const(i32 location, shader_const_t *c) {
 		}
 		return true;
 	}
-	else if (string_equals(c->type, "vec3")) {
+	else if (string_equals(c->type, "float3")) {
 		vec4_t v = vec4_nan();
 
 		if (string_equals(c->link, "_camera_pos")) {
@@ -1470,7 +1440,7 @@ bool uniforms_set_context_const(i32 location, shader_const_t *c) {
 		}
 		return true;
 	}
-	else if (string_equals(c->type, "vec2")) {
+	else if (string_equals(c->type, "float2")) {
 		vec4_t v = vec4_nan();
 
 		if (string_equals(c->link, "_vec2x")) {
@@ -1617,7 +1587,7 @@ void uniforms_set_obj_const(object_t *obj, i32 loc, shader_const_t *c) {
 	}
 
 	camera_object_t *camera = scene_camera;
-	if (string_equals(c->type, "mat4")) {
+	if (string_equals(c->type, "float4x4")) {
 		mat4_t m = mat4_nan();
 
 		if (string_equals(c->link, "_world_matrix")) {
@@ -1642,7 +1612,7 @@ void uniforms_set_obj_const(object_t *obj, i32 loc, shader_const_t *c) {
 		}
 		gpu_set_mat4(loc, m);
 	}
-	else if (string_equals(c->type, "mat3")) {
+	else if (string_equals(c->type, "float3x3")) {
 		mat3_t m = mat3_nan();
 
 		if (string_equals(c->link, "_normal_matrix")) {
@@ -1659,7 +1629,7 @@ void uniforms_set_obj_const(object_t *obj, i32 loc, shader_const_t *c) {
 		}
 		gpu_set_mat3(loc, m);
 	}
-	else if (string_equals(c->type, "vec4")) {
+	else if (string_equals(c->type, "float4")) {
 		vec4_t v = vec4_nan();
 
 		if (uniforms_vec4_links != NULL) {
@@ -1671,7 +1641,7 @@ void uniforms_set_obj_const(object_t *obj, i32 loc, shader_const_t *c) {
 		}
 		gpu_set_float4(loc, v.x, v.y, v.z, v.w);
 	}
-	else if (string_equals(c->type, "vec3")) {
+	else if (string_equals(c->type, "float3")) {
 		vec4_t v = vec4_nan();
 
 		if (string_equals(c->link, "_dim")) { // Model space
@@ -1697,7 +1667,7 @@ void uniforms_set_obj_const(object_t *obj, i32 loc, shader_const_t *c) {
 		}
 		gpu_set_float3(loc, v.x, v.y, v.z);
 	}
-	else if (string_equals(c->type, "vec2")) {
+	else if (string_equals(c->type, "float2")) {
 		vec2_t v = vec2_nan();
 
 		if (uniforms_vec2_links != NULL) {
@@ -1811,14 +1781,14 @@ material_data_t *current_material(object_t *object) {
 }
 
 void uniforms_set_material_const(i32 location, shader_const_t *shader_const, bind_const_t *material_const) {
-	if (string_equals(shader_const->type, "vec4")) {
+	if (string_equals(shader_const->type, "float4")) {
 		gpu_set_float4(location, material_const->vec->buffer[0], material_const->vec->buffer[1], material_const->vec->buffer[2],
 		               material_const->vec->buffer[3]);
 	}
-	else if (string_equals(shader_const->type, "vec3")) {
+	else if (string_equals(shader_const->type, "float3")) {
 		gpu_set_float3(location, material_const->vec->buffer[0], material_const->vec->buffer[1], material_const->vec->buffer[2]);
 	}
-	else if (string_equals(shader_const->type, "vec2")) {
+	else if (string_equals(shader_const->type, "float2")) {
 		gpu_set_float2(location, material_const->vec->buffer[0], material_const->vec->buffer[1]);
 	}
 	else if (string_equals(shader_const->type, "float")) {
