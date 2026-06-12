@@ -1104,39 +1104,39 @@ static int16_t  mesh__ScaleZ_nor[]     = {0,      0, 0,      0, 0,      0, 0,   
 static uint32_t mesh__ScaleZ_indices[] = {0,  1,  2,  0,  2,  3,  4,  5,  6,  4,  6,  7,  8,  9,  10, 8,  10, 11,
                                           12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23};
 
-static int16_t  mesh__TranslateX_pos[]     = {-11796, -3276, -3276, 0,      -11796, -3276, 3276,  0,      -11796, 3276,  3276,  0,      -11796, 3276,  -3276, 0,
-                                              -11796, 3276,  -3276, 0,      -11796, 3276,  3276,  0,      11796,  3276,  3276,  0,      11796,  3276,  -3276, 0,
-                                              11796,  3276,  -3276, 0,      11796,  3276,  3276,  0,      11796,  -3276, 3276,  0,      11796,  -3276, -3276, 0,
-                                              11796,  -3276, -3276, 0,      11796,  -3276, 3276,  0,      -11796, -3276, 3276,  0,      -11796, -3276, -3276, 0,
-                                              -11796, 3276,  -3276, -32767, 11796,  3276,  -3276, -32767, 11796,  -3276, -3276, -32767, -11796, -3276, -3276, -32767,
-                                              11796,  3276,  3276,  32767,  -11796, 3276,  3276,  32767,  -11796, -3276, 3276,  32767,  11796,  -3276, 3276,  32767};
-static int16_t  mesh__TranslateX_nor[]     = {-32767, 0, -32767, 0, -32767, 0, -32767, 0, 0, 32767,  0, 32767,  0, 32767,  0, 32767,
-                                              32767,  0, 32767,  0, 32767,  0, 32767,  0, 0, -32767, 0, -32767, 0, -32767, 0, -32767,
-                                              0,      0, 0,      0, 0,      0, 0,      0, 0, 0,      0, 0,      0, 0,      0, 0};
+static int16_t mesh__TranslateX_pos[] = {-11796, -3276, -3276, 0,      -11796, -3276, 3276,  0,      -11796, 3276,  3276,  0,      -11796, 3276,  -3276, 0,
+                                         -11796, 3276,  -3276, 0,      -11796, 3276,  3276,  0,      11796,  3276,  3276,  0,      11796,  3276,  -3276, 0,
+                                         11796,  3276,  -3276, 0,      11796,  3276,  3276,  0,      11796,  -3276, 3276,  0,      11796,  -3276, -3276, 0,
+                                         11796,  -3276, -3276, 0,      11796,  -3276, 3276,  0,      -11796, -3276, 3276,  0,      -11796, -3276, -3276, 0,
+                                         -11796, 3276,  -3276, -32767, 11796,  3276,  -3276, -32767, 11796,  -3276, -3276, -32767, -11796, -3276, -3276, -32767,
+                                         11796,  3276,  3276,  32767,  -11796, 3276,  3276,  32767,  -11796, -3276, 3276,  32767,  11796,  -3276, 3276,  32767};
+static int16_t mesh__TranslateX_nor[] = {-32767, 0, -32767, 0, -32767, 0, -32767, 0, 0, 32767,  0, 32767,  0, 32767,  0, 32767,
+                                         32767,  0, 32767,  0, 32767,  0, 32767,  0, 0, -32767, 0, -32767, 0, -32767, 0, -32767,
+                                         0,      0, 0,      0, 0,      0, 0,      0, 0, 0,      0, 0,      0, 0,      0, 0};
 static uint32_t mesh__TranslateX_indices[] = {0,  1,  2,  0,  2,  3,  4,  5,  6,  4,  6,  7,  8,  9,  10, 8,  10, 11,
                                               12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23};
 
-static int16_t  mesh__TranslateY_pos[]     = {3276,  -11796, -3276, 0,      3276,  -11796, 3276,  0,      -3276, -11796, 3276,  0,      -3276, -11796, -3276, 0,
-                                              -3276, -11796, -3276, 0,      -3276, -11796, 3276,  0,      -3276, 11796,  3276,  0,      -3276, 11796,  -3276, 0,
-                                              -3276, 11796,  -3276, 0,      -3276, 11796,  3276,  0,      3276,  11796,  3276,  0,      3276,  11796,  -3276, 0,
-                                              3276,  11796,  -3276, 0,      3276,  11796,  3276,  0,      3276,  -11796, 3276,  0,      3276,  -11796, -3276, 0,
-                                              -3276, -11796, -3276, -32767, -3276, 11796,  -3276, -32767, 3276,  11796,  -3276, -32767, 3276,  -11796, -3276, -32767,
-                                              -3276, 11796,  3276,  32767,  -3276, -11796, 3276,  32767,  3276,  -11796, 3276,  32767,  3276,  11796,  3276,  32767};
-static int16_t  mesh__TranslateY_nor[]     = {0, -32767, 0, -32767, 0, -32767, 0, -32767, -32767, 0, -32767, 0, -32767, 0, -32767, 0,
-                                              0, 32767,  0, 32767,  0, 32767,  0, 32767,  32767,  0, 32767,  0, 32767,  0, 32767,  0,
-                                              0, 0,      0, 0,      0, 0,      0, 0,      0,      0, 0,      0, 0,      0, 0,      0};
+static int16_t mesh__TranslateY_pos[] = {3276,  -11796, -3276, 0,      3276,  -11796, 3276,  0,      -3276, -11796, 3276,  0,      -3276, -11796, -3276, 0,
+                                         -3276, -11796, -3276, 0,      -3276, -11796, 3276,  0,      -3276, 11796,  3276,  0,      -3276, 11796,  -3276, 0,
+                                         -3276, 11796,  -3276, 0,      -3276, 11796,  3276,  0,      3276,  11796,  3276,  0,      3276,  11796,  -3276, 0,
+                                         3276,  11796,  -3276, 0,      3276,  11796,  3276,  0,      3276,  -11796, 3276,  0,      3276,  -11796, -3276, 0,
+                                         -3276, -11796, -3276, -32767, -3276, 11796,  -3276, -32767, 3276,  11796,  -3276, -32767, 3276,  -11796, -3276, -32767,
+                                         -3276, 11796,  3276,  32767,  -3276, -11796, 3276,  32767,  3276,  -11796, 3276,  32767,  3276,  11796,  3276,  32767};
+static int16_t mesh__TranslateY_nor[] = {0, -32767, 0, -32767, 0, -32767, 0, -32767, -32767, 0, -32767, 0, -32767, 0, -32767, 0,
+                                         0, 32767,  0, 32767,  0, 32767,  0, 32767,  32767,  0, 32767,  0, 32767,  0, 32767,  0,
+                                         0, 0,      0, 0,      0, 0,      0, 0,      0,      0, 0,      0, 0,      0, 0,      0};
 static uint32_t mesh__TranslateY_indices[] = {0,  1,  2,  0,  2,  3,  4,  5,  6,  4,  6,  7,  8,  9,  10, 8,  10, 11,
                                               12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23};
 
-static int16_t  mesh__TranslateZ_pos[] = {-3276, -3276, 11796,  32767,  3276,  -3276, 11796,  32767,  3276,  3276,  11796,  32767,  -3276, 3276,  11796,  32767,
-                                          -3276, 3276,  11796,  0,      3276,  3276,  11796,  0,      3276,  3276,  -11796, 0,      -3276, 3276,  -11796, 0,
-                                          -3276, 3276,  -11796, -32767, 3276,  3276,  -11796, -32767, 3276,  -3276, -11796, -32767, -3276, -3276, -11796, -32767,
-                                          -3276, -3276, -11796, 0,      3276,  -3276, -11796, 0,      3276,  -3276, 11796,  0,      -3276, -3276, 11796,  0,
-                                          -3276, 3276,  11796,  0,      -3276, 3276,  -11796, 0,      -3276, -3276, -11796, 0,      -3276, -3276, 11796,  0,
-                                          3276,  3276,  -11796, 0,      3276,  3276,  11796,  0,      3276,  -3276, 11796,  0,      3276,  -3276, -11796, 0};
-static int16_t  mesh__TranslateZ_nor[] = {0,      0, 0,      0, 0,      0, 0,      0, 0,     32767,  0,     32767,  0,     32767,  0,     32767,
-                                          0,      0, 0,      0, 0,      0, 0,      0, 0,     -32767, 0,     -32767, 0,     -32767, 0,     -32767,
-                                          -32767, 0, -32767, 0, -32767, 0, -32767, 0, 32767, 0,      32767, 0,      32767, 0,      32767, 0};
+static int16_t mesh__TranslateZ_pos[] = {-3276, -3276, 11796,  32767,  3276,  -3276, 11796,  32767,  3276,  3276,  11796,  32767,  -3276, 3276,  11796,  32767,
+                                         -3276, 3276,  11796,  0,      3276,  3276,  11796,  0,      3276,  3276,  -11796, 0,      -3276, 3276,  -11796, 0,
+                                         -3276, 3276,  -11796, -32767, 3276,  3276,  -11796, -32767, 3276,  -3276, -11796, -32767, -3276, -3276, -11796, -32767,
+                                         -3276, -3276, -11796, 0,      3276,  -3276, -11796, 0,      3276,  -3276, 11796,  0,      -3276, -3276, 11796,  0,
+                                         -3276, 3276,  11796,  0,      -3276, 3276,  -11796, 0,      -3276, -3276, -11796, 0,      -3276, -3276, 11796,  0,
+                                         3276,  3276,  -11796, 0,      3276,  3276,  11796,  0,      3276,  -3276, 11796,  0,      3276,  -3276, -11796, 0};
+static int16_t mesh__TranslateZ_nor[] = {0,      0, 0,      0, 0,      0, 0,      0, 0,     32767,  0,     32767,  0,     32767,  0,     32767,
+                                         0,      0, 0,      0, 0,      0, 0,      0, 0,     -32767, 0,     -32767, 0,     -32767, 0,     -32767,
+                                         -32767, 0, -32767, 0, -32767, 0, -32767, 0, 32767, 0,      32767, 0,      32767, 0,      32767, 0};
 static uint32_t mesh__TranslateZ_indices[] = {0,  1,  2,  0,  2,  3,  4,  5,  6,  4,  6,  7,  8,  9,  10, 8,  10, 11,
                                               12, 13, 14, 12, 14, 15, 16, 17, 18, 16, 18, 19, 20, 21, 22, 20, 22, 23};
 
@@ -2884,14 +2884,14 @@ scene_t *startup_get_scene(void) {
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "WVP";
-				c->type                  = "mat4";
+				c->type                  = "float4x4";
 				c->link                  = "_world_view_proj_matrix";
 				sc->constants->buffer[0] = c;
 			}
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "N";
-				c->type                  = "mat3";
+				c->type                  = "float3x3";
 				c->link                  = "_normal_matrix";
 				sc->constants->buffer[1] = c;
 			}
@@ -2932,7 +2932,7 @@ scene_t *startup_get_scene(void) {
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "WVP";
-				c->type                  = "mat4";
+				c->type                  = "float4x4";
 				c->link                  = "_world_view_proj_matrix";
 				sc->constants->buffer[0] = c;
 			}
@@ -2982,14 +2982,14 @@ scene_t *startup_get_scene(void) {
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "WVP";
-				c->type                  = "mat4";
+				c->type                  = "float4x4";
 				c->link                  = "_world_view_proj_matrix";
 				sc->constants->buffer[0] = c;
 			}
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "N";
-				c->type                  = "mat3";
+				c->type                  = "float3x3";
 				c->link                  = "_normal_matrix";
 				sc->constants->buffer[1] = c;
 			}
@@ -3044,14 +3044,14 @@ scene_t *startup_get_scene(void) {
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "WVP";
-				c->type                  = "mat4";
+				c->type                  = "float4x4";
 				c->link                  = "_world_view_proj_matrix";
 				sc->constants->buffer[0] = c;
 			}
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "N";
-				c->type                  = "mat3";
+				c->type                  = "float3x3";
 				c->link                  = "_normal_matrix";
 				sc->constants->buffer[1] = c;
 			}
@@ -3337,7 +3337,7 @@ scene_t *startup_get_scene(void) {
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "screen_size_inv";
-				c->type                  = "vec2";
+				c->type                  = "float2";
 				c->link                  = "_screen_size_inv";
 				sc->constants->buffer[0] = c;
 			}
@@ -3371,7 +3371,7 @@ scene_t *startup_get_scene(void) {
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "screen_size_inv";
-				c->type                  = "vec2";
+				c->type                  = "float2";
 				c->link                  = "_screen_size_inv";
 				sc->constants->buffer[0] = c;
 			}
@@ -3449,28 +3449,28 @@ scene_t *startup_get_scene(void) {
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "invP";
-				c->type                  = "mat4";
+				c->type                  = "float4x4";
 				c->link                  = "_inv_proj_matrix";
 				sc->constants->buffer[0] = c;
 			}
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "P";
-				c->type                  = "mat4";
+				c->type                  = "float4x4";
 				c->link                  = "_proj_matrix";
 				sc->constants->buffer[1] = c;
 			}
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "V3";
-				c->type                  = "mat3";
+				c->type                  = "float3x3";
 				c->link                  = "_view_matrix3";
 				sc->constants->buffer[2] = c;
 			}
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "camera_proj";
-				c->type                  = "vec2";
+				c->type                  = "float2";
 				c->link                  = "_camera_plane_proj";
 				sc->constants->buffer[3] = c;
 			}
@@ -3515,7 +3515,7 @@ scene_t *startup_get_scene(void) {
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "dir_inv";
-				c->type                  = "vec2";
+				c->type                  = "float2";
 				c->link                  = "_vec2x_inv";
 				sc->constants->buffer[0] = c;
 			}
@@ -3554,7 +3554,7 @@ scene_t *startup_get_scene(void) {
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "dir_inv";
-				c->type                  = "vec2";
+				c->type                  = "float2";
 				c->link                  = "_vec2y_inv";
 				sc->constants->buffer[0] = c;
 			}
@@ -3599,7 +3599,7 @@ scene_t *startup_get_scene(void) {
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "screen_size_inv";
-				c->type                  = "vec2";
+				c->type                  = "float2";
 				c->link                  = "_screen_size_inv";
 				sc->constants->buffer[0] = c;
 			}
@@ -3644,7 +3644,7 @@ scene_t *startup_get_scene(void) {
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "screen_size_inv";
-				c->type                  = "vec2";
+				c->type                  = "float2";
 				c->link                  = "_screen_size_inv";
 				sc->constants->buffer[0] = c;
 			}
@@ -3833,7 +3833,7 @@ scene_t *startup_get_scene(void) {
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "tex_size";
-				c->type                  = "vec2";
+				c->type                  = "float2";
 				c->link                  = "_size(tex)";
 				sc->constants->buffer[1] = c;
 			}
@@ -3880,7 +3880,7 @@ scene_t *startup_get_scene(void) {
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "tex_size";
-				c->type                  = "vec2";
+				c->type                  = "float2";
 				c->link                  = "_size(tex)";
 				sc->constants->buffer[1] = c;
 			}
@@ -3927,7 +3927,7 @@ scene_t *startup_get_scene(void) {
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "tex_size";
-				c->type                  = "vec2";
+				c->type                  = "float2";
 				c->link                  = "_size(tex)";
 				sc->constants->buffer[1] = c;
 			}
@@ -4006,21 +4006,21 @@ scene_t *startup_get_scene(void) {
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "invVP";
-				c->type                  = "mat4";
+				c->type                  = "float4x4";
 				c->link                  = "_inv_view_proj_matrix";
 				sc->constants->buffer[0] = c;
 			}
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "eye";
-				c->type                  = "vec3";
+				c->type                  = "float3";
 				c->link                  = "_camera_pos";
 				sc->constants->buffer[1] = c;
 			}
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "envmap_data";
-				c->type                  = "vec4";
+				c->type                  = "float4";
 				c->link                  = "_envmap_data";
 				sc->constants->buffer[2] = c;
 			}
@@ -4034,63 +4034,63 @@ scene_t *startup_get_scene(void) {
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "camera_proj";
-				c->type                  = "vec2";
+				c->type                  = "float2";
 				c->link                  = "_camera_plane_proj";
 				sc->constants->buffer[4] = c;
 			}
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "eye_look";
-				c->type                  = "vec3";
+				c->type                  = "float3";
 				c->link                  = "_camera_look";
 				sc->constants->buffer[5] = c;
 			}
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "shirr0";
-				c->type                  = "vec4";
+				c->type                  = "float4";
 				c->link                  = "_envmap_irradiance0";
 				sc->constants->buffer[6] = c;
 			}
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "shirr1";
-				c->type                  = "vec4";
+				c->type                  = "float4";
 				c->link                  = "_envmap_irradiance1";
 				sc->constants->buffer[7] = c;
 			}
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "shirr2";
-				c->type                  = "vec4";
+				c->type                  = "float4";
 				c->link                  = "_envmap_irradiance2";
 				sc->constants->buffer[8] = c;
 			}
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "shirr3";
-				c->type                  = "vec4";
+				c->type                  = "float4";
 				c->link                  = "_envmap_irradiance3";
 				sc->constants->buffer[9] = c;
 			}
 			{
 				shader_const_t *c         = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                   = "shirr4";
-				c->type                   = "vec4";
+				c->type                   = "float4";
 				c->link                   = "_envmap_irradiance4";
 				sc->constants->buffer[10] = c;
 			}
 			{
 				shader_const_t *c         = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                   = "shirr5";
-				c->type                   = "vec4";
+				c->type                   = "float4";
 				c->link                   = "_envmap_irradiance5";
 				sc->constants->buffer[11] = c;
 			}
 			{
 				shader_const_t *c         = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                   = "shirr6";
-				c->type                   = "vec4";
+				c->type                   = "float4";
 				c->link                   = "_envmap_irradiance6";
 				sc->constants->buffer[12] = c;
 			}
@@ -4188,14 +4188,14 @@ scene_t *startup_get_scene(void) {
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "SMVP";
-				c->type                  = "mat4";
+				c->type                  = "float4x4";
 				c->link                  = "_skydome_matrix";
 				sc->constants->buffer[0] = c;
 			}
 			{
 				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
 				c->name                  = "envmap_data_world";
-				c->type                  = "vec4";
+				c->type                  = "float4";
 				c->link                  = "_envmap_data_world";
 				sc->constants->buffer[1] = c;
 			}

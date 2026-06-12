@@ -207,13 +207,13 @@ void pipes_init() {
 		pipes_cursor->depth_mode        = GPU_COMPARE_MODE_ALWAYS;
 		gpu_pipeline_compile(pipes_cursor);
 		pipes_offset              = 0;
-		pipes_cursor_vp           = pipes_get_constant_location("mat4");
-		pipes_cursor_inv_vp       = pipes_get_constant_location("mat4");
-		pipes_cursor_mouse        = pipes_get_constant_location("vec2");
-		pipes_cursor_tex_step     = pipes_get_constant_location("vec2");
+		pipes_cursor_vp           = pipes_get_constant_location("float4x4");
+		pipes_cursor_inv_vp       = pipes_get_constant_location("float4x4");
+		pipes_cursor_mouse        = pipes_get_constant_location("float2");
+		pipes_cursor_tex_step     = pipes_get_constant_location("float2");
 		pipes_cursor_radius       = pipes_get_constant_location("float");
-		pipes_cursor_camera_right = pipes_get_constant_location("vec3");
-		pipes_cursor_tint         = pipes_get_constant_location("vec3");
+		pipes_cursor_camera_right = pipes_get_constant_location("float3");
+		pipes_cursor_tint         = pipes_get_constant_location("float3");
 		pipes_cursor_gbufferd     = 0;
 	}
 
@@ -233,16 +233,16 @@ void pipes_init() {
 		pipes_cursor_decal->depth_mode        = GPU_COMPARE_MODE_ALWAYS;
 		gpu_pipeline_compile(pipes_cursor_decal);
 		pipes_offset                    = 0;
-		pipes_cursor_decal_vp           = pipes_get_constant_location("mat4");
-		pipes_cursor_decal_inv_vp       = pipes_get_constant_location("mat4");
-		pipes_cursor_decal_mouse        = pipes_get_constant_location("vec2");
-		pipes_cursor_decal_tex_step     = pipes_get_constant_location("vec2");
+		pipes_cursor_decal_vp           = pipes_get_constant_location("float4x4");
+		pipes_cursor_decal_inv_vp       = pipes_get_constant_location("float4x4");
+		pipes_cursor_decal_mouse        = pipes_get_constant_location("float2");
+		pipes_cursor_decal_tex_step     = pipes_get_constant_location("float2");
 		pipes_cursor_decal_radius       = pipes_get_constant_location("float");
-		pipes_cursor_decal_camera_right = pipes_get_constant_location("vec3");
+		pipes_cursor_decal_camera_right = pipes_get_constant_location("float3");
 		pipes_cursor_decal_opacity      = pipes_get_constant_location("float");
-		pipes_cursor_decal_angle        = pipes_get_constant_location("vec2");
+		pipes_cursor_decal_angle        = pipes_get_constant_location("float2");
 		pipes_cursor_decal_scale_x      = pipes_get_constant_location("float");
-		pipes_cursor_decal_camera_up    = pipes_get_constant_location("vec3");
+		pipes_cursor_decal_camera_up    = pipes_get_constant_location("float3");
 		pipes_cursor_decal_camera_align = pipes_get_constant_location("float");
 		pipes_cursor_decal_gbufferd     = 0;
 		pipes_cursor_decal_texdecal     = 1;

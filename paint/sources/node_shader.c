@@ -56,20 +56,6 @@ void node_shader_add_constant(node_shader_t *raw, char *s, char *link) {
 		string_array_t *ar    = string_split(s, ": ");
 		char           *uname = ar->buffer[0];
 		char           *utype = ar->buffer[1];
-
-		////
-		if (string_equals(utype, "float2"))
-			utype = "vec2";
-		if (string_equals(utype, "float3"))
-			utype = "vec3";
-		if (string_equals(utype, "float4"))
-			utype = "vec4";
-		if (string_equals(utype, "float3x3"))
-			utype = "mat3";
-		if (string_equals(utype, "float4x4"))
-			utype = "mat4";
-		////
-
 		any_array_push(raw->consts, s);
 		node_shader_context_add_constant(raw->context, utype, uname, link);
 	}
