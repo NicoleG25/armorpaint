@@ -52,6 +52,7 @@ void sculpt_import_mesh_pack_to_texture(gpu_texture_t *target) {
 	draw_scaled_image(imgmesh, 0, 0, config_get_texture_res_x(), config_get_texture_res_y());
 	draw_set_pipeline(NULL);
 	draw_end();
+	gpu_texture_destroy(imgmesh);
 }
 
 static char *sculpt_blend_mode(node_shader_t *kong, i32 blending, char *cola, char *colb, char *opac) {
