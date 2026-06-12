@@ -717,13 +717,13 @@ void ui_menubar_draw_category_items() {
 	}
 	else if (ui_menubar_category == MENUBAR_CATEGORY_HELP) {
 		if (ui_menu_button(tr("Manual"), "", ICON_HELP)) {
-			iron_load_url(string("%s/manual", manifest_url));
+			iron_load_url("https://armorpaint.org/manual");
 		}
 		if (ui_menu_button(tr("How To"), "", ICON_HELP)) {
-			iron_load_url(string("%s/howto", manifest_url));
+			iron_load_url("https://forums.armorpaint.org/c/how-to");
 		}
 		if (ui_menu_button(tr("What's New"), "", ICON_LINK)) {
-			iron_load_url(string("%s/notes", manifest_url));
+			iron_load_url("https://forums.armorpaint.org/c/news");
 		}
 		if (ui_menu_button(tr("Issue Tracker"), "", ICON_LINK)) {
 			iron_load_url("https://github.com/armory3d/armorpaint/issues");
