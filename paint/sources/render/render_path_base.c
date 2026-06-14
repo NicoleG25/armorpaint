@@ -158,6 +158,11 @@ void render_path_base_commands(void (*draw_commands)(void)) {
 	if (render_path_base_is_cached()) {
 		return;
 	}
+
+	if (base_ui_enabled) {
+		util_brush_update();
+	}
+
 	render_path_base_begin();
 
 	render_path_paint_begin();
