@@ -532,6 +532,7 @@ void ui_view2d_update(void *_) {
 		g_ui->_x    = 2;
 		g_ui->_y    = 2 + start_y;
 
+		// Back button
 		if (g_config->touch_ui && !base_view3d_show) {
 			g_ui->_w = math_floor(ew * 0.7 + 3);
 			if (ui_icon_button(tr("Back"), ICON_ARROW_LEFT, UI_ALIGN_CENTER)) {
@@ -544,40 +545,50 @@ void ui_view2d_update(void *_) {
 			g_ui->_y = 2 + start_y;
 		}
 
+		bool full = true;
+		#ifdef IRON_IOS
+		if (config_is_iphone()) {
+			full = false;
+		}
+		#endif
+
 		// Editable layer name
-		g_ui->_w          = ew;
-		ui_handle_t *h    = ui_handle(__ID__);
-		char        *text = ui_view2d_type == VIEW_2D_TYPE_NODE ? g_context->node_preview_name : h->text;
+		if (full) {
+			g_ui->_w          = ew;
+			ui_handle_t *h    = ui_handle(__ID__);
+			char        *text = ui_view2d_type == VIEW_2D_TYPE_NODE ? g_context->node_preview_name : h->text;
 
-		g_ui->_w = math_floor(math_min(draw_string_width(g_font, g_ui->font_size, text) + 15 * UI_SCALE(), 100 * UI_SCALE()));
+			g_ui->_w = math_floor(math_min(draw_string_width(g_font, g_ui->font_size, text) + 15 * UI_SCALE(), 100 * UI_SCALE()));
 
-		if (ui_view2d_type == VIEW_2D_TYPE_ASSET) {
-			asset_t *asset = g_context->texture;
-			if (asset != NULL) {
-				h->text     = string_copy(asset->name);
-				asset->name = string_copy(ui_text_input(h, "", UI_ALIGN_LEFT, true, false));
+			if (ui_view2d_type == VIEW_2D_TYPE_ASSET) {
+				asset_t *asset = g_context->texture;
+				if (asset != NULL) {
+					h->text     = string_copy(asset->name);
+					asset->name = string_copy(ui_text_input(h, "", UI_ALIGN_LEFT, true, false));
+				}
 			}
-		}
-		else if (ui_view2d_type == VIEW_2D_TYPE_NODE) {
-			ui_text(g_context->node_preview_name, UI_ALIGN_LEFT, 0x00000000);
-		}
-		else if (ui_view2d_type == VIEW_2D_TYPE_LAYER) {
-			h->text        = string_copy(l->name);
-			char *new_name = string_copy(ui_text_input(h, "", UI_ALIGN_LEFT, true, false));
-			tab_stages_rename_layer(l->name, new_name);
-			l->name                    = new_name;
-			ui_view2d_text_input_hover = g_ui->is_hovered;
-		}
-		else if (ui_view2d_type == VIEW_2D_TYPE_FONT) {
-			h->text               = string_copy(g_context->font->name);
-			g_context->font->name = ui_text_input(h, "", UI_ALIGN_LEFT, true, false);
+			else if (ui_view2d_type == VIEW_2D_TYPE_NODE) {
+				ui_text(g_context->node_preview_name, UI_ALIGN_LEFT, 0x00000000);
+			}
+			else if (ui_view2d_type == VIEW_2D_TYPE_LAYER) {
+				h->text        = string_copy(l->name);
+				char *new_name = string_copy(ui_text_input(h, "", UI_ALIGN_LEFT, true, false));
+				tab_stages_rename_layer(l->name, new_name);
+				l->name                    = new_name;
+				ui_view2d_text_input_hover = g_ui->is_hovered;
+			}
+			else if (ui_view2d_type == VIEW_2D_TYPE_FONT) {
+				h->text               = string_copy(g_context->font->name);
+				g_context->font->name = ui_text_input(h, "", UI_ALIGN_LEFT, true, false);
+			}
+
+			if (h->changed) {
+				ui_base_hwnds->buffer[0]->redraws = 2;
+			}
+			g_ui->_x += g_ui->_w + 3;
+			g_ui->_y = 2 + start_y;
 		}
 
-		if (h->changed) {
-			ui_base_hwnds->buffer[0]->redraws = 2;
-		}
-		g_ui->_x += g_ui->_w + 3;
-		g_ui->_y = 2 + start_y;
 		g_ui->_w = ew;
 
 		if (ui_view2d_type == VIEW_2D_TYPE_LAYER) {

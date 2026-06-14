@@ -567,6 +567,7 @@ void ui_nodes_draw_menubar() {
 	g_ui->_x    = 0;
 	g_ui->_y    = 2 + start_y;
 
+	// Back button
 	if (g_config->touch_ui && !base_view3d_show && !ui_view2d_show) {
 		g_ui->_w = math_floor(ew + 3);
 		if (ui_icon_button("Back", ICON_ARROW_LEFT, UI_ALIGN_CENTER)) {
@@ -579,51 +580,62 @@ void ui_nodes_draw_menubar() {
 		g_ui->_y = 2 + start_y;
 	}
 
+	bool full = true;
+	#ifdef IRON_IOS
+	if (config_is_iphone()) {
+		full = false;
+	}
+	#endif
+
 	// Editable canvas name
-	g_ui->_w       = ew;
-	ui_handle_t *h = ui_handle(__ID__);
-	h->text        = string_copy(c->name);
-	g_ui->_w       = math_floor(math_min(draw_string_width(g_font, g_ui->font_size, h->text) + 15 * UI_SCALE(), 100 * UI_SCALE()));
-	char *new_name = ui_text_input(h, "", UI_ALIGN_LEFT, true, false);
-	g_ui->_x += g_ui->_w + 3;
-	g_ui->_y = 2 + start_y;
-	g_ui->_w = ew;
-	if (h->changed) { // Check whether renaming is possible and update group links
-		if (ui_nodes_group_stack->length > 0) {
-			bool can_rename = true;
-			for (i32 i = 0; i < g_project->_->material_groups->length; ++i) {
-				node_group_t *m = g_project->_->material_groups->buffer[i];
-				if (string_equals(m->canvas->name, new_name)) {
-					can_rename = false; // Name already used
-				}
-			}
-			if (can_rename) {
-				char *old_name                     = c->name;
-				c->name                            = string_copy(new_name);
-				ui_node_canvas_t_array_t *canvases = any_array_create_from_raw((void *[]){}, 0);
-				for (i32 i = 0; i < g_project->_->materials->length; ++i) {
-					slot_material_t *m = g_project->_->materials->buffer[i];
-					any_array_push(canvases, m->canvas);
-				}
+	if (full) {
+		g_ui->_w       = ew;
+		ui_handle_t *h = ui_handle(__ID__);
+		h->text        = string_copy(c->name);
+		g_ui->_w       = math_floor(math_min(draw_string_width(g_font, g_ui->font_size, h->text) + 15 * UI_SCALE(), 100 * UI_SCALE()));
+		char *new_name = ui_text_input(h, "", UI_ALIGN_LEFT, true, false);
+		g_ui->_x += g_ui->_w + 3;
+		g_ui->_y = 2 + start_y;
+		g_ui->_w = ew;
+		if (h->changed) { // Check whether renaming is possible and update group links
+			if (ui_nodes_group_stack->length > 0) {
+				bool can_rename = true;
 				for (i32 i = 0; i < g_project->_->material_groups->length; ++i) {
 					node_group_t *m = g_project->_->material_groups->buffer[i];
-					any_array_push(canvases, m->canvas);
+					if (string_equals(m->canvas->name, new_name)) {
+						can_rename = false; // Name already used
+					}
 				}
-				for (i32 i = 0; i < canvases->length; ++i) {
-					ui_node_canvas_t *canvas = canvases->buffer[i];
-					for (i32 i = 0; i < canvas->nodes->length; ++i) {
-						ui_node_t *n = canvas->nodes->buffer[i];
-						if (string_equals(n->type, "GROUP") && string_equals(n->name, old_name)) {
-							n->name = string_copy(c->name);
+				if (can_rename) {
+					char *old_name                     = c->name;
+					c->name                            = string_copy(new_name);
+					ui_node_canvas_t_array_t *canvases = any_array_create_from_raw((void *[]){}, 0);
+					for (i32 i = 0; i < g_project->_->materials->length; ++i) {
+						slot_material_t *m = g_project->_->materials->buffer[i];
+						any_array_push(canvases, m->canvas);
+					}
+					for (i32 i = 0; i < g_project->_->material_groups->length; ++i) {
+						node_group_t *m = g_project->_->material_groups->buffer[i];
+						any_array_push(canvases, m->canvas);
+					}
+					for (i32 i = 0; i < canvases->length; ++i) {
+						ui_node_canvas_t *canvas = canvases->buffer[i];
+						for (i32 i = 0; i < canvas->nodes->length; ++i) {
+							ui_node_t *n = canvas->nodes->buffer[i];
+							if (string_equals(n->type, "GROUP") && string_equals(n->name, old_name)) {
+								n->name = string_copy(c->name);
+							}
 						}
 					}
 				}
 			}
-		}
-		else {
-			c->name = string_copy(new_name);
+			else {
+				c->name = string_copy(new_name);
+			}
 		}
 	}
+
+	// Category buttons
 	i32  _BUTTON_COL     = g_theme->BUTTON_COL;
 	bool _SHADOWS        = g_theme->SHADOWS;
 	g_theme->BUTTON_COL  = g_theme->WINDOW_BG_COL;
