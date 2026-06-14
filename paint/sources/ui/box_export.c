@@ -3,7 +3,6 @@
 
 bool                     _box_export_bake_material;
 export_preset_texture_t *_box_export_t;
-bool                     _box_export_apply_displacement;
 bool                     _box_export_merge_vertices;
 
 void box_export_tab_export_textures_run(void *_) {
@@ -438,7 +437,7 @@ void box_export_tab_export_mesh_path_picked(char *path) {
             },
             1);
 	}
-	export_mesh_run(string("%s%s%s", path, PATH_SEP, f), paint_objects, _box_export_apply_displacement, _box_export_merge_vertices);
+	export_mesh_run(string("%s%s%s", path, PATH_SEP, f), paint_objects, _box_export_merge_vertices);
 }
 
 void box_export_tab_export_mesh(ui_handle_t *htab) {
@@ -473,8 +472,6 @@ void box_export_tab_export_mesh(ui_handle_t *htab) {
 		}
 		ui_combo(box_export_mesh_handle, ar, tr("Meshes"), true, UI_ALIGN_LEFT, true);
 
-		bool apply_displacement = ui_check(ui_handle(__ID__), tr("Apply Displacement"), "");
-
 		ui_handle_t *hmerge = ui_handle(__ID__);
 		if (hmerge->init) {
 			hmerge->b = true;
@@ -507,8 +504,7 @@ void box_export_tab_export_mesh(ui_handle_t *htab) {
 		}
 		if (ui_icon_button(tr("Export"), ICON_CHECK, UI_ALIGN_CENTER)) {
 			ui_box_hide();
-			_box_export_apply_displacement = apply_displacement;
-			_box_export_merge_vertices     = merge_vertices;
+			_box_export_merge_vertices = merge_vertices;
 			ui_files_show(export_mesh_format_combo->buffer[g_context->export_mesh_format], true, false, &box_export_tab_export_mesh_path_picked);
 		}
 	}

@@ -5,7 +5,7 @@
 void export_glb_run(char *path, mesh_object_t_array_t *paint_objects);
 #endif
 
-void export_mesh_run(char *path, mesh_object_t_array_t *paint_objects, bool apply_disp, bool merge_vertices) {
+void export_mesh_run(char *path, mesh_object_t_array_t *paint_objects, bool merge_vertices) {
 	if (paint_objects == NULL) {
 		paint_objects = g_project->_->paint_objects;
 	}
@@ -14,7 +14,7 @@ void export_mesh_run(char *path, mesh_object_t_array_t *paint_objects, bool appl
 			export_obj_run_sculpt(path, paint_objects);
 		}
 		else if (merge_vertices) {
-			export_obj_run(path, paint_objects, apply_disp);
+			export_obj_run(path, paint_objects);
 		}
 		else {
 			export_obj_run_fast(path, paint_objects);

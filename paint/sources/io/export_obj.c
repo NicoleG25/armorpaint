@@ -7,7 +7,7 @@ static void export_obj_write_string(u8_array_t *out, char *str) {
 	}
 }
 
-void export_obj_run(char *path, mesh_object_t_array_t *paint_objects, bool apply_disp) {
+void export_obj_run(char *path, mesh_object_t_array_t *paint_objects) {
 	u8_array_t *o = u8_array_create_from_raw((u8[]){}, 0);
 	export_obj_write_string(o, "# armorpaint.org\n");
 
@@ -84,19 +84,6 @@ void export_obj_run(char *path, mesh_object_t_array_t *paint_objects, bool apply
 				texa2->buffer[ti * 2 + 1] = texa->buffer[i * 2 + 1];
 				ti++;
 			}
-		}
-		if (apply_disp) {
-			// let height: buffer_t = gpu_get_texture_pixels(layers[0].texpaint_pack);
-			// let res: i32 = layers[0].texpaint_pack.width;
-			// let strength: f32 = 0.1;
-			// for (let i: i32 = 0; i < len; ++i) {
-			// 	let x: i32 = math_floor(texa2[i * 2    ] / 32767 * res);
-			// 	let y: i32 = math_floor((1.0 - texa2[i * 2 + 1] / 32767) * res);
-			// 	let h: f32 = (1.0 - height.get((y * res + x) * 4 + 3) / 255) * strength;
-			// 	posa2[i * 3    ] -= math_floor(nora2[i * 3    ] * inv * h / sc);
-			// 	posa2[i * 3 + 1] -= math_floor(nora2[i * 3 + 1] * inv * h / sc);
-			// 	posa2[i * 3 + 2] -= math_floor(nora2[i * 3 + 2] * inv * h / sc);
-			// }
 		}
 
 		export_obj_write_string(o, string("o %s\n", p->base->name));
