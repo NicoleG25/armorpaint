@@ -6,7 +6,11 @@ void util_select_update() {
 		if (base_ui_enabled && !base_is_dragging && !base_is_resizing) {
 			f32  mx          = mouse_view_x();
 			f32  my          = mouse_view_y();
-			bool in_viewport = mx < sys_w() && mx > 0 && my < sys_h() && my > 0;
+			bool in_viewport = context_in_3d_view();
+
+			if (context_is_floating_toolbar() && mx < ui_toolbar_x() + ui_toolbar_w(false)) {
+				in_viewport = false;
+			}
 
 			if (mouse_started("left") && in_viewport) {
 				g_context->select_dragging = true;
