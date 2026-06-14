@@ -89,7 +89,7 @@ void nodes_material_new_group_button(i32 node_id) {
 			break;
 		}
 	}
-	if (ui_button(tr("Nodes"), UI_ALIGN_CENTER, "")) {
+	if (ui_icon_button(tr("Nodes"), ICON_NODES, UI_ALIGN_CENTER)) {
 		any_array_push(ui_nodes_group_stack, group);
 	}
 }
@@ -115,7 +115,7 @@ void nodes_material_add_socket_menu_draw() {
 }
 
 void nodes_material_add_socket_button(ui_nodes_t *nodes, ui_node_t *node, ui_node_socket_t_array_t *sockets) {
-	if (ui_button(tr("Add"), UI_ALIGN_CENTER, "")) {
+	if (ui_icon_button(tr("Add"), ICON_PLUS, UI_ALIGN_CENTER)) {
 		gc_unroot(_nodes_material_nodes);
 		_nodes_material_nodes = nodes;
 		gc_root(_nodes_material_nodes);

@@ -682,12 +682,15 @@ void ui_nodes_draw_menubar() {
 	if (g_ui->is_hovered) {
 		ui_tooltip(string("%s (%s)", tr("Search for nodes"), any_map_get(g_keymap, "node_search")));
 	}
+
 	g_ui->_x += g_ui->_w + 3;
 	g_ui->_y            = 2 + start_y;
 	g_theme->BUTTON_COL = _BUTTON_COL;
 	g_theme->SHADOWS    = _SHADOWS;
+
 	// Close node group
-	if (ui_nodes_group_stack->length > 0 && ui_menubar_button(tr("Close"))) {
+	g_ui->_w = ew;
+	if (ui_nodes_group_stack->length > 0 && ui_icon_button(tr("Back"), ICON_ARROW_LEFT, UI_ALIGN_CENTER)) {
 		array_pop(ui_nodes_group_stack);
 	}
 }
