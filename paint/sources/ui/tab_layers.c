@@ -604,7 +604,7 @@ void tab_layers_draw_layer_context_menu_clear(void *_) {
 	slot_layer_t *l = tab_layers_l;
 	if (!slot_layer_is_group(l)) {
 		history_clear_layer();
-		slot_layer_clear(l, 0x00000000, NULL, 1.0, layers_default_rough, 0.0);
+		slot_layer_clear(l, slot_layer_is_mask(l) ? 0xffffffff : 0x00000000, NULL, 1.0, layers_default_rough, 0.0);
 		util_layer_clear_path_points(l);
 	}
 	else {
@@ -612,7 +612,7 @@ void tab_layers_draw_layer_context_menu_clear(void *_) {
 			slot_layer_t *c  = slot_layer_get_children(l)->buffer[i];
 			g_context->layer = c;
 			history_clear_layer();
-			slot_layer_clear(c, 0x00000000, NULL, 1.0, layers_default_rough, 0.0);
+			slot_layer_clear(c, slot_layer_is_mask(c) ? 0xffffffff : 0x00000000, NULL, 1.0, layers_default_rough, 0.0);
 		}
 		g_context->layers_preview_dirty = true;
 		g_context->layer                = l;
