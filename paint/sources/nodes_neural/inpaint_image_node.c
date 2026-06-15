@@ -25,7 +25,21 @@ void inpaint_image_node_button_on_next_frame(ui_node_t *node) {
 			buffer_t *input_buf = gpu_get_texture_pixels(input);
 #endif
 			iron_write_png(string("%s%sinput.png", dir, PATH_SEP), input_buf, input->width, input->height, 0);
-			iron_write_png(string("%s%smask.png", dir, PATH_SEP), gpu_get_texture_pixels(mask), mask->width, mask->height, 0);
+
+			buffer_t *mask_buf = gpu_get_texture_pixels(mask);
+			for (uint32_t i = 0; i < mask_buf->length / 4; ++i) {
+				if (mask_buf->buffer[i * 4] + mask_buf->buffer[i * 4 + 1] + mask_buf->buffer[i * 4 + 2] > 200) {
+					mask_buf->buffer[i * 4]     = 0;
+					mask_buf->buffer[i * 4 + 1] = 0;
+					mask_buf->buffer[i * 4 + 2] = 0;
+				}
+				else {
+					mask_buf->buffer[i * 4]     = 255;
+					mask_buf->buffer[i * 4 + 1] = 255;
+					mask_buf->buffer[i * 4 + 2] = 255;
+				}
+			}
+			iron_write_png(string("%s%smask.png", dir, PATH_SEP), mask_buf, mask->width, mask->height, 0);
 		}
 		else {
 			gpu_texture_t *masked = gpu_create_render_target(512, 512, GPU_TEXTURE_FORMAT_RGBA32);

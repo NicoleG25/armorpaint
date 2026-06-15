@@ -26,12 +26,6 @@ void outpaint_image_node_button_on_next_frame(ui_node_t *node) {
 		draw_scaled_image(input, 64, 64, 512 - 128, 512 - 128);
 		draw_end();
 
-		// #ifdef IRON_BGRA
-		// let input_buf: buffer_t = buffer_bgra_swap(gpu_get_texture_pixels(input)); // Vulkan non-rt textures need a flip
-		// #else
-		// let input_buf: buffer_t = gpu_get_texture_pixels(input);
-		// #endif
-
 		char *dir = neural_node_dir();
 		iron_write_png(string("%s%sinput.png", dir, PATH_SEP), gpu_get_texture_pixels(input_scaled), input_scaled->width, input_scaled->height, 0);
 		iron_write_png(string("%s%smask.png", dir, PATH_SEP), gpu_get_texture_pixels(mask), mask->width, mask->height, 0);

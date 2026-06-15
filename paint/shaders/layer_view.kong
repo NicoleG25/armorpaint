@@ -50,10 +50,10 @@ fun layer_view_frag(input: vert_out): float4 {
 	if (constants.channel == 6) {
 		// Apply mask as red area
 		var tex_sample: float4 = sample_lod(tex, sampler_linear, input.tex, 0.0);
-		if (tex_sample.r < 0.9) {
-			discard;
+		if (tex_sample.r < 0.9 || tex_sample.g < 0.9 || tex_sample.b < 0.9) {
+			return float4(1.0, 0.0, 0.0, 1.0);
 		}
-		return float4(1.0, 0.0, 0.0, 1.0);
+		discard;
 	}
 	// else {
 		var tex_sample: float4 = sample_lod(tex, sampler_linear, input.tex, 0.0);
