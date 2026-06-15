@@ -308,11 +308,11 @@ vec4_t uniforms_ext_vec4_link(object_t *object, material_data_t *mat, char *link
 
 mat4_t uniforms_ext_mat4_link(object_t *object, material_data_t *mat, char *link) {
 	if (string_equals(link, "_decal_layer_matrix")) { // Decal layer
-		mat4_t m = mat4_inv(g_context->layer->decal_mat);
-		f32 parent_scale = object->parent != NULL ? object->parent->transform->scale.x : 1.0;
-		f32 f            = parent_scale * object->transform->scale_world;
-		m                = mat4_scale(m, (vec4_t){f, f, f, 1.0});
-		m                = mat4_mult_mat(m, uniforms_ext_ortho_p);
+		mat4_t m            = mat4_inv(g_context->layer->decal_mat);
+		f32    parent_scale = object->parent != NULL ? object->parent->transform->scale.x : 1.0;
+		f32    f            = parent_scale * object->transform->scale_world;
+		m                   = mat4_scale(m, (vec4_t){f, f, f, 1.0});
+		m                   = mat4_mult_mat(m, uniforms_ext_ortho_p);
 		return m;
 	}
 

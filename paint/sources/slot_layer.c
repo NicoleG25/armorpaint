@@ -460,9 +460,9 @@ void slot_layer_resize_and_set_bits(slot_layer_t *raw) {
 		gpu_delete_texture(_texpaint_sculpt);
 
 		render_target_t *srt = any_map_get(rts, string("texpaint_sculpt%s", raw->ext));
-		srt->width  = res_x;
-		srt->height = res_y;
-		srt->_image = raw->texpaint_sculpt;
+		srt->width           = res_x;
+		srt->height          = res_y;
+		srt->_image          = raw->texpaint_sculpt;
 	}
 }
 
