@@ -99,8 +99,10 @@ raw_mesh_t *geom_make_uv_sphere(f32 radius, i32 width_segments, i32 height_segme
 			mesh->nora->buffer[i2 + 1] = math_floor(nor.y * 32767);
 			i32 tx                     = (math_floor((u + u_off) * 32767) - 1);
 			i32 ty                     = (math_floor(v_flip * 32767) - 1);
-			mesh->texa->buffer[i2]     = tx % 32767;
-			mesh->texa->buffer[i2 + 1] = ty % 32767;
+			tx                         = tx < 0 ? 0 : (tx > 32767 ? 32767 : tx);
+			ty                         = ty < 0 ? 0 : (ty > 32767 ? 32767 : ty);
+			mesh->texa->buffer[i2]     = tx;
+			mesh->texa->buffer[i2 + 1] = ty;
 			pos++;
 		}
 	}
