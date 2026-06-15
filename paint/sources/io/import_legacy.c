@@ -82,14 +82,23 @@ ui_node_canvas_t_array_t *import_arm_get_node_canvas_array(any_map_t *map, char 
 	return ar;
 }
 
-bool import_arm_is_version(buffer_t *b, char n) {
-	bool has_v = b->buffer[10] == 118; // 'v'
-	bool has_n = b->buffer[22] == n;   // '4'
-	return has_v && has_n;
+bool import_arm_is_version(buffer_t *b, char *n) {
+	// 0xdf map, i32 count, 0xdb string, i32 len, "version", 0xdb string, i32 len, version value
+	if (b->buffer[10] != 'v') {
+		return false;
+	}
+	uint32_t len = *(uint32_t *)(b->buffer + 18); // version value length
+	char    *v   = (char *)(b->buffer + 22);      // version value
+	for (uint32_t i = 0; i < len; ++i) {
+		if (n[i] == '\0' || v[i] != n[i]) {
+			return false;
+		}
+	}
+	return n[len] == '\0';
 }
 
 bool import_arm_is_old(buffer_t *b) {
-	return !import_arm_is_version(b, manifest_version_project[0]);
+	return !import_arm_is_version(b, manifest_version_project);
 }
 
 project_t *import_arm_from_map_to_arm(any_map_t *old) {
@@ -187,6 +196,7 @@ project_t *import_arm_from_map_to_arm(any_map_t *old) {
 			ld->visible            = armpack_map_get_i32(old, "visible") > 0;
 			ld->texpaint_nor       = any_map_get(old, "texpaint_nor");
 			ld->texpaint_pack      = any_map_get(old, "texpaint_pack");
+			ld->texpaint_sculpt    = any_map_get(old, "texpaint_sculpt");
 			ld->paint_base         = armpack_map_get_i32(old, "paint_base") > 0;
 			ld->paint_opac         = armpack_map_get_i32(old, "paint_opac") > 0;
 			ld->paint_occ          = armpack_map_get_i32(old, "paint_occ") > 0;
@@ -289,12 +299,23 @@ project_t *import_arm_from_map_to_arm(any_map_t *old) {
 	return project;
 }
 
+project_t *import_arm_from_version_9(any_map_t *old) {
+	any_array_t *lds = any_map_get(old, "layer_datas");
+	if (lds != NULL) {
+		for (i32 i = 0; i < lds->length; ++i) {
+			any_map_t *ld = lds->buffer[i];
+			any_map_set(ld, "texpaint_sculpt", NULL);
+		}
+	}
+	return import_arm_from_map_to_arm(old);
+}
+
 project_t *import_arm_from_version_8(any_map_t *old) {
 	any_map_set(old, "mesh_materials", NULL);
 	any_map_set(old, "mesh_parents", NULL);
 	any_map_set(old, "script_names", NULL);
 	any_map_set(old, "stages", NULL);
-	return import_arm_from_map_to_arm(old);
+	return import_arm_from_version_9(old);
 }
 
 project_t *import_arm_from_version_7(any_map_t *old) {
@@ -380,28 +401,24 @@ project_t *import_arm_from_version_2(any_map_t *old) {
 	return import_arm_from_version_3(old);
 }
 
+project_t *import_arm_from_version_1(any_map_t *old) {
+	return import_arm_from_version_2(old);
+}
+
+project_t *import_arm_from_version_0(any_map_t *old) {
+	return import_arm_from_version_1(old);
+}
+
 project_t *import_arm_from_old(buffer_t *b) {
-	any_map_t *old = armpack_decode_to_map(b);
-	if (import_arm_is_version(b, '8')) {
-		return import_arm_from_version_8(old);
-	}
-	if (import_arm_is_version(b, '7')) {
-		return import_arm_from_version_7(old);
-	}
-	if (import_arm_is_version(b, '6')) {
-		return import_arm_from_version_6(old);
-	}
-	if (import_arm_is_version(b, '5')) {
-		return import_arm_from_version_5(old);
-	}
-	if (import_arm_is_version(b, '4')) {
-		return import_arm_from_version_4(old);
-	}
-	if (import_arm_is_version(b, '3')) {
-		return import_arm_from_version_3(old);
-	}
-	if (import_arm_is_version(b, '2')) {
-		return import_arm_from_version_2(old);
+	any_map_t *old                   = armpack_decode_to_map(b);
+	project_t *(*fns[])(any_map_t *) = {
+	    import_arm_from_version_0, import_arm_from_version_1, import_arm_from_version_2, import_arm_from_version_3, import_arm_from_version_4,
+	    import_arm_from_version_5, import_arm_from_version_6, import_arm_from_version_7, import_arm_from_version_8, import_arm_from_version_9,
+	};
+	for (i32 v = sizeof(fns) / sizeof(fns[0]) - 1; v >= 0; --v) {
+		if (import_arm_is_version(b, i32_to_string(v))) {
+			return fns[v](old);
+		}
 	}
 	return NULL;
 }

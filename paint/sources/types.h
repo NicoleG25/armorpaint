@@ -619,6 +619,7 @@ typedef struct layer_data {
 	bool              visible;
 	struct buffer    *texpaint_nor;
 	struct buffer    *texpaint_pack;
+	struct buffer    *texpaint_sculpt;
 	bool              paint_base;
 	bool              paint_opac;
 	bool              paint_occ;

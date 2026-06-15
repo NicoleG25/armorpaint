@@ -483,6 +483,24 @@ void import_arm_run_project(char *path) {
 				draw_image(_texpaint_pack, 0, 0);
 				draw_set_pipeline(NULL);
 				draw_end();
+
+				if (ld->texpaint_sculpt != NULL) {
+					render_target_t *t = render_target_create();
+					t->name            = string("texpaint_sculpt%s", l->ext);
+					t->width           = ld->res;
+					t->height          = ld->res;
+					t->format          = "RGBA128";
+					l->texpaint_sculpt = render_path_create_render_target(t)->_image;
+
+					gpu_texture_t *_texpaint_sculpt =
+					    gpu_create_texture_from_bytes(lz4_decode(ld->texpaint_sculpt, ld->res * ld->res * 4 * 4), ld->res, ld->res, GPU_TEXTURE_FORMAT_RGBA128);
+					draw_begin(l->texpaint_sculpt, false, 0);
+					draw_set_pipeline(pipes_copy128);
+					draw_image(_texpaint_sculpt, 0, 0);
+					draw_set_pipeline(NULL);
+					draw_end();
+					gpu_delete_texture(_texpaint_sculpt);
+				}
 			}
 
 			l->scale   = ld->uv_scale;

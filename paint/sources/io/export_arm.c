@@ -198,6 +198,7 @@ void export_arm_run_project() {
 		                                 .visible            = l->visible,
 		                                 .texpaint_nor       = l->texpaint_nor != NULL ? lz4_encode(gpu_get_texture_pixels(l->texpaint_nor)) : NULL,
 		                                 .texpaint_pack      = l->texpaint_pack != NULL ? lz4_encode(gpu_get_texture_pixels(l->texpaint_pack)) : NULL,
+		                                 .texpaint_sculpt    = l->texpaint_sculpt != NULL ? lz4_encode(gpu_get_texture_pixels(l->texpaint_sculpt)) : NULL,
 		                                 .paint_base         = l->paint_base,
 		                                 .paint_opac         = l->paint_opac,
 		                                 .paint_occ          = l->paint_occ,
