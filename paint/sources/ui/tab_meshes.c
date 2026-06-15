@@ -40,7 +40,8 @@ void tab_meshes_draw_context_menu_delete_next_frame(mesh_object_t *o) {
 	tab_stages_prune();
 	g_context->paint_object = context_main_object();
 	util_mesh_merge(NULL);
-	g_context->ddirty = 2;
+	g_context->ddirty                                 = 2;
+	ui_base_hwnds->buffer[TAB_AREA_SIDEBAR0]->redraws = 2;
 }
 
 void tab_meshes_draw_context_menu_delete(mesh_object_t *o) {
@@ -746,6 +747,13 @@ void tab_meshes_draw_mesh_slot(mesh_object_t *o, i32 i) {
 				_tab_meshes_draw_i      = i;
 				ui_menu_draw(&tab_meshes_draw_context_menu, -1, -1);
 			}
+		}
+
+		bool in_focus = g_ui->input_x > g_ui->_window_x && g_ui->input_x < g_ui->_window_x + g_ui->_window_w && g_ui->input_y > g_ui->_window_y &&
+		                g_ui->input_y < g_ui->_window_y + g_ui->_window_h;
+		if (in_focus && g_ui->is_delete_down && g_project->_->paint_objects->length > 1) {
+			g_ui->is_delete_down = false;
+			sys_notify_on_next_frame(&tab_meshes_draw_context_menu_delete, g_context->paint_object);
 		}
 	}
 
