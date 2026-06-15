@@ -1119,3 +1119,79 @@ bc7enc_bool bc7enc_compress_block(void *pBlock, const void *pPixelsRGBA, const b
 	handle_opaque_block(pBlock, pPixels, pComp_params, &params);
 	return BC7ENC_FALSE;
 }
+
+static uint32_t get_block_bits(const uint8_t *pBytes, uint32_t num_bits, uint32_t *pCur_ofs) {
+	uint32_t val       = 0;
+	uint32_t bits_read = 0;
+	while (num_bits) {
+		const uint32_t n     = minimumu(8 - (*pCur_ofs & 7), num_bits);
+		const uint32_t chunk = (pBytes[*pCur_ofs >> 3] >> (*pCur_ofs & 7)) & ((1u << n) - 1);
+		val |= chunk << bits_read;
+		bits_read += n;
+		num_bits -= n;
+		*pCur_ofs += n;
+	}
+	return val;
+}
+
+void bc7enc_decompress_block(void *pPixelsRGBA, const void *pBlock) {
+	const uint8_t *pBytes      = (const uint8_t *)pBlock;
+	color_quad_u8 *pPixels     = (color_quad_u8 *)pPixelsRGBA;
+	uint32_t       cur_bit_ofs = 0;
+
+	get_block_bits(pBytes, 7, &cur_bit_ofs);
+	const uint32_t r0 = get_block_bits(pBytes, 7, &cur_bit_ofs);
+	const uint32_t r1 = get_block_bits(pBytes, 7, &cur_bit_ofs);
+	const uint32_t g0 = get_block_bits(pBytes, 7, &cur_bit_ofs);
+	const uint32_t g1 = get_block_bits(pBytes, 7, &cur_bit_ofs);
+	const uint32_t b0 = get_block_bits(pBytes, 7, &cur_bit_ofs);
+	const uint32_t b1 = get_block_bits(pBytes, 7, &cur_bit_ofs);
+	const uint32_t a0 = get_block_bits(pBytes, 7, &cur_bit_ofs);
+	const uint32_t a1 = get_block_bits(pBytes, 7, &cur_bit_ofs);
+	const uint32_t p0 = get_block_bits(pBytes, 1, &cur_bit_ofs);
+	const uint32_t p1 = get_block_bits(pBytes, 1, &cur_bit_ofs);
+
+	color_quad_u8 low, high;
+	low.m_c[0]  = (uint8_t)((r0 << 1) | p0);
+	low.m_c[1]  = (uint8_t)((g0 << 1) | p0);
+	low.m_c[2]  = (uint8_t)((b0 << 1) | p0);
+	low.m_c[3]  = (uint8_t)((a0 << 1) | p0);
+	high.m_c[0] = (uint8_t)((r1 << 1) | p1);
+	high.m_c[1] = (uint8_t)((g1 << 1) | p1);
+	high.m_c[2] = (uint8_t)((b1 << 1) | p1);
+	high.m_c[3] = (uint8_t)((a1 << 1) | p1);
+
+	for (uint32_t i = 0; i < 16; i++) {
+		const uint32_t index = get_block_bits(pBytes, (i == 0) ? 3 : 4, &cur_bit_ofs);
+		const uint32_t w     = g_bc7_weights4[index];
+		pPixels[i].m_c[0]    = (uint8_t)((low.m_c[0] * (64 - w) + high.m_c[0] * w + 32) >> 6);
+		pPixels[i].m_c[1]    = (uint8_t)((low.m_c[1] * (64 - w) + high.m_c[1] * w + 32) >> 6);
+		pPixels[i].m_c[2]    = (uint8_t)((low.m_c[2] * (64 - w) + high.m_c[2] * w + 32) >> 6);
+		pPixels[i].m_c[3]    = (uint8_t)((low.m_c[3] * (64 - w) + high.m_c[3] * w + 32) >> 6);
+	}
+}
+
+void bc7enc_decompress(void *pPixelsRGBA, const void *pBC7Blocks, int width, int height) {
+	const uint8_t *pBlocks  = (const uint8_t *)pBC7Blocks;
+	uint8_t       *dst      = (uint8_t *)pPixelsRGBA;
+	const int      blocks_x = (width + 3) / 4;
+	const int      blocks_y = (height + 3) / 4;
+
+	for (int by = 0; by < blocks_y; by++) {
+		for (int bx = 0; bx < blocks_x; bx++) {
+			color_quad_u8 pixels[16];
+			bc7enc_decompress_block(pixels, pBlocks + (size_t)(by * blocks_x + bx) * BC7ENC_BLOCK_SIZE);
+			for (int py = 0; py < 4; py++) {
+				int y = by * 4 + py;
+				if (y >= height)
+					break;
+				for (int px = 0; px < 4; px++) {
+					int x = bx * 4 + px;
+					if (x >= width)
+						continue;
+					memcpy(dst + ((size_t)y * width + x) * 4, &pixels[py * 4 + px], 4);
+				}
+			}
+		}
+	}
+}
