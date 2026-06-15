@@ -939,7 +939,6 @@ buffer_t *gpu_get_texture_pixels(gpu_texture_t *image) {
 #ifdef WITH_BC7
 	if (image->format == GPU_TEXTURE_FORMAT_RGBA32_BC7) {
 		uint8_t *compressed   = image->buffer->buffer;
-		image->format         = GPU_TEXTURE_FORMAT_RGBA32;
 		image->buffer->buffer = malloc((size_t)image->width * image->height * 4);
 		bc7enc_decompress(image->buffer->buffer, compressed, image->width, image->height);
 		free(compressed);
