@@ -233,7 +233,13 @@ void ui_nodes_capture_output() {
 	ui_nodes_t       *ui_nodes = ui_nodes_get_nodes();
 	ui_node_canvas_t *c        = ui_nodes_get_canvas(true);
 	ui_node_t        *sel      = ui_get_node(c->nodes, ui_nodes->nodes_selected_id->buffer[0]);
-	util_texture_capture_output(ui_nodes_get_node_preview_image(sel), "node_preview");
+
+	bool bgra = false;
+#ifdef IRON_BGRA
+	bgra = string_equals(sel->type, "TEX_IMAGE") || starts_with(sel->type, "NEURAL_");
+#endif
+
+	util_texture_capture_output(ui_nodes_get_node_preview_image(sel), "node_preview", bgra);
 }
 
 void ui_viewnodes_on_canvas_capture_output(void *_) {

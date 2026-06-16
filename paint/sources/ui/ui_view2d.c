@@ -36,7 +36,7 @@ void ui_view2d_init() {
 }
 
 void ui_view2d_capture_output(void *_) {
-	util_texture_capture_output(ui_view2d_tex, "tex_capture");
+	util_texture_capture_output(ui_view2d_tex, "tex_capture", false);
 }
 
 void ui_view2d_draw_edit() {
