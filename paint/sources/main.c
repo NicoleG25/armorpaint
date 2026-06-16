@@ -104,8 +104,6 @@
 
 #include "nodes_neural/edit_image_node.c"
 #include "nodes_neural/image_to_3d_mesh_node.c"
-#include "nodes_neural/image_to_depth_node.c"
-#include "nodes_neural/image_to_normal_map_node.c"
 #include "nodes_neural/image_to_pbr_node.c"
 #include "nodes_neural/inpaint_image_node.c"
 #include "nodes_neural/neural_node.c"
@@ -115,7 +113,6 @@
 #include "nodes_neural/text_to_image_node.c"
 #include "nodes_neural/text_to_text_node.c"
 #include "nodes_neural/texture_mesh_node.c"
-#include "nodes_neural/tile_image_node.c"
 #include "nodes_neural/upscale_image_node.c"
 
 #include "render/make_bake.c"

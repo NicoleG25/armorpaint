@@ -90,8 +90,6 @@ void nodes_material_init() {
 #ifdef IRON_WINDOWS
 	image_to_3d_mesh_node_init();
 #endif
-	image_to_depth_node_init();
-	image_to_normal_map_node_init();
 	image_to_pbr_node_init();
 	inpaint_image_node_init();
 	repeat_node_init();
@@ -100,7 +98,6 @@ void nodes_material_init() {
 	if (g_config->experimental) {
 		texture_mesh_node_init();
 	}
-	tile_image_node_init();
 	upscale_image_node_init();
 
 #endif

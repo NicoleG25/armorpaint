@@ -6,14 +6,13 @@ gpu_texture_t *image_to_pbr_node_result_normal    = NULL;
 gpu_texture_t *image_to_pbr_node_result_occlusion = NULL;
 gpu_texture_t *image_to_pbr_node_result_height    = NULL;
 gpu_texture_t *image_to_pbr_node_result_roughness = NULL;
-gpu_texture_t *image_to_pbr_node_result_metallic  = NULL;
 
 char *image_to_pbr_node_vector(ui_node_t *node, ui_node_socket_t *socket) {
 	gpu_texture_t *result = NULL;
 	if (socket == node->outputs->buffer[0]) { // base color
 		result = image_to_pbr_node_result_base;
 	}
-	else if (socket == node->outputs->buffer[4]) { // normal map
+	else if (socket == node->outputs->buffer[3]) { // normal map
 		result = image_to_pbr_node_result_normal;
 	}
 
@@ -35,10 +34,7 @@ char *image_to_pbr_node_value(ui_node_t *node, ui_node_socket_t *socket) {
 	else if (socket == node->outputs->buffer[2]) { // roughness
 		result = image_to_pbr_node_result_roughness;
 	}
-	else if (socket == node->outputs->buffer[3]) { // metallic
-		result = image_to_pbr_node_result_metallic;
-	}
-	else if (socket == node->outputs->buffer[5]) { // height
+	else if (socket == node->outputs->buffer[4]) { // height
 		result = image_to_pbr_node_result_height;
 	}
 
@@ -220,17 +216,40 @@ void image_to_pbr_node_normals_done(gpu_texture_t *tex) {
 	image_to_pbr_node_run_sd("marigold-depth-v1-1.q8_0.gguf", "_height", &image_to_pbr_node_height_done);
 }
 
+void image_to_pbr_node_normals_only_done(gpu_texture_t *tex) {
+	gc_unroot(image_to_pbr_node_result_normal);
+	image_to_pbr_node_result_normal = tex;
+	gc_root(image_to_pbr_node_result_normal);
+}
+
+void image_to_pbr_node_height_only_done(gpu_texture_t *tex) {
+	gc_unroot(image_to_pbr_node_result_height);
+	image_to_pbr_node_result_height = tex;
+	gc_root(image_to_pbr_node_result_height);
+}
+
 void image_to_pbr_node_button(i32 node_id) {
 	ui_node_canvas_t *canvas    = ui_nodes_get_canvas(true);
 	ui_node_t        *node      = ui_get_node(canvas->nodes, node_id);
 	char             *node_name = parser_material_node_name(node, NULL);
 	ui_handle_t      *h         = ui_handle(node_name);
-	string_array_t   *models    = any_array_create_from_raw(
-        (void *[]){
-            "Marigold",
-        },
-        1);
+
+	string_array_t *models = any_array_create_from_raw(
+	    (void *[]){
+	        "Marigold",
+	    },
+	    1);
 	i32 model = ui_combo(ui_nest(h, 0), models, tr("Model"), false, UI_ALIGN_LEFT, true);
+
+	string_array_t *channels = any_array_create_from_raw(
+	    (void *[]){
+	        "All",
+	        "Normal Map",
+	        "Height",
+	    },
+	    3);
+	i32 channel = ui_combo(ui_nest(h, 1), channels, tr("Channels"), false, UI_ALIGN_LEFT, true);
+
 	if (neural_node_button(node, models->buffer[model])) {
 		ui_node_t     *from_node = neural_from_node(node->inputs->buffer[0], 0);
 		gpu_texture_t *input     = ui_nodes_get_node_preview_image(from_node);
@@ -244,7 +263,15 @@ void image_to_pbr_node_button(i32 node_id) {
 #endif
 			iron_write_png(string("%s%sinput.png", dir, PATH_SEP), input_buf, input->width, input->height, 0);
 
-			image_to_pbr_node_run_sd("marigold-normals-v1-1.q8_0.gguf", "_normals", &image_to_pbr_node_normals_done);
+			if (channel == 1) { // Normal Map only
+				image_to_pbr_node_run_sd("marigold-normals-v1-1.q8_0.gguf", "_normals", &image_to_pbr_node_normals_only_done);
+			}
+			else if (channel == 2) { // Height only
+				image_to_pbr_node_run_sd("marigold-depth-v1-1.q8_0.gguf", "_height", &image_to_pbr_node_height_only_done);
+			}
+			else { // All
+				image_to_pbr_node_run_sd("marigold-normals-v1-1.q8_0.gguf", "_normals", &image_to_pbr_node_normals_done);
+			}
 		}
 	}
 }
@@ -306,16 +333,6 @@ void image_to_pbr_node_init() {
 	                                                                       .display       = 0}),
 	                                      GC_ALLOC_INIT(ui_node_socket_t, {.id            = 0,
 	                                                                       .node_id       = 0,
-	                                                                       .name          = _tr("Metallic"),
-	                                                                       .type          = "VALUE",
-	                                                                       .color         = 0xffa1a1a1,
-	                                                                       .default_value = f32_array_create_x(0.0),
-	                                                                       .min           = 0.0,
-	                                                                       .max           = 1.0,
-	                                                                       .precision     = 100,
-	                                                                       .display       = 0}),
-	                                      GC_ALLOC_INIT(ui_node_socket_t, {.id            = 0,
-	                                                                       .node_id       = 0,
 	                                                                       .name          = _tr("Normal Map"),
 	                                                                       .type          = "VECTOR",
 	                                                                       .color         = 0xffc7c729,
@@ -335,7 +352,7 @@ void image_to_pbr_node_init() {
 	                                                                       .precision     = 100,
 	                                                                       .display       = 0}),
 	                                  },
-	                                  6),
+	                                  5),
 	                              .buttons = any_array_create_from_raw(
 	                                  (void *[]){
 	                                      GC_ALLOC_INIT(ui_node_button_t, {.name          = "image_to_pbr_node_button",
@@ -346,7 +363,7 @@ void image_to_pbr_node_init() {
 	                                                                       .min           = 0.0,
 	                                                                       .max           = 1.0,
 	                                                                       .precision     = 100,
-	                                                                       .height        = 2}),
+	                                                                       .height        = 3}),
 	                                  },
 	                                  1),
 	                              .width = 0,

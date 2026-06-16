@@ -11,27 +11,10 @@ string_array_t *text_to_image_node_flux_klein_args(char *dir, char *prompt) {
 	        string("%s/taef2.safetensors", dir),
 	        "--llm",
 	        string("%s/Qwen3-4B-Q8_0.gguf", dir),
-	        "--cfg-scale",
-	        "1.0",
-	        "--sampling-method",
-	        "euler",
-	        "--diffusion-fa",
-	        "--offload-to-cpu",
 	        "--steps",
 	        "4",
-	        "-W",
-	        string("%d", g_config->neural_res),
-	        "-H",
-	        string("%d", g_config->neural_res),
-	        "-s",
-	        "-1",
-	        "-o",
-	        string("%s/output.png", dir),
-	        "-p",
-	        string("'%s'", prompt),
-	        NULL,
 	    },
-	    26);
+	    9);
 	return argv;
 }
 
@@ -45,25 +28,10 @@ string_array_t *text_to_image_node_zimage_args(char *dir, char *prompt) {
 	        string("%s/ae.safetensors", dir),
 	        "--llm",
 	        string("%s/Qwen3-4B-Instruct-2507-Q4_K_S.gguf", dir),
-	        "--diffusion-fa",
-	        "--offload-to-cpu",
-	        "--cfg-scale",
-	        "1.0",
-	        "-W",
-	        string("%d", g_config->neural_res),
-	        "-H",
-	        string("%d", g_config->neural_res),
 	        "--steps",
 	        "40",
-	        "-s",
-	        "-1",
-	        "-o",
-	        string("%s/output.png", dir),
-	        "-p",
-	        string("'%s'", prompt),
-	        NULL,
 	    },
-	    24);
+	    9);
 	return argv;
 }
 
@@ -79,24 +47,10 @@ string_array_t *text_to_image_node_qwen_args(char *dir, char *prompt) {
 	        string("%s/Qwen2.5-VL-7B-Instruct-Q4_K_S.gguf", dir),
 	        "--llm_vision",
 	        string("%s/mmproj-F16.gguf", dir),
-	        "--sampling-method",
-	        "euler",
-	        "--offload-to-cpu",
-	        "-W",
-	        string("%d", g_config->neural_res),
-	        "-H",
-	        string("%d", g_config->neural_res),
 	        "--steps",
 	        "20",
-	        "-s",
-	        "-1",
-	        "-o",
-	        string("%s/output.png", dir),
-	        "-p",
-	        string("'%s'", prompt),
-	        NULL,
 	    },
-	    25);
+	    11);
 	return argv;
 }
 
@@ -109,6 +63,7 @@ void text_to_image_node_run(ui_node_t *node, void (*callback)(ui_node_t *)) {
 	if (prompt == NULL || string_equals(prompt, "")) {
 		prompt = ".";
 	}
+
 	string_array_t *argv;
 	if (model == 0) {
 		argv = text_to_image_node_flux_klein_args(dir, prompt);
@@ -119,9 +74,26 @@ void text_to_image_node_run(ui_node_t *node, void (*callback)(ui_node_t *)) {
 	else {
 		argv = text_to_image_node_qwen_args(dir, prompt);
 	}
+
+	string_array_push(argv, "--cfg-scale");
+	string_array_push(argv, "1.0");
+	string_array_push(argv, "--diffusion-fa");
+	string_array_push(argv, "--offload-to-cpu");
+	string_array_push(argv, "-W");
+	string_array_push(argv, string("%d", g_config->neural_res));
+	string_array_push(argv, "-H");
+	string_array_push(argv, string("%d", g_config->neural_res));
+	string_array_push(argv, "-s");
+	string_array_push(argv, "-1");
+	string_array_push(argv, "-o");
+	string_array_push(argv, string("%s/output.png", dir));
+	string_array_push(argv, "-p");
+	string_array_push(argv, string("'%s'", prompt));
 	if (node->buttons->buffer[1]->default_value->buffer[0] > 0.0) {
-		array_insert(argv, argv->length - 1, "--circular");
+		string_array_push(argv, "--circular");
 	}
+	string_array_push(argv, NULL);
+
 	iron_exec_async(argv->buffer[0], argv->buffer);
 	sys_notify_on_update(callback, node);
 }
