@@ -30,32 +30,32 @@ extern "C" {
  * ======================================================================== */
 
 /* Model architecture constants (same across model sizes) */
-#define IRIS_LATENT_CHANNELS    128  /* Flux: 32*2*2 */
+#define IRIS_LATENT_CHANNELS 128 /* Flux: 32*2*2 */
 
 /* VAE architecture */
-#define IRIS_VAE_Z_CHANNELS     32   /* Flux default */
-#define IRIS_VAE_BASE_CH        128
-#define IRIS_VAE_CH_MULT_0      1
-#define IRIS_VAE_CH_MULT_1      2
-#define IRIS_VAE_CH_MULT_2      4
-#define IRIS_VAE_CH_MULT_3      4
-#define IRIS_VAE_NUM_RES        2
-#define IRIS_VAE_GROUPS         32
-#define IRIS_VAE_MAX_DIM        2048  /* Max image dimension for VAE */
+#define IRIS_VAE_Z_CHANNELS 32 /* Flux default */
+#define IRIS_VAE_BASE_CH    128
+#define IRIS_VAE_CH_MULT_0  1
+#define IRIS_VAE_CH_MULT_1  2
+#define IRIS_VAE_CH_MULT_2  4
+#define IRIS_VAE_CH_MULT_3  4
+#define IRIS_VAE_NUM_RES    2
+#define IRIS_VAE_GROUPS     32
+#define IRIS_VAE_MAX_DIM    2048 /* Max image dimension for VAE */
 
 /* Tokenizer */
-#define IRIS_MAX_SEQ_LEN        512
-#define IRIS_VOCAB_HASH_SIZE    150001
+#define IRIS_MAX_SEQ_LEN     512
+#define IRIS_VOCAB_HASH_SIZE 150001
 
 /* Sampling */
-#define IRIS_MAX_STEPS          256
+#define IRIS_MAX_STEPS 256
 
 /* ========================================================================
  * Opaque Types
  * ======================================================================== */
 
-typedef struct iris_ctx iris_ctx;
-typedef struct iris_image iris_image;
+typedef struct iris_ctx       iris_ctx;
+typedef struct iris_image     iris_image;
 typedef struct iris_tokenizer iris_tokenizer;
 
 /* ========================================================================
@@ -63,10 +63,10 @@ typedef struct iris_tokenizer iris_tokenizer;
  * ======================================================================== */
 
 struct iris_image {
-    int width;
-    int height;
-    int channels;       /* 3 for RGB, 4 for RGBA */
-    uint8_t *data;      /* Row-major, channel-interleaved */
+	int      width;
+	int      height;
+	int      channels; /* 3 for RGB, 4 for RGBA */
+	uint8_t *data;     /* Row-major, channel-interleaved */
 };
 
 /* ========================================================================
@@ -75,27 +75,27 @@ struct iris_image {
 
 /* Schedule type: 0 = model default (sigmoid for Flux) */
 enum {
-    IRIS_SCHEDULE_DEFAULT   = 0,
-    IRIS_SCHEDULE_LINEAR    = 1,
-    IRIS_SCHEDULE_POWER     = 2,
-    IRIS_SCHEDULE_SIGMOID   = 3,  /* Flux shifted sigmoid */
+	IRIS_SCHEDULE_DEFAULT = 0,
+	IRIS_SCHEDULE_LINEAR  = 1,
+	IRIS_SCHEDULE_POWER   = 2,
+	IRIS_SCHEDULE_SIGMOID = 3, /* Flux shifted sigmoid */
 };
 
 typedef struct {
-    int width;              /* Output width (default: 256) */
-    int height;             /* Output height (default: 256) */
-    int num_steps;          /* Inference steps (default: 4 distilled, 50 base) */
-    int64_t seed;           /* Random seed (-1 for random) */
-    float guidance;         /* CFG guidance scale (0 = auto from model type) */
-    int schedule;           /* Schedule type (IRIS_SCHEDULE_*) */
-    float power_alpha;      /* Exponent for power schedule (default: 2.0) */
-    int circular;           /* 1 = seamless/tileable (circular conv padding) */
+	int     width;       /* Output width (default: 256) */
+	int     height;      /* Output height (default: 256) */
+	int     num_steps;   /* Inference steps (default: 4 distilled, 50 base) */
+	int64_t seed;        /* Random seed (-1 for random) */
+	float   guidance;    /* CFG guidance scale (0 = auto from model type) */
+	int     schedule;    /* Schedule type (IRIS_SCHEDULE_*) */
+	float   power_alpha; /* Exponent for power schedule (default: 2.0) */
+	int     circular;    /* 1 = seamless/tileable (circular conv padding) */
 } iris_params;
 
 /* Default parameters */
 #define IRIS_DEFAULT_WIDTH  256
 #define IRIS_DEFAULT_HEIGHT 256
-#define IRIS_PARAMS_DEFAULT { IRIS_DEFAULT_WIDTH, IRIS_DEFAULT_HEIGHT, 0, -1, 0.0f, IRIS_SCHEDULE_DEFAULT, 2.0f, 0 }
+#define IRIS_PARAMS_DEFAULT {IRIS_DEFAULT_WIDTH, IRIS_DEFAULT_HEIGHT, 0, -1, 0.0f, IRIS_SCHEDULE_DEFAULT, 2.0f, 0}
 
 /* ========================================================================
  * Core API
@@ -145,8 +145,7 @@ void iris_set_base_mode(iris_ctx *ctx);
  * Returns newly allocated image, caller must free with iris_image_free().
  * Returns NULL on error.
  */
-iris_image *iris_generate(iris_ctx *ctx, const char *prompt,
-                          const iris_params *params);
+iris_image *iris_generate(iris_ctx *ctx, const char *prompt, const iris_params *params);
 
 /*
  * Image-to-image generation.
@@ -154,15 +153,12 @@ iris_image *iris_generate(iris_ctx *ctx, const char *prompt,
  * Uses in-context conditioning: the reference image is passed as additional
  * tokens that the model attends to during generation.
  */
-iris_image *iris_img2img(iris_ctx *ctx, const char *prompt,
-                         const iris_image *input, const iris_params *params);
+iris_image *iris_img2img(iris_ctx *ctx, const char *prompt, const iris_image *input, const iris_params *params);
 
 /*
  * Multi-reference generation (up to 4 reference images for klein).
  */
-iris_image *iris_multiref(iris_ctx *ctx, const char *prompt,
-                          const iris_image **refs, int num_refs,
-                          const iris_params *params);
+iris_image *iris_multiref(iris_ctx *ctx, const char *prompt, const iris_image **refs, int num_refs, const iris_params *params);
 
 /*
  * Debug: img2img using Python's exact inputs from /tmp/py_*.bin files.
@@ -255,14 +251,12 @@ void iris_set_step_image_callback(iris_ctx *ctx, iris_step_image_cb_t callback);
  * Returns latent tensor [1, 128, H/16, W/16].
  * Caller must free() the returned pointer.
  */
-float *iris_encode_image(iris_ctx *ctx, const iris_image *img,
-                         int *out_h, int *out_w);
+float *iris_encode_image(iris_ctx *ctx, const iris_image *img, int *out_h, int *out_w);
 
 /*
  * Decode latent to image using VAE decoder.
  */
-iris_image *iris_decode_latent(iris_ctx *ctx, const float *latent,
-                               int latent_h, int latent_w);
+iris_image *iris_decode_latent(iris_ctx *ctx, const float *latent, int latent_h, int latent_w);
 
 /*
  * Encode text prompt to embeddings.
@@ -278,9 +272,7 @@ float *iris_encode_text(iris_ctx *ctx, const char *prompt, int *out_seq_len);
  * text_emb: text embeddings
  * Returns velocity prediction.
  */
-float *iris_denoise_step(iris_ctx *ctx, const float *z, float t,
-                         const float *text_emb, int text_len,
-                         int latent_h, int latent_w);
+float *iris_denoise_step(iris_ctx *ctx, const float *z, float t, const float *text_emb, int text_len, int latent_h, int latent_w);
 
 #ifdef __cplusplus
 }

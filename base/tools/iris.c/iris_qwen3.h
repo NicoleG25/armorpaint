@@ -19,23 +19,23 @@ extern "C" {
  * ======================================================================== */
 
 /* Fixed constants (same across model sizes) */
-#define QWEN3_VOCAB_SIZE       151936
-#define QWEN3_MAX_SEQ_LEN      512
-#define QWEN3_RMS_NORM_EPS     1e-6f
-#define QWEN3_ROPE_THETA       1000000.0f
+#define QWEN3_VOCAB_SIZE   151936
+#define QWEN3_MAX_SEQ_LEN  512
+#define QWEN3_RMS_NORM_EPS 1e-6f
+#define QWEN3_ROPE_THETA   1000000.0f
 
 /* Output layers to extract (0-indexed)
  * Python uses hidden_states[9,18,27] which are outputs AFTER layers 8,17,26
  * since hidden_states[0] is embedding and hidden_states[i] is output after layer i-1 */
-#define QWEN3_OUTPUT_LAYER_1   8
-#define QWEN3_OUTPUT_LAYER_2   17
-#define QWEN3_OUTPUT_LAYER_3   26
+#define QWEN3_OUTPUT_LAYER_1 8
+#define QWEN3_OUTPUT_LAYER_2 17
+#define QWEN3_OUTPUT_LAYER_3 26
 
 /* ========================================================================
  * Opaque Types
  * ======================================================================== */
 
-typedef struct qwen3_model qwen3_model_t;
+typedef struct qwen3_model     qwen3_model_t;
 typedef struct qwen3_tokenizer qwen3_tokenizer_t;
 
 /* ========================================================================
@@ -56,8 +56,7 @@ void qwen3_tokenizer_free(qwen3_tokenizer_t *tok);
  * Tokenize text with chat template.
  * Format: <|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n<think>\n\n</think>\n\n
  */
-int *qwen3_tokenize_chat(qwen3_tokenizer_t *tok, const char *prompt,
-                         int *num_tokens, int max_len);
+int *qwen3_tokenize_chat(qwen3_tokenizer_t *tok, const char *prompt, int *num_tokens, int max_len);
 
 /*
  * Pad tokens to max_len with PAD token.
@@ -100,18 +99,15 @@ void qwen3_model_free(qwen3_model_t *model);
  * Returns: Embedding array [seq_len, 7680] (caller must free)
  * Extracts hidden states from layers 9, 18, 27 and concatenates them.
  */
-float *qwen3_forward(qwen3_model_t *model,
-                     const int *input_ids,
-                     const int *attention_mask,
-                     int seq_len);
+float *qwen3_forward(qwen3_model_t *model, const int *input_ids, const int *attention_mask, int seq_len);
 
 /* ========================================================================
  * Combined Text Encoder API
  * ======================================================================== */
 
 typedef struct qwen3_encoder {
-    qwen3_tokenizer_t *tokenizer;
-    qwen3_model_t *model;
+	qwen3_tokenizer_t *tokenizer;
+	qwen3_model_t     *model;
 } qwen3_encoder_t;
 
 /*
@@ -139,8 +135,7 @@ float *qwen3_encode_text(qwen3_encoder_t *enc, const char *prompt);
  * (non-padding) tokens in *out_num_tokens.
  * Returns: Embedding array [512, text_dim] (caller must free)
  */
-float *qwen3_encode_text_ex(qwen3_encoder_t *enc, const char *prompt,
-                              int *out_num_tokens);
+float *qwen3_encode_text_ex(qwen3_encoder_t *enc, const char *prompt, int *out_num_tokens);
 
 #ifdef __cplusplus
 }

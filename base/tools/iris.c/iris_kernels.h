@@ -8,9 +8,9 @@
 #ifndef IRIS_KERNELS_H
 #define IRIS_KERNELS_H
 
+#include <math.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <math.h>
 
 /* Forward declarations */
 struct iris_image;
@@ -19,16 +19,20 @@ struct iris_image;
  * Relative error < 2e-6 across the full float range.
  * Inlined so the compiler can auto-vectorize loops that use it. */
 static inline float fast_expf(float x) {
-    if (x < -87.3f) return 0.0f;
-    if (x > 88.7f) return 1e38f;
-    float n = floorf(x * 1.4426950408889634f + 0.5f);
-    float r = x - n * 0.6931471805599453f;
-    float p = 1.0f + r * (1.0f + r * (0.5f + r * (0.16666667f +
-              r * (0.04166667f + r * 0.00833333f))));
-    union { float f; int32_t i; } v;
-    v.f = p;
-    v.i += (int32_t)n << 23;
-    return v.f;
+	if (x < -87.3f)
+		return 0.0f;
+	if (x > 88.7f)
+		return 1e38f;
+	float n = floorf(x * 1.4426950408889634f + 0.5f);
+	float r = x - n * 0.6931471805599453f;
+	float p = 1.0f + r * (1.0f + r * (0.5f + r * (0.16666667f + r * (0.04166667f + r * 0.00833333f))));
+	union {
+		float   f;
+		int32_t i;
+	} v;
+	v.f = p;
+	v.i += (int32_t)n << 23;
+	return v.f;
 }
 
 /* ========================================================================
@@ -53,35 +57,30 @@ void iris_axpy(float *a, float scale, const float *b, int n);
  * General matrix multiplication: C = A @ B
  * A: [M, K], B: [K, N], C: [M, N]
  */
-void iris_matmul(float *C, const float *A, const float *B,
-                 int M, int K, int N);
+void iris_matmul(float *C, const float *A, const float *B, int M, int K, int N);
 
 /*
  * Matrix multiplication with transposed B: C = A @ B^T
  * A: [M, K], B: [N, K], C: [M, N]
  */
-void iris_matmul_t(float *C, const float *A, const float *B,
-                   int M, int K, int N);
+void iris_matmul_t(float *C, const float *A, const float *B, int M, int K, int N);
 
 /*
  * Linear layer: y = x @ W^T + b (if b != NULL)
  * x: [seq_len, in_dim], W: [out_dim, in_dim], b: [out_dim], y: [seq_len, out_dim]
  */
-void iris_linear(float *y, const float *x, const float *W, const float *b,
-                 int seq_len, int in_dim, int out_dim);
+void iris_linear(float *y, const float *x, const float *W, const float *b, int seq_len, int in_dim, int out_dim);
 
 /*
  * Linear layer without bias: y = x @ W^T
  */
-void iris_linear_nobias(float *y, const float *x, const float *W,
-                        int seq_len, int in_dim, int out_dim);
+void iris_linear_nobias(float *y, const float *x, const float *W, int seq_len, int in_dim, int out_dim);
 
 /*
  * Linear layer without bias using bf16 weights
  * x: [seq_len, in_dim] (f32), W: [out_dim, in_dim] (bf16), y: [seq_len, out_dim] (f32)
  */
-void iris_linear_nobias_bf16(float *y, const float *x, const uint16_t *W_bf16,
-                             int seq_len, int in_dim, int out_dim);
+void iris_linear_nobias_bf16(float *y, const float *x, const uint16_t *W_bf16, int seq_len, int in_dim, int out_dim);
 
 /*
  * Linear layer without bias using GGML Q8_0 block-quantized weights.
@@ -89,8 +88,7 @@ void iris_linear_nobias_bf16(float *y, const float *x, const uint16_t *W_bf16,
  * Accelerated on the Vulkan backend (in-shader dequant); CPU dequant fallback
  * otherwise. W points at the raw 34-byte-per-32-element block stream.
  */
-void iris_linear_nobias_q8(float *y, const float *x, const void *W_q8,
-                           int seq_len, int in_dim, int out_dim);
+void iris_linear_nobias_q8(float *y, const float *x, const void *W_q8, int seq_len, int in_dim, int out_dim);
 
 /* ========================================================================
  * GPU Batch Operations
@@ -122,9 +120,8 @@ void iris_gpu_end_batch(void);
  * bias: [out_ch] (can be NULL)
  * out: [batch, out_ch, outH, outW]
  */
-void iris_conv2d(float *out, const float *in, const float *weight, const float *bias,
-                 int batch, int in_ch, int out_ch, int H, int W,
-                 int kH, int kW, int stride, int padding);
+void iris_conv2d(float *out, const float *in, const float *weight, const float *bias, int batch, int in_ch, int out_ch, int H, int W, int kH, int kW,
+                 int stride, int padding);
 
 /* ========================================================================
  * Normalization
@@ -134,24 +131,20 @@ void iris_conv2d(float *out, const float *in, const float *weight, const float *
  * RMS Normalization (no mean centering, no bias)
  * x: [seq_len, hidden], weight: [hidden]
  */
-void iris_rms_norm(float *out, const float *x, const float *weight,
-                   int seq_len, int hidden, float eps);
+void iris_rms_norm(float *out, const float *x, const float *weight, int seq_len, int hidden, float eps);
 
 /*
  * Group Normalization
  * x: [batch, channels, H, W], gamma/beta: [channels]
  */
-void iris_group_norm(float *out, const float *x, const float *gamma, const float *beta,
-                     int batch, int channels, int H, int W, int num_groups, float eps);
+void iris_group_norm(float *out, const float *x, const float *gamma, const float *beta, int batch, int channels, int H, int W, int num_groups, float eps);
 
 /*
  * Batch Normalization (inference mode with running stats)
  * x: [batch, channels, H, W]
  */
-void iris_batch_norm(float *out, const float *x,
-                     const float *running_mean, const float *running_var,
-                     const float *gamma, const float *beta,
-                     int batch, int channels, int H, int W, float eps);
+void iris_batch_norm(float *out, const float *x, const float *running_mean, const float *running_var, const float *gamma, const float *beta, int batch,
+                     int channels, int H, int W, float eps);
 
 /* ========================================================================
  * Activation Functions
@@ -179,9 +172,7 @@ void iris_softmax_cpu(float *x, int rows, int cols);
  * out: [batch, heads, seq_q, head_dim]
  * scale: typically 1/sqrt(head_dim)
  */
-void iris_attention(float *out, const float *Q, const float *K, const float *V,
-                    int batch, int heads, int seq_q, int seq_k, int head_dim,
-                    float scale);
+void iris_attention(float *out, const float *Q, const float *K, const float *V, int batch, int heads, int seq_q, int seq_k, int head_dim, float scale);
 
 /*
  * Flash attention - memory-efficient tiled attention.
@@ -194,16 +185,14 @@ void iris_attention(float *out, const float *Q, const float *K, const float *V,
  * V: [seq_k, heads * head_dim]
  * out: [seq_q, heads * head_dim]
  */
-void iris_flash_attention(float *out, const float *Q, const float *K, const float *V,
-                          int seq_q, int seq_k, int heads, int head_dim, float scale);
+void iris_flash_attention(float *out, const float *Q, const float *K, const float *V, int seq_q, int seq_k, int heads, int head_dim, float scale);
 
 /*
  * Apply rotary position embeddings (RoPE)
  * x: [batch, seq, heads, head_dim]
  * freqs: [seq, head_dim/2, 2] (cos, sin pairs)
  */
-void iris_apply_rope(float *x, const float *freqs,
-                     int batch, int seq, int heads, int head_dim);
+void iris_apply_rope(float *x, const float *freqs, int batch, int seq, int heads, int head_dim);
 
 /*
  * Compute RoPE frequencies
@@ -217,17 +206,13 @@ void iris_compute_rope_freqs(float *freqs, const int *pos, int seq, int dim, flo
  * ======================================================================== */
 
 /* Upsample with nearest neighbor */
-void iris_upsample_nearest(float *out, const float *in,
-                           int batch, int channels, int H, int W,
-                           int scale_h, int scale_w);
+void iris_upsample_nearest(float *out, const float *in, int batch, int channels, int H, int W, int scale_h, int scale_w);
 
 /* Patchify: [B, C, H, W] -> [B, C*p*p, H/p, W/p] */
-void iris_patchify(float *out, const float *in,
-                   int batch, int channels, int H, int W, int patch_size);
+void iris_patchify(float *out, const float *in, int batch, int channels, int H, int W, int patch_size);
 
 /* Unpatchify: [B, C*p*p, H, W] -> [B, C, H*p, W*p] */
-void iris_unpatchify(float *out, const float *in,
-                     int batch, int channels, int H, int W, int patch_size);
+void iris_unpatchify(float *out, const float *in, int batch, int channels, int H, int W, int patch_size);
 
 /* ========================================================================
  * Random Number Generation
@@ -261,9 +246,9 @@ void iris_copy(float *dst, const float *src, int n);
 
 /* Substep types during transformer forward pass */
 typedef enum {
-    IRIS_SUBSTEP_DOUBLE_BLOCK,   /* Double-stream block completed */
-    IRIS_SUBSTEP_SINGLE_BLOCK,   /* Single-stream block completed */
-    IRIS_SUBSTEP_FINAL_LAYER,    /* Final layer completed */
+	IRIS_SUBSTEP_DOUBLE_BLOCK, /* Double-stream block completed */
+	IRIS_SUBSTEP_SINGLE_BLOCK, /* Single-stream block completed */
+	IRIS_SUBSTEP_FINAL_LAYER,  /* Final layer completed */
 } iris_substep_type_t;
 
 /*
@@ -283,7 +268,7 @@ typedef void (*iris_step_callback_t)(int step, int total);
 
 /* Global callback pointers - set by caller before inference */
 extern iris_substep_callback_t iris_substep_callback;
-extern iris_step_callback_t iris_step_callback;
+extern iris_step_callback_t    iris_step_callback;
 
 /*
  * Phase callback - called at major phase boundaries.
@@ -304,7 +289,7 @@ extern iris_phase_callback_t iris_phase_callback;
  */
 typedef void (*iris_step_image_callback_t)(int step, int total, const struct iris_image *img);
 extern iris_step_image_callback_t iris_step_image_callback;
-extern void *iris_step_image_vae;  /* Set to iris_vae_t* for step image decoding */
+extern void                      *iris_step_image_vae; /* Set to iris_vae_t* for step image decoding */
 
 /*
  * Text encoder progress callback - called once per Qwen3 layer.

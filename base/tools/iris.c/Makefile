@@ -14,7 +14,7 @@ UNAME_S := $(shell uname -s)
 UNAME_M := $(shell uname -m)
 
 # Source files
-SRCS = iris.c iris_kernels.c iris_tokenizer.c iris_vae.c iris_transformer_flux.c iris_sample.c iris_image.c jpeg.c iris_safetensors.c iris_gguf.c iris_qwen3.c iris_qwen3_tokenizer.c
+SRCS = iris.c iris_kernels.c iris_tokenizer.c iris_vae.c iris_transformer_flux.c iris_sample.c iris_image.c jpeg.c iris_safetensors.c iris_gguf.c iris_qwen3.c iris_qwen3_tokenizer.c iris_upscale.c iris_depth.c
 OBJS = $(addprefix $(BUILD_DIR)/,$(SRCS:.c=.o))
 MAIN = main.c
 TARGET = $(BUILD_DIR)/iris
@@ -114,6 +114,7 @@ VULKAN_SPV = $(addprefix $(BUILD_DIR)/, \
              iris_vulkan_gemm_q8_spv.h \
              iris_vulkan_conv2d_spv.h iris_vulkan_groupnorm_spv.h \
              iris_vulkan_swish_spv.h iris_vulkan_add_spv.h iris_vulkan_upsample_spv.h \
+             iris_vulkan_leakyrelu_spv.h iris_vulkan_scaleadd_spv.h \
              iris_vulkan_qwen_rmsnorm_spv.h iris_vulkan_qwen_headrms_spv.h \
              iris_vulkan_qwen_rope_spv.h iris_vulkan_qwen_attn_spv.h \
              iris_vulkan_qwen_silumul_spv.h \
@@ -208,6 +209,8 @@ $(BUILD_DIR)/iris_gguf.o: iris_gguf.c iris_gguf.h iris_safetensors.h
 $(BUILD_DIR)/iris_sample.o: iris_sample.c iris.h iris_kernels.h
 $(BUILD_DIR)/iris_image.o: iris_image.c iris.h
 $(BUILD_DIR)/iris_safetensors.o: iris_safetensors.c iris_safetensors.h
+$(BUILD_DIR)/iris_upscale.o: iris_upscale.c iris_upscale.h iris_safetensors.h iris.h
+$(BUILD_DIR)/iris_depth.o: iris_depth.c iris_depth.h iris_safetensors.h iris.h
 $(BUILD_DIR)/iris_qwen3.o: iris_qwen3.c iris_qwen3.h iris_safetensors.h
 $(BUILD_DIR)/iris_qwen3_tokenizer.o: iris_qwen3_tokenizer.c iris_qwen3.h
 $(BUILD_DIR)/main.o: main.c iris.h iris_kernels.h

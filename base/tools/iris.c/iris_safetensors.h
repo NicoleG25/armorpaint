@@ -13,40 +13,42 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* Maximum number of tensors per file */
-#define SAFETENSORS_MAX_TENSORS 512
+/* Maximum number of tensors per file.
+ * RealESRGAN_x4plus (RRDBNet) has 702 tensors in a single file, so this must
+ * comfortably exceed that; FLUX shards stay well under it. */
+#define SAFETENSORS_MAX_TENSORS 1024
 
 /* Tensor data types */
 typedef enum {
-    DTYPE_F32 = 0,
-    DTYPE_F16 = 1,
-    DTYPE_BF16 = 2,
-    DTYPE_I32 = 3,
-    DTYPE_I64 = 4,
-    DTYPE_BOOL = 5,
-    DTYPE_Q8_0 = 6,   /* GGML block quant: 32 int8 + fp16 scale per 34-byte block */
-    DTYPE_UNKNOWN = -1
+	DTYPE_F32     = 0,
+	DTYPE_F16     = 1,
+	DTYPE_BF16    = 2,
+	DTYPE_I32     = 3,
+	DTYPE_I64     = 4,
+	DTYPE_BOOL    = 5,
+	DTYPE_Q8_0    = 6, /* GGML block quant: 32 int8 + fp16 scale per 34-byte block */
+	DTYPE_UNKNOWN = -1
 } safetensor_dtype_t;
 
 /* Tensor descriptor */
 typedef struct {
-    char name[256];
-    safetensor_dtype_t dtype;
-    int ndim;
-    int64_t shape[8];
-    size_t data_offset;
-    size_t data_size;
+	char               name[256];
+	safetensor_dtype_t dtype;
+	int                ndim;
+	int64_t            shape[8];
+	size_t             data_offset;
+	size_t             data_size;
 } safetensor_t;
 
 /* Safetensors file handle */
 typedef struct {
-    char *path;
-    void *data;              /* mmap'd file data */
-    size_t file_size;
-    size_t header_size;
-    char *header_json;
-    int num_tensors;
-    safetensor_t tensors[SAFETENSORS_MAX_TENSORS];
+	char        *path;
+	void        *data; /* mmap'd file data */
+	size_t       file_size;
+	size_t       header_size;
+	char        *header_json;
+	int          num_tensors;
+	safetensor_t tensors[SAFETENSORS_MAX_TENSORS];
 } safetensors_file_t;
 
 /* Open a safetensors file (memory-mapped) */
