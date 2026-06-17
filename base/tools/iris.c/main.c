@@ -228,8 +228,7 @@ static void print_usage(const char *prog) {
 	fprintf(stderr, "      --linear          Use linear timestep schedule\n");
 	fprintf(stderr, "      --power           Use power curve timestep schedule (default alpha: 2.0)\n");
 	fprintf(stderr, "      --power-alpha N   Set power schedule exponent (default: 2.0)\n");
-	fprintf(stderr, "      --sigmoid         Use Flux shifted sigmoid schedule\n");
-	fprintf(stderr, "      --circular        Seamless/tileable output (circular conv padding)\n\n");
+	fprintf(stderr, "      --sigmoid         Use Flux shifted sigmoid schedule\n\n");
 	fprintf(stderr, "Model options:\n");
 	fprintf(stderr, "      --base            Force base model mode (undistilled, CFG enabled)\n\n");
 	fprintf(stderr, "Reference images (img2img / multi-reference):\n");
@@ -240,9 +239,12 @@ static void print_usage(const char *prog) {
 	fprintf(stderr, "                        (uses <model-dir>/RealESRGAN_x4plus.safetensors; no prompt needed)\n\n");
 	fprintf(stderr, "Depth estimation:\n");
 	fprintf(stderr, "      --depth           Estimate depth from input (-i) via Depth Anything 3, write to -o\n");
-	fprintf(stderr, "                        (uses <model-dir>/da3-mono-large.safetensors; no prompt needed)\n");
-	fprintf(stderr, "      --tileable        With --depth: flatten the perspective tilt so depth from a\n");
-	fprintf(stderr, "                        seamless top-down texture also tiles seamlessly\n\n");
+	fprintf(stderr, "                        (uses <model-dir>/da3-mono-large.safetensors; no prompt needed)\n\n");
+	fprintf(stderr, "Seamless tiling:\n");
+	fprintf(stderr, "      --tileable        Make the output seamlessly tileable.\n");
+	fprintf(stderr, "                        Generation: circular conv padding.\n");
+	fprintf(stderr, "                        With --upscale: keep a tileable input seamless after 4x.\n");
+	fprintf(stderr, "                        With --depth: also flatten the perspective tilt.\n\n");
 	fprintf(stderr, "Output options:\n");
 	fprintf(stderr, "  -q, --quiet           Silent mode, no output\n");
 	fprintf(stderr, "  -v, --verbose         Detailed output\n\n");
@@ -291,7 +293,6 @@ int main(int argc, char *argv[]) {
 	                                       {"power", no_argument, 0, 256},
 	                                       {"power-alpha", required_argument, 0, 257},
 	                                       {"sigmoid", no_argument, 0, 260},
-	                                       {"circular", no_argument, 0, 259},
 	                                       {"vae-tiling", no_argument, 0, 261},
 	                                       {"upscale", no_argument, 0, 262},
 	                                       {"depth", no_argument, 0, 263},
@@ -322,7 +323,7 @@ int main(int argc, char *argv[]) {
 	int no_license_info = 0;
 	int upscale_mode    = 0;
 	int depth_mode      = 0;
-	int depth_tileable  = 0;
+	int tileable        = 0;
 
 	int opt;
 	while ((opt = getopt_long(argc, argv, "d:p:o:W:H:s:g:S:i:t:qvhVmMD", long_options, NULL)) != -1) {
@@ -397,9 +398,6 @@ int main(int argc, char *argv[]) {
 		case 260:
 			params.schedule = IRIS_SCHEDULE_SIGMOID;
 			break;
-		case 259:
-			params.circular = 1;
-			break;
 		case 261:
 			iris_vae_tiling = 1;
 			break;
@@ -410,7 +408,8 @@ int main(int argc, char *argv[]) {
 			depth_mode = 1;
 			break;
 		case 264:
-			depth_tileable = 1;
+			tileable        = 1;
+			params.circular = 1;
 			break;
 		case 258:
 			no_license_info = 1;
@@ -477,6 +476,7 @@ int main(int argc, char *argv[]) {
 			fprintf(stderr, "\nError: Failed to load upscale model: %s\n", model_path);
 			return 1;
 		}
+		iris_upscale_set_tileable(up, tileable);
 		LOG_NORMAL(" done (%.1fs)\n", timer_end());
 
 		iris_image *src = iris_image_load(input_paths[0]);
@@ -539,7 +539,7 @@ int main(int argc, char *argv[]) {
 			return 1;
 		}
 		LOG_NORMAL(" done (%.1fs)\n", timer_end());
-		iris_depth_set_tileable(dm, depth_tileable);
+		iris_depth_set_tileable(dm, tileable);
 
 		iris_image *src = iris_image_load(input_paths[0]);
 		if (!src) {

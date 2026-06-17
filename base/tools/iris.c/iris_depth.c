@@ -30,8 +30,9 @@
  * a single-channel grayscale image (brighter = nearer).
  *
  * All weights are F32 in the memory-mapped safetensors file (zero-copy). The
- * transformer linear/attention matrix multiplies are dispatched to the Vulkan
- * GEMM backend when available; convolutions (small spatially) run on the CPU.
+ * transformer linear/attention matrix multiplies are dispatched to the Metal
+ * or Vulkan GEMM backend when available; convolutions (small spatially) run on
+ * the CPU.
  *
  * Note: the official image processor resizes with bicubic resampling; here we
  * use bilinear, which yields a visually equivalent relative-depth map.
@@ -45,7 +46,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef USE_VULKAN
+#if defined(USE_METAL)
+#include "iris_metal.h"
+#elif defined(USE_VULKAN)
 #include "iris_vulkan.h"
 #endif
 
@@ -119,7 +122,15 @@ static const float *da_tensorf(iris_depth_t *m, const char *fmt, ...) {
 /* C[M,N] = scale * A[M,K] @ B[N,K]^T   (row-wise dot products).
  * cache_b: weight matrix is immutable -> cache it on the GPU by pointer. */
 static void gemm_nt(int M, int N, int K, const float *A, int lda, const float *B, int ldb, float *C, int ldc, float scale, int cache_b) {
-#ifdef USE_VULKAN
+#if defined(USE_METAL)
+	if (iris_metal_available()) {
+		if (cache_b)
+			iris_metal_sgemm_cached(0, 1, M, N, K, scale, A, lda, B, ldb, 0.0f, C, ldc);
+		else
+			iris_metal_sgemm(0, 1, M, N, K, scale, A, lda, B, ldb, 0.0f, C, ldc);
+		return;
+	}
+#elif defined(USE_VULKAN)
 	if (iris_vulkan_available()) {
 		if (cache_b)
 			iris_vulkan_sgemm_cached(0, 1, M, N, K, scale, A, lda, B, ldb, 0.0f, C, ldc);
@@ -127,9 +138,8 @@ static void gemm_nt(int M, int N, int K, const float *A, int lda, const float *B
 			iris_vulkan_sgemm(0, 1, M, N, K, scale, A, lda, B, ldb, 0.0f, C, ldc);
 		return;
 	}
-#else
-	(void)cache_b;
 #endif
+	(void)cache_b;
 	for (int i = 0; i < M; i++) {
 		const float *a = A + (size_t)i * lda;
 		float       *c = C + (size_t)i * ldc;
@@ -145,7 +155,12 @@ static void gemm_nt(int M, int N, int K, const float *A, int lda, const float *B
 
 /* C[M,N] = A[M,K] @ B[K,N]  (B not transposed). */
 static void gemm_nn(int M, int N, int K, const float *A, int lda, const float *B, int ldb, float *C, int ldc) {
-#ifdef USE_VULKAN
+#if defined(USE_METAL)
+	if (iris_metal_available()) {
+		iris_metal_sgemm(0, 0, M, N, K, 1.0f, A, lda, B, ldb, 0.0f, C, ldc);
+		return;
+	}
+#elif defined(USE_VULKAN)
 	if (iris_vulkan_available()) {
 		iris_vulkan_sgemm(0, 0, M, N, K, 1.0f, A, lda, B, ldb, 0.0f, C, ldc);
 		return;

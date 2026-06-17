@@ -139,12 +139,32 @@ typedef struct {
 	id<MTLBuffer> buffer;
 	float        *cpu_ptr;
 	size_t        size;
+	int           rows; /* M  */
+	int           cols; /* N  */
+	int           ldc;  /* row stride of cpu_ptr, in elements */
 } pending_output_t;
 
 static id<MTLCommandBuffer> g_batch_cmd = nil;
 static int                  g_in_batch  = 0;
 static pending_output_t     g_pending_outputs[MAX_BATCH_OUTPUTS];
 static int                  g_pending_count = 0;
+
+/* Copy an MPS result buffer back to a (possibly row-strided) CPU matrix.
+ * MPS writes only the N valid columns of each row (rowBytes = ldc), leaving the
+ * gap columns of a strided output (ldc > N) untouched. A single contiguous copy
+ * is therefore only correct when the matrix is packed (ldc == N); otherwise it
+ * would clobber the caller's gap columns and run past the end of C. When the
+ * output is strided we copy row by row, mirroring the Vulkan sgemm semantics
+ * (e.g. depth attention writes each head's head_dim-wide slice into a hidden-
+ * wide row). */
+static void sgemm_copy_result(float *C, const float *src, int M, int N, int ldc) {
+	if (ldc == N) {
+		memcpy(C, src, (size_t)M * ldc * sizeof(float));
+		return;
+	}
+	for (int r = 0; r < M; r++)
+		memcpy(C + (size_t)r * ldc, src + (size_t)r * ldc, (size_t)N * sizeof(float));
+}
 
 /* Input buffer cache - during batch mode, cache input buffers to avoid
  * redundant copies when the same tensor is used as input to multiple ops */
@@ -226,6 +246,8 @@ static id<MTLComputePipelineState> g_group_norm_f32_pipeline;
 static id<MTLComputePipelineState> g_swish_f32_pipeline;
 static id<MTLComputePipelineState> g_add_f32_pipeline;
 static id<MTLComputePipelineState> g_upsample_nearest_2x_f32_pipeline;
+static id<MTLComputePipelineState> g_leaky_relu_f32_pipeline;
+static id<MTLComputePipelineState> g_scale_add_f32_pipeline;
 static int                         g_shaders_initialized;
 
 /* ========================================================================
@@ -621,9 +643,10 @@ void iris_metal_end_batch(void) {
 			[g_batch_cmd commit];
 			[g_batch_cmd waitUntilCompleted];
 
-			/* Copy all pending outputs back to CPU */
+			/* Copy all pending outputs back to CPU (respecting row stride) */
 			for (int i = 0; i < g_pending_count; i++) {
-				memcpy(g_pending_outputs[i].cpu_ptr, [g_pending_outputs[i].buffer contents], g_pending_outputs[i].size);
+				sgemm_copy_result(g_pending_outputs[i].cpu_ptr, [g_pending_outputs[i].buffer contents], g_pending_outputs[i].rows, g_pending_outputs[i].cols,
+				                  g_pending_outputs[i].ldc);
 				/* Don't nil the buffer - it's from the pool */
 			}
 
@@ -757,6 +780,9 @@ static void iris_metal_sgemm_impl(int transpose_a, int transpose_b, int M, int N
 				g_pending_outputs[g_pending_count].buffer  = bufferC;
 				g_pending_outputs[g_pending_count].cpu_ptr = C;
 				g_pending_outputs[g_pending_count].size    = sizeC;
+				g_pending_outputs[g_pending_count].rows    = M;
+				g_pending_outputs[g_pending_count].cols    = N;
+				g_pending_outputs[g_pending_count].ldc     = ldc;
 				g_pending_count++;
 				/* Don't release bufferA if it came from batch input cache */
 				if (!bufferA_from_cache) {
@@ -767,7 +793,7 @@ static void iris_metal_sgemm_impl(int transpose_a, int transpose_b, int M, int N
 				/* Too many pending outputs - fall back to immediate sync */
 				[cmdBuffer commit];
 				[cmdBuffer waitUntilCompleted];
-				memcpy(C, [bufferC contents], sizeC);
+				sgemm_copy_result(C, [bufferC contents], M, N, ldc);
 				if (!bufferA_from_cache) {
 					pool_release_buffer(bufferA);
 				}
@@ -778,7 +804,7 @@ static void iris_metal_sgemm_impl(int transpose_a, int transpose_b, int M, int N
 			/* Not in batch mode: execute immediately */
 			[cmdBuffer commit];
 			[cmdBuffer waitUntilCompleted];
-			memcpy(C, [bufferC contents], sizeC);
+			sgemm_copy_result(C, [bufferC contents], M, N, ldc);
 
 			/* Release pooled buffers */
 			pool_release_buffer(bufferA);
@@ -1345,16 +1371,28 @@ static conv2d_graph_cache_t *get_conv2d_graph_cache(int batch, int in_ch, int ou
 		MPSGraphTensor *weight = [graph placeholderWithShape:weightShape dataType:MPSDataTypeFloat32 name:nil];
 		MPSGraphTensor *bias   = [graph placeholderWithShape:biasShape dataType:MPSDataTypeFloat32 name:nil];
 
-		/* Seamless tiling: wrap the input around a torus (circular padding) as a
-		 * separate pad node, then run a VALID conv. MPSGraph's convolution only
-		 * offers zero padding, so circular wrapping must precede it. */
+		/* Seamless tiling: wrap the input around a torus (circular padding), then
+		 * run a VALID conv. MPSGraph's convolution only offers zero padding, so the
+		 * circular wrap must precede it. MPSGraphPaddingModePeriodic exists in the
+		 * enum but is not implemented by the underlying MPS pad kernel (it asserts
+		 * "Unsupported paddingMode"), so we build the wrap by hand from slices: take
+		 * the trailing `padding` elements to the front and the leading ones to the
+		 * back, concatenated around the original tensor. Layout is NCHW, so H is
+		 * dimension 2 and W is dimension 3. */
 		MPSGraphTensor *convSource = input;
 		NSUInteger      convPad    = (NSUInteger)padding;
 		if (circular) {
-			NSArray<NSNumber *> *lowPad  = @[ @0, @0, @(padding), @(padding) ];
-			NSArray<NSNumber *> *highPad = @[ @0, @0, @(padding), @(padding) ];
-			convSource = [graph padTensor:input withPaddingMode:MPSGraphPaddingModePeriodic leftPadding:lowPad rightPadding:highPad constantValue:0.0 name:nil];
-			convPad    = 0; /* padding already applied via the periodic pad node */
+			/* Wrap width (dimension 3). */
+			MPSGraphTensor *wLeft  = [graph sliceTensor:input dimension:3 start:(W - padding) length:padding name:nil];
+			MPSGraphTensor *wRight = [graph sliceTensor:input dimension:3 start:0 length:padding name:nil];
+			MPSGraphTensor *wWrap  = [graph concatTensors:@[ wLeft, input, wRight ] dimension:3 name:nil];
+
+			/* Wrap height (dimension 2) on the width-wrapped tensor. */
+			MPSGraphTensor *hTop    = [graph sliceTensor:wWrap dimension:2 start:(H - padding) length:padding name:nil];
+			MPSGraphTensor *hBottom = [graph sliceTensor:wWrap dimension:2 start:0 length:padding name:nil];
+			convSource = [graph concatTensors:@[ hTop, wWrap, hBottom ] dimension:2 name:nil];
+
+			convPad = 0; /* padding already applied via the circular wrap */
 		}
 
 		MPSGraphConvolution2DOpDescriptor *desc = [MPSGraphConvolution2DOpDescriptor descriptorWithStrideInX:(NSUInteger)stride
@@ -3475,6 +3513,14 @@ int iris_metal_init_shaders(void) {
 		func = [g_shader_library newFunctionWithName:@"upsample_nearest_2x_f32"];
 		if (func) {
 			g_upsample_nearest_2x_f32_pipeline = [g_device newComputePipelineStateWithFunction:func error:&error];
+		}
+		func = [g_shader_library newFunctionWithName:@"leaky_relu_f32"];
+		if (func) {
+			g_leaky_relu_f32_pipeline = [g_device newComputePipelineStateWithFunction:func error:&error];
+		}
+		func = [g_shader_library newFunctionWithName:@"scale_add_f32"];
+		if (func) {
+			g_scale_add_f32_pipeline = [g_device newComputePipelineStateWithFunction:func error:&error];
 		}
 
 		g_shaders_initialized = 1;
@@ -6253,6 +6299,75 @@ void iris_gpu_add_f32(iris_gpu_tensor_t out, iris_gpu_tensor_t a, iris_gpu_tenso
 		[encoder setBuffer:b->buffer offset:0 atIndex:1];
 		[encoder setBuffer:out->buffer offset:0 atIndex:2];
 		[encoder setBytes:&n length:sizeof(int) atIndex:3];
+
+		NSUInteger threads = 256;
+		NSUInteger groups  = ((NSUInteger)n + threads - 1) / threads;
+		[encoder dispatchThreadgroups:MTLSizeMake(groups, 1, 1) threadsPerThreadgroup:MTLSizeMake(threads, 1, 1)];
+		[encoder endEncoding];
+
+		out->has_pending_work = 1;
+		a->has_pending_work   = 1;
+		b->has_pending_work   = 1;
+		if (!g_tensor_batch_mode) {
+			[cmdBuffer commit];
+			[cmdBuffer waitUntilCompleted];
+			out->has_pending_work = 0;
+			a->has_pending_work   = 0;
+			b->has_pending_work   = 0;
+		}
+	}
+}
+
+/* In-place-safe LeakyReLU on f32 GPU tensor: out = x >= 0 ? x : slope*x */
+void iris_gpu_leaky_relu_f32(iris_gpu_tensor_t out, iris_gpu_tensor_t x, int n, float slope) {
+	if (!g_shaders_initialized || !g_leaky_relu_f32_pipeline)
+		return;
+	if (!out || !x || n <= 0)
+		return;
+
+	@autoreleasepool {
+		id<MTLCommandBuffer>         cmdBuffer = get_tensor_cmd();
+		id<MTLComputeCommandEncoder> encoder   = [cmdBuffer computeCommandEncoder];
+
+		[encoder setComputePipelineState:g_leaky_relu_f32_pipeline];
+		[encoder setBuffer:x->buffer offset:0 atIndex:0];
+		[encoder setBuffer:out->buffer offset:0 atIndex:1];
+		[encoder setBytes:&n length:sizeof(int) atIndex:2];
+		[encoder setBytes:&slope length:sizeof(float) atIndex:3];
+
+		NSUInteger threads = 256;
+		NSUInteger groups  = ((NSUInteger)n + threads - 1) / threads;
+		[encoder dispatchThreadgroups:MTLSizeMake(groups, 1, 1) threadsPerThreadgroup:MTLSizeMake(threads, 1, 1)];
+		[encoder endEncoding];
+
+		out->has_pending_work = 1;
+		x->has_pending_work   = 1;
+		if (!g_tensor_batch_mode) {
+			[cmdBuffer commit];
+			[cmdBuffer waitUntilCompleted];
+			out->has_pending_work = 0;
+			x->has_pending_work   = 0;
+		}
+	}
+}
+
+/* Scaled residual add on f32 GPU tensors: out = scale*a + b */
+void iris_gpu_scale_add_f32(iris_gpu_tensor_t out, iris_gpu_tensor_t a, iris_gpu_tensor_t b, float scale, int n) {
+	if (!g_shaders_initialized || !g_scale_add_f32_pipeline)
+		return;
+	if (!out || !a || !b || n <= 0)
+		return;
+
+	@autoreleasepool {
+		id<MTLCommandBuffer>         cmdBuffer = get_tensor_cmd();
+		id<MTLComputeCommandEncoder> encoder   = [cmdBuffer computeCommandEncoder];
+
+		[encoder setComputePipelineState:g_scale_add_f32_pipeline];
+		[encoder setBuffer:a->buffer offset:0 atIndex:0];
+		[encoder setBuffer:b->buffer offset:0 atIndex:1];
+		[encoder setBuffer:out->buffer offset:0 atIndex:2];
+		[encoder setBytes:&n length:sizeof(int) atIndex:3];
+		[encoder setBytes:&scale length:sizeof(float) atIndex:4];
 
 		NSUInteger threads = 256;
 		NSUInteger groups  = ((NSUInteger)n + threads - 1) / threads;

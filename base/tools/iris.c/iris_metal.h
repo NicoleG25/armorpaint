@@ -461,6 +461,12 @@ void iris_gpu_swish_f32(iris_gpu_tensor_t out, iris_gpu_tensor_t x, int n);
 /* Element-wise add on f32 GPU tensors: out = a + b, in-place safe */
 void iris_gpu_add_f32(iris_gpu_tensor_t out, iris_gpu_tensor_t a, iris_gpu_tensor_t b, int n);
 
+/* In-place-safe LeakyReLU: out[i] = x[i] >= 0 ? x[i] : slope*x[i]. */
+void iris_gpu_leaky_relu_f32(iris_gpu_tensor_t out, iris_gpu_tensor_t x, int n, float slope);
+
+/* Scaled residual add: out[i] = scale*a[i] + b[i], in-place safe. */
+void iris_gpu_scale_add_f32(iris_gpu_tensor_t out, iris_gpu_tensor_t a, iris_gpu_tensor_t b, float scale, int n);
+
 /* Nearest neighbor 2x upsample on f32 GPU tensor: [1, C, H, W] -> [1, C, 2H, 2W] (batch=1) */
 iris_gpu_tensor_t iris_gpu_upsample_nearest_2x_f32(iris_gpu_tensor_t x, int channels, int H, int W);
 

@@ -22,12 +22,21 @@
 
 #include "iris_upscale.h"
 #include "iris_safetensors.h"
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#ifdef USE_VULKAN
+#if defined(USE_METAL)
+#include "iris_metal.h"
+#elif defined(USE_VULKAN)
 #include "iris_vulkan.h"
+#endif
+
+#if defined(USE_METAL)
+#define IRIS_GPU_AVAILABLE() iris_metal_available()
+#elif defined(USE_VULKAN)
+#define IRIS_GPU_AVAILABLE() iris_vulkan_available()
 #endif
 
 /* RRDBNet hyperparameters for RealESRGAN_x4plus */
@@ -44,6 +53,7 @@
 
 struct iris_upscale {
 	safetensors_file_t *sf;
+	int                 tileable; /* make the upscaled image wrap seamlessly */
 };
 
 /* ========================================================================
@@ -254,13 +264,170 @@ static iris_image *rg_chw_to_image(const float *out, int W4, int H4) {
 }
 
 /* ========================================================================
- * Vulkan GPU-resident forward path
+ * Seamless tiling via periodic+smooth decomposition (Moisan 2011)
+ *
+ * A 4x upscale of a tileable texture is not itself tileable: the network has no
+ * notion of wrap-around, so opposite borders no longer match. Rather than
+ * blend edges per-row/column (which streaks any line whose two ends differ
+ * sharply), we subtract the single smoothest 2D field that makes the image
+ * periodic -- Moisan's "smooth component", the solution of a periodic Poisson
+ * equation whose source is the jump between opposite borders. A localized edge
+ * mismatch is diffused into a gentle bump instead of smeared along a scanline,
+ * so the result tiles exactly. Solved in the Fourier domain, so it requires
+ * power-of-two dimensions (always the case for textures); other sizes are left
+ * unchanged.
+ * ======================================================================== */
+
+#ifndef IRIS_TWO_PI
+#define IRIS_TWO_PI 6.28318530717958647692
+#endif
+
+static int rg_is_pow2(int n) {
+	return n > 0 && (n & (n - 1)) == 0;
+}
+
+/* In-place iterative radix-2 Cooley-Tukey FFT. inv=0 forward (e^-i), inv=1
+ * inverse (e^+i, scaled by 1/n). n must be a power of two. */
+static void rg_fft1d(double *re, double *im, int n, int inv) {
+	for (int i = 1, j = 0; i < n; i++) {
+		int bit = n >> 1;
+		for (; j & bit; bit >>= 1)
+			j ^= bit;
+		j ^= bit;
+		if (i < j) {
+			double tr = re[i];
+			re[i]     = re[j];
+			re[j]     = tr;
+			double ti = im[i];
+			im[i]     = im[j];
+			im[j]     = ti;
+		}
+	}
+	for (int len = 2; len <= n; len <<= 1) {
+		double ang = IRIS_TWO_PI / len * (inv ? 1.0 : -1.0);
+		double wr = cos(ang), wi = sin(ang);
+		for (int i = 0; i < n; i += len) {
+			double cwr = 1.0, cwi = 0.0;
+			for (int k = 0; k < len / 2; k++) {
+				int    a = i + k, b = i + k + len / 2;
+				double vr = re[b] * cwr - im[b] * cwi;
+				double vi = re[b] * cwi + im[b] * cwr;
+				re[b]     = re[a] - vr;
+				im[b]     = im[a] - vi;
+				re[a] += vr;
+				im[a] += vi;
+				double ncwr = cwr * wr - cwi * wi;
+				cwi         = cwr * wi + cwi * wr;
+				cwr         = ncwr;
+			}
+		}
+	}
+	if (inv) {
+		for (int i = 0; i < n; i++) {
+			re[i] /= n;
+			im[i] /= n;
+		}
+	}
+}
+
+/* 2D FFT: transform every row (length W), then every column (length H), using
+ * caller-provided column scratch of length >= H. */
+static void rg_fft2d(double *re, double *im, int H, int W, int inv, double *cr, double *ci) {
+	for (int i = 0; i < H; i++)
+		rg_fft1d(re + (size_t)i * W, im + (size_t)i * W, W, inv);
+	for (int j = 0; j < W; j++) {
+		for (int i = 0; i < H; i++) {
+			cr[i] = re[(size_t)i * W + j];
+			ci[i] = im[(size_t)i * W + j];
+		}
+		rg_fft1d(cr, ci, H, inv);
+		for (int i = 0; i < H; i++) {
+			re[(size_t)i * W + j] = cr[i];
+			im[(size_t)i * W + j] = ci[i];
+		}
+	}
+}
+
+/* Subtract the smooth component so img becomes seamlessly tileable. Only acts on
+ * power-of-two dimensions (textures always qualify); other sizes are untouched. */
+static void make_seamless_poisson(float *img, int H, int W) {
+	if (!rg_is_pow2(H) || !rg_is_pow2(W) || H < 2 || W < 2)
+		return;
+
+	size_t  n  = (size_t)H * W;
+	double *re = calloc(n, sizeof(double));
+	double *im = calloc(n, sizeof(double));
+	double *cr = malloc((size_t)H * sizeof(double));
+	double *ci = malloc((size_t)H * sizeof(double));
+	if (!re || !im || !cr || !ci) {
+		free(re);
+		free(im);
+		free(cr);
+		free(ci);
+		return;
+	}
+
+	/* Boundary jump field: the wrap-around difference across each border,
+	 * accumulated (corners receive both a row and a column contribution). */
+	for (int i = 0; i < H; i++) {
+		double *row = re + (size_t)i * W;
+		double  l = img[(size_t)i * W + 0], r = img[(size_t)i * W + (W - 1)];
+		row[0] += r - l;
+		row[W - 1] += l - r;
+	}
+	for (int j = 0; j < W; j++) {
+		double t = img[(size_t)0 * W + j], b = img[(size_t)(H - 1) * W + j];
+		re[(size_t)0 * W + j] += b - t;
+		re[(size_t)(H - 1) * W + j] += t - b;
+	}
+
+	rg_fft2d(re, im, H, W, 0, cr, ci);
+
+	/* Divide by the periodic-Laplacian eigenvalues to solve the Poisson eq;
+	 * the DC term (constant offset) is undetermined, so pin it to zero. */
+	for (int q = 0; q < H; q++) {
+		double cq = 2.0 * cos(IRIS_TWO_PI * q / H);
+		for (int j = 0; j < W; j++) {
+			size_t idx = (size_t)q * W + j;
+			if (q == 0 && j == 0) {
+				re[idx] = 0.0;
+				im[idx] = 0.0;
+				continue;
+			}
+			double denom = cq + 2.0 * cos(IRIS_TWO_PI * j / W) - 4.0;
+			re[idx] /= denom;
+			im[idx] /= denom;
+		}
+	}
+
+	rg_fft2d(re, im, H, W, 1, cr, ci);
+
+	for (size_t i = 0; i < n; i++)
+		img[i] -= (float)re[i];
+
+	free(re);
+	free(im);
+	free(cr);
+	free(ci);
+}
+
+/* Make a planar CHW [3, H, W] float image tile seamlessly, per channel. */
+static void rg_make_tileable(float *chw, int H, int W) {
+	const size_t plane = (size_t)H * W;
+	for (int c = 0; c < 3; c++)
+		make_seamless_poisson(chw + (size_t)c * plane, H, W);
+}
+
+/* ========================================================================
+ * GPU-resident forward path (Metal or Vulkan)
  *
  * Mirrors the CPU forward, but every convolution / activation / residual runs
  * on the GPU and activations stay resident in VRAM between ops. Convolution is
  * the entire cost of RRDBNet (~350 3x3 convs), so offloading it is the win.
+ * Both backends expose the same iris_gpu_* tensor surface, so this path is
+ * shared verbatim between them.
  * ======================================================================== */
-#ifdef USE_VULKAN
+#if defined(USE_METAL) || defined(USE_VULKAN)
 
 /* Run a named 3x3/pad-1/stride-1 conv on the GPU. Weights are F32 in the
  * mmap'd file and cached in VRAM by pointer across the run. */
@@ -346,7 +513,7 @@ static iris_gpu_tensor_t rrdb_gpu(iris_upscale_t *m, int idx, iris_gpu_tensor_t 
 	return out;
 }
 
-static iris_image *upscale_vulkan(iris_upscale_t *m, const iris_image *input) {
+static iris_image *upscale_gpu(iris_upscale_t *m, const iris_image *input) {
 	int          H = input->height, W = input->width;
 	const size_t plane = (size_t)H * W;
 
@@ -433,11 +600,14 @@ static iris_image *upscale_vulkan(iris_upscale_t *m, const iris_image *input) {
 	iris_gpu_tensor_read(out, outbuf);
 	iris_gpu_tensor_free(out);
 
+	if (m->tileable)
+		rg_make_tileable(outbuf, H4, W4);
+
 	iris_image *result = rg_chw_to_image(outbuf, W4, H4);
 	free(outbuf);
 	return result;
 }
-#endif /* USE_VULKAN */
+#endif /* USE_METAL || USE_VULKAN */
 
 /* ========================================================================
  * Public API
@@ -462,6 +632,11 @@ iris_upscale_t *iris_upscale_load(const char *path) {
 	}
 	m->sf = sf;
 	return m;
+}
+
+void iris_upscale_set_tileable(iris_upscale_t *m, int on) {
+	if (m)
+		m->tileable = on ? 1 : 0;
 }
 
 void iris_upscale_free(iris_upscale_t *m) {
@@ -491,11 +666,11 @@ iris_image *iris_upscale_run(iris_upscale_t *m, const iris_image *input) {
 	int          H = input->height, W = input->width;
 	const size_t plane = (size_t)H * W;
 
-#ifdef USE_VULKAN
+#if defined(USE_METAL) || defined(USE_VULKAN)
 	/* GPU-resident path: convolution dominates RRDBNet, so offload it. Falls
 	 * back to the CPU path below if the GPU forward fails. */
-	if (iris_vulkan_available()) {
-		iris_image *r = upscale_vulkan(m, input);
+	if (IRIS_GPU_AVAILABLE()) {
+		iris_image *r = upscale_gpu(m, input);
 		if (r)
 			return r;
 		fprintf(stderr, "RealESRGAN: GPU path failed, falling back to CPU\n");
@@ -654,6 +829,9 @@ iris_image *iris_upscale_run(iris_upscale_t *m, const iris_image *input) {
 		return NULL;
 	}
 	free(hr);
+
+	if (m->tileable)
+		rg_make_tileable(out, H4, W4);
 
 	/* ---- CHW float [0,1] -> RGB uint8 image ---- */
 	iris_image *result = rg_chw_to_image(out, W4, H4);

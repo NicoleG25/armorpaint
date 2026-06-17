@@ -2134,3 +2134,31 @@ kernel void upsample_nearest_2x_f32(
 
     out[c * out_spatial + oy * out_w + ox] = x[c * in_h * in_w + iy * in_w + ix];
 }
+
+/* LeakyReLU f32: out = x >= 0 ? x : slope*x, in-place safe (out can alias x) */
+kernel void leaky_relu_f32(
+    device const float *x [[buffer(0)]],
+    device float *out [[buffer(1)]],
+    constant int &n [[buffer(2)]],
+    constant float &slope [[buffer(3)]],
+    uint gid [[thread_position_in_grid]]
+) {
+    if (gid < uint(n)) {
+        float v = x[gid];
+        out[gid] = v >= 0.0f ? v : slope * v;
+    }
+}
+
+/* Scaled residual add f32: out = scale*a + b, in-place safe (out can alias a or b) */
+kernel void scale_add_f32(
+    device const float *a [[buffer(0)]],
+    device const float *b [[buffer(1)]],
+    device float *out [[buffer(2)]],
+    constant int &n [[buffer(3)]],
+    constant float &scale [[buffer(4)]],
+    uint gid [[thread_position_in_grid]]
+) {
+    if (gid < uint(n)) {
+        out[gid] = scale * a[gid] + b[gid];
+    }
+}

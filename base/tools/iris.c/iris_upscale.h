@@ -25,6 +25,13 @@ typedef struct iris_upscale iris_upscale_t;
 iris_upscale_t *iris_upscale_load(const char *path);
 
 /*
+ * Enable "tileable" mode: subtract the smoothest periodic field that makes the
+ * upscaled image wrap seamlessly, so a tileable input stays tileable after 4x
+ * upscaling. Off by default.
+ */
+void iris_upscale_set_tileable(iris_upscale_t *model, int on);
+
+/*
  * Free the model and its resources.
  */
 void iris_upscale_free(iris_upscale_t *model);
