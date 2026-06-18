@@ -161,10 +161,31 @@ iris_image *iris_img2img(iris_ctx *ctx, const char *prompt, const iris_image *in
 iris_image *iris_multiref(iris_ctx *ctx, const char *prompt, const iris_image **refs, int num_refs, const iris_params *params);
 
 /*
- * Debug: img2img using Python's exact inputs from /tmp/py_*.bin files.
- * Used for comparing C and Python implementations.
+ * Strength-based image-to-image (traditional noise-and-denoise variation).
+ * strength in [0,1]: 0 stays at the input, 1 is full noise (like txt2img).
+ * Unlike iris_img2img(), the input is re-noised and denoised rather than used
+ * as an in-context attention reference. Good for generating variations.
  */
-iris_image *iris_img2img_debug_py(iris_ctx *ctx, const iris_params *params);
+iris_image *iris_img2img_strength(iris_ctx *ctx, const char *prompt, const iris_image *input, float strength, const iris_params *params);
+
+/*
+ * Turn a non-tiling photo into a seamless tile while staying close to it.
+ * Re-synthesizes the whole image with a low-strength, circular-padded img2img:
+ * circular convolutions make the output wrap seamlessly while the low strength
+ * keeps every pixel close to the original. `strength` trades fidelity (lower)
+ * for seamlessness (higher); pass a negative value for the default. Output
+ * dimensions match the input.
+ */
+iris_image *iris_make_tileable(iris_ctx *ctx, const char *prompt, const iris_image *input, float strength, const iris_params *params);
+
+/*
+ * Masked inpainting / object removal.
+ * mask is a grayscale image: white (255) regenerates, black (0) is kept.
+ * The keep region is pinned to the original in latent space (seamless blend)
+ * and the masked region of the reference is neutralized so the model does not
+ * redraw the removed content. Output dimensions match the input.
+ */
+iris_image *iris_inpaint(iris_ctx *ctx, const char *prompt, const iris_image *input, const iris_image *mask, const iris_params *params);
 
 /* ========================================================================
  * Image I/O

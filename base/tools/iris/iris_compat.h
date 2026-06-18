@@ -214,7 +214,7 @@ static int getopt_long(int argc, char *const argv[], const char *optstring, cons
 			optind += 2;
 		}
 		else {
-			optopt      = c;
+			optopt = c;
 			optind++;
 			iris_optpos = 1;
 			if (opterr)

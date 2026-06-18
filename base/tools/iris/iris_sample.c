@@ -576,6 +576,158 @@ float *iris_sample_euler_cfg_refs_flux(void *transformer, void *text_encoder, fl
 	return z_curr;
 }
 
+/* ========================================================================
+ * Inpainting Samplers (masked latent diffusion)
+ *
+ * Like the single-reference samplers, but the keep region (mask=0) is pinned
+ * to the original image's forward-diffusion path at every step, while only the
+ * masked region (mask=1) is freely generated. Decoding the whole latent
+ * through the VAE yields a seamless blend with no pixel-space seams.
+ *
+ *   mask:   per-latent-pixel weights [h*w], 1 = inpaint (generate), 0 = keep.
+ *   x0:     clean latent of the original image [channels*h*w] (keep target).
+ *   noise0: the initial noise used to seed z [channels*h*w].
+ * For rectified flow, the keep region at time t is (1-t)*x0 + t*noise0, so at
+ * t=0 it reconstructs the original exactly.
+ * ======================================================================== */
+
+static void iris_inpaint_blend(float *z_curr, const float *x0, const float *noise0, const float *mask, float t_next, int channels, int h, int w) {
+	int hw = h * w;
+	for (int c = 0; c < channels; c++) {
+		const float *x0c = x0 + (size_t)c * hw;
+		const float *n0c = noise0 + (size_t)c * hw;
+		float       *zc  = z_curr + (size_t)c * hw;
+		for (int p = 0; p < hw; p++) {
+			float m  = mask[p];
+			float zk = (1.0f - t_next) * x0c[p] + t_next * n0c[p];
+			zc[p]    = m * zc[p] + (1.0f - m) * zk;
+		}
+	}
+}
+
+/* Distilled (no CFG) inpainting sampler. noise0 is the caller's initial z. */
+float *iris_sample_euler_inpaint_refs_flux(void *transformer, void *text_encoder, float *z, int batch, int channels, int h, int w, const float *ref_latent,
+                                           int ref_h, int ref_w, int t_offset, const float *x0, const float *mask, const float *text_emb, int text_seq,
+                                           const float *schedule, int num_steps, void (*progress_callback)(int step, int total)) {
+	(void)text_encoder;
+	iris_transformer_flux_t *tf          = (iris_transformer_flux_t *)transformer;
+	int                      latent_size = batch * channels * h * w;
+
+	float *z_curr = (float *)malloc(latent_size * sizeof(float));
+	iris_copy(z_curr, z, latent_size);
+
+	iris_reset_timing();
+	double total_denoising_start = get_time_ms();
+	double step_times[IRIS_MAX_STEPS];
+
+	for (int step = 0; step < num_steps; step++) {
+		float t_curr = schedule[step];
+		float t_next = schedule[step + 1];
+		float dt     = t_next - t_curr;
+
+		double step_start = get_time_ms();
+
+		if (iris_step_callback)
+			iris_step_callback(step + 1, num_steps);
+
+		float *v = iris_transformer_forward_refs_flux(tf, z_curr, h, w, ref_latent, ref_h, ref_w, t_offset, text_emb, text_seq, t_curr);
+		iris_axpy(z_curr, dt, v, latent_size);
+		free(v);
+
+		/* Pin the keep region to the original image's diffusion path */
+		iris_inpaint_blend(z_curr, x0, z, mask, t_next, channels, h, w);
+
+		step_times[step] = get_time_ms() - step_start;
+
+		if (progress_callback)
+			progress_callback(step + 1, num_steps);
+
+		if (iris_step_image_callback && iris_step_image_vae && step + 1 < num_steps) {
+			iris_image *img = iris_vae_decode((iris_vae_t *)iris_step_image_vae, z_curr, 1, h, w);
+			if (img) {
+				iris_step_image_callback(step + 1, num_steps, img);
+				iris_image_free(img);
+			}
+		}
+	}
+
+	if (iris_verbose) {
+		double total_denoising = get_time_ms() - total_denoising_start;
+		fprintf(stderr, "\nDenoising timing breakdown (inpaint):\n");
+		for (int step = 0; step < num_steps; step++)
+			fprintf(stderr, "  Step %d: %.1f ms\n", step + 1, step_times[step]);
+		fprintf(stderr, "  Total denoising: %.1f ms (%.2f s)\n", total_denoising, total_denoising / 1000.0);
+	}
+
+	iris_transformer_free_mmap_cache_flux(tf);
+	return z_curr;
+}
+
+/* Base-model (CFG) inpainting sampler. */
+float *iris_sample_euler_cfg_inpaint_refs_flux(void *transformer, void *text_encoder, float *z, int batch, int channels, int h, int w, const float *ref_latent,
+                                               int ref_h, int ref_w, int t_offset, const float *x0, const float *mask, const float *text_emb_cond,
+                                               int text_seq_cond, const float *text_emb_uncond, int text_seq_uncond, float guidance_scale,
+                                               const float *schedule, int num_steps, void (*progress_callback)(int step, int total)) {
+	(void)text_encoder;
+	iris_transformer_flux_t *tf          = (iris_transformer_flux_t *)transformer;
+	int                      latent_size = batch * channels * h * w;
+
+	float *z_curr = (float *)malloc(latent_size * sizeof(float));
+	iris_copy(z_curr, z, latent_size);
+
+	iris_reset_timing();
+	double total_denoising_start = get_time_ms();
+	double step_times[IRIS_MAX_STEPS];
+
+	for (int step = 0; step < num_steps; step++) {
+		float t_curr = schedule[step];
+		float t_next = schedule[step + 1];
+		float dt     = t_next - t_curr;
+
+		double step_start = get_time_ms();
+
+		if (iris_step_callback)
+			iris_step_callback(step + 1, num_steps);
+
+		float *v_uncond = iris_transformer_forward_refs_flux(tf, z_curr, h, w, ref_latent, ref_h, ref_w, t_offset, text_emb_uncond, text_seq_uncond, t_curr);
+		float *v_cond   = iris_transformer_forward_refs_flux(tf, z_curr, h, w, ref_latent, ref_h, ref_w, t_offset, text_emb_cond, text_seq_cond, t_curr);
+
+		for (int i = 0; i < latent_size; i++) {
+			float v = v_uncond[i] + guidance_scale * (v_cond[i] - v_uncond[i]);
+			z_curr[i] += dt * v;
+		}
+		free(v_uncond);
+		free(v_cond);
+
+		/* Pin the keep region to the original image's diffusion path */
+		iris_inpaint_blend(z_curr, x0, z, mask, t_next, channels, h, w);
+
+		step_times[step] = get_time_ms() - step_start;
+
+		if (progress_callback)
+			progress_callback(step + 1, num_steps);
+
+		if (iris_step_image_callback && iris_step_image_vae && step + 1 < num_steps) {
+			iris_image *img = iris_vae_decode((iris_vae_t *)iris_step_image_vae, z_curr, 1, h, w);
+			if (img) {
+				iris_step_image_callback(step + 1, num_steps, img);
+				iris_image_free(img);
+			}
+		}
+	}
+
+	if (iris_verbose) {
+		double total_denoising = get_time_ms() - total_denoising_start;
+		fprintf(stderr, "\nDenoising timing breakdown (CFG inpaint, guidance=%.1f):\n", guidance_scale);
+		for (int step = 0; step < num_steps; step++)
+			fprintf(stderr, "  Step %d: %.1f ms\n", step + 1, step_times[step]);
+		fprintf(stderr, "  Total denoising: %.1f ms (%.2f s)\n", total_denoising, total_denoising / 1000.0);
+	}
+
+	iris_transformer_free_mmap_cache_flux(tf);
+	return z_curr;
+}
+
 /*
  * Euler sampler with CFG and multiple reference images.
  */

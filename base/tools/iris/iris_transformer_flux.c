@@ -329,8 +329,7 @@ typedef struct iris_transformer_flux {
 	float *vk_single_rope_cos; /* [(txt_seq + img_seq) * head_dim] */
 	float *vk_single_rope_sin;
 	int    vk_single_rope_txt_seq;
-	int    vk_single_rope_img_h;
-	int    vk_single_rope_img_w;
+	int    vk_single_rope_img_seq; /* full image rope length (target + any references) */
 
 	/* Persistent GPU scratch/IO tensors for the Vulkan-resident path. Allocated
 	 * once and reused across denoising steps (reallocated only when the sequence
@@ -3647,28 +3646,33 @@ static int single_block_forward_vk(iris_gpu_tensor_t hidden_gpu, const single_bl
 	return 1;
 }
 
-/* Build (and cache) the combined [txt, img] RoPE table for the single-block
- * sequence: the text rope rows followed by the image rope rows. Depends only on
- * (txt_seq, img geometry) so it is reused across all denoising steps. */
-static int vkflux_build_single_rope(iris_transformer_flux_t *tf, int img_h, int img_w, int txt_seq, const float *img_rope_cos, const float *img_rope_sin,
+/* Build the combined [txt, img] RoPE table for the single-block sequence: the
+ * text rope rows followed by the image rope rows. The underlying allocation is
+ * cached and reused across denoising steps (reallocated only when the sequence
+ * size changes); the rope *content* is refilled every call. Those two memcpys
+ * are negligible next to a step's block GEMMs, and refilling unconditionally
+ * keeps the table correct for txt2img, single-ref and multi-ref img2img (whose
+ * image rope already concatenates target + references) without needing
+ * geometry-specific cache keys. */
+static int vkflux_build_single_rope(iris_transformer_flux_t *tf, int img_seq, int txt_seq, const float *img_rope_cos, const float *img_rope_sin,
                                     const float *txt_rope_cos, const float *txt_rope_sin) {
-	int img_seq   = img_h * img_w;
 	int head_dim  = tf->head_dim;
 	int total_seq = txt_seq + img_seq;
 
-	if (tf->vk_single_rope_cos && tf->vk_single_rope_txt_seq == txt_seq && tf->vk_single_rope_img_h == img_h && tf->vk_single_rope_img_w == img_w)
-		return 1;
-
-	free(tf->vk_single_rope_cos);
-	free(tf->vk_single_rope_sin);
-	size_t bytes           = (size_t)total_seq * head_dim * sizeof(float);
-	tf->vk_single_rope_cos = (float *)malloc(bytes);
-	tf->vk_single_rope_sin = (float *)malloc(bytes);
-	if (!tf->vk_single_rope_cos || !tf->vk_single_rope_sin) {
+	if (!tf->vk_single_rope_cos || tf->vk_single_rope_txt_seq != txt_seq || tf->vk_single_rope_img_seq != img_seq) {
 		free(tf->vk_single_rope_cos);
 		free(tf->vk_single_rope_sin);
-		tf->vk_single_rope_cos = tf->vk_single_rope_sin = NULL;
-		return 0;
+		size_t bytes           = (size_t)total_seq * head_dim * sizeof(float);
+		tf->vk_single_rope_cos = (float *)malloc(bytes);
+		tf->vk_single_rope_sin = (float *)malloc(bytes);
+		if (!tf->vk_single_rope_cos || !tf->vk_single_rope_sin) {
+			free(tf->vk_single_rope_cos);
+			free(tf->vk_single_rope_sin);
+			tf->vk_single_rope_cos = tf->vk_single_rope_sin = NULL;
+			return 0;
+		}
+		tf->vk_single_rope_txt_seq = txt_seq;
+		tf->vk_single_rope_img_seq = img_seq;
 	}
 	size_t txt_bytes = (size_t)txt_seq * head_dim * sizeof(float);
 	size_t img_bytes = (size_t)img_seq * head_dim * sizeof(float);
@@ -3676,25 +3680,21 @@ static int vkflux_build_single_rope(iris_transformer_flux_t *tf, int img_h, int 
 	memcpy(tf->vk_single_rope_sin, txt_rope_sin, txt_bytes);
 	memcpy(tf->vk_single_rope_cos + (size_t)txt_seq * head_dim, img_rope_cos, img_bytes);
 	memcpy(tf->vk_single_rope_sin + (size_t)txt_seq * head_dim, img_rope_sin, img_bytes);
-	tf->vk_single_rope_txt_seq = txt_seq;
-	tf->vk_single_rope_img_h   = img_h;
-	tf->vk_single_rope_img_w   = img_w;
 	return 1;
 }
 
 /* Full GPU-resident Flux transformer forward for one denoising step. Returns
  * the velocity latent in NCHW layout, or NULL on failure (caller falls back to
  * the GEMM-offload path). */
-static float *iris_transformer_forward_vulkan_resident_flux(iris_transformer_flux_t *tf, const float *img_transposed, int img_h, int img_w,
+static float *iris_transformer_forward_vulkan_resident_flux(iris_transformer_flux_t *tf, const float *img_transposed, int img_seq, int extract_seq,
                                                             const float *txt_emb, int txt_seq, const float *t_emb, const float *img_rope_cos,
                                                             const float *img_rope_sin, const float *txt_rope_cos, const float *txt_rope_sin) {
 	int hidden    = tf->hidden_size;
 	int mlp       = tf->mlp_hidden;
 	int channels  = tf->latent_channels;
-	int img_seq   = img_h * img_w;
 	int total_seq = img_seq + txt_seq;
 
-	if (!vkflux_build_single_rope(tf, img_h, img_w, txt_seq, img_rope_cos, img_rope_sin, txt_rope_cos, txt_rope_sin))
+	if (!vkflux_build_single_rope(tf, img_seq, txt_seq, img_rope_cos, img_rope_sin, txt_rope_cos, txt_rope_sin))
 		return NULL;
 	const float *single_rope_cos = tf->vk_single_rope_cos;
 	const float *single_rope_sin = tf->vk_single_rope_sin;
@@ -3771,23 +3771,29 @@ static float *iris_transformer_forward_vulkan_resident_flux(iris_transformer_flu
 	}
 
 	if (ok) {
-		/* Final layer: slice image tokens -> AdaLN -> project to latent channels. */
-		iris_gpu_copy_region_f32(scratch.sq, 0, concat_hidden, (size_t)txt_seq * hidden, (size_t)img_seq * hidden);
-		iris_gpu_adaln_norm(scratch.norm, scratch.sq, final_shift, final_scale, img_seq, hidden, 1e-6f);
-		ok = vkflux_linear(final_out, scratch.norm, tf->final_proj_weight, tf->final_proj_weight_bf16, img_seq, hidden, channels);
+		/* Final layer: slice the target image tokens (the first extract_seq image
+		 * tokens, which sit right after the txt tokens) -> AdaLN -> project to
+		 * latent channels. For img2img extract_seq < img_seq drops the reference. */
+		iris_gpu_copy_region_f32(scratch.sq, 0, concat_hidden, (size_t)txt_seq * hidden, (size_t)extract_seq * hidden);
+		iris_gpu_adaln_norm(scratch.norm, scratch.sq, final_shift, final_scale, extract_seq, hidden, 1e-6f);
+		ok = vkflux_linear(final_out, scratch.norm, tf->final_proj_weight, tf->final_proj_weight_bf16, extract_seq, hidden, channels);
 	}
 
 	iris_gpu_batch_end();
 
 	if (ok) {
+		/* final_out is the persistent tensor sized for the full image stream
+		 * (img_seq, = target+reference for img2img); iris_gpu_tensor_read copies
+		 * its entire allocation, so the staging buffer must match that size even
+		 * though only the first extract_seq (target) rows are meaningful. */
 		output_nlc = (float *)malloc((size_t)img_seq * channels * sizeof(float));
-		output     = (float *)malloc((size_t)img_seq * channels * sizeof(float));
+		output     = (float *)malloc((size_t)extract_seq * channels * sizeof(float));
 		if (output_nlc && output) {
 			iris_gpu_tensor_read(final_out, output_nlc);
-			/* NLC [seq, channels] -> NCHW [channels, seq] */
-			for (int pos = 0; pos < img_seq; pos++)
+			/* NLC [seq, channels] -> NCHW [channels, seq], target tokens only */
+			for (int pos = 0; pos < extract_seq; pos++)
 				for (int c = 0; c < channels; c++)
-					output[c * img_seq + pos] = output_nlc[pos * channels + c];
+					output[c * extract_seq + pos] = output_nlc[pos * channels + c];
 			if (iris_substep_callback)
 				iris_substep_callback(IRIS_SUBSTEP_FINAL_LAYER, 0, 1);
 		}
@@ -4036,8 +4042,8 @@ float *iris_transformer_forward_flux(iris_transformer_flux_t *tf, const float *i
 	 * Requires bf16 weights (applied in-shader); the f32 path would allocate
 	 * large per-linear temporaries inside the batch. */
 	if (iris_vk_flux_available() && tf->use_bf16) {
-		float *vk_output = iris_transformer_forward_vulkan_resident_flux(tf, img_transposed, img_h, img_w, txt_emb, txt_seq, t_emb, img_rope_cos, img_rope_sin,
-		                                                                 txt_rope_cos, txt_rope_sin);
+		float *vk_output = iris_transformer_forward_vulkan_resident_flux(tf, img_transposed, img_seq, /* extract_seq = */ img_seq, txt_emb, txt_seq, t_emb,
+		                                                                 img_rope_cos, img_rope_sin, txt_rope_cos, txt_rope_sin);
 		if (vk_output) {
 			free(img_transposed);
 			free(t_emb);
@@ -4527,6 +4533,26 @@ float *iris_transformer_forward_refs_flux(iris_transformer_flux_t *tf, const flo
 	}
 #endif
 
+#ifdef USE_VULKAN
+	/* Fully GPU-resident Vulkan path for img2img: same monolithic per-step batch
+	 * as txt2img, but the image stream carries the combined [target, reference]
+	 * sequence (with the combined RoPE), and the final layer extracts only the
+	 * target tokens. Keeps every block on the GPU instead of falling through to
+	 * the CPU block loop below. */
+	if (iris_vk_flux_available() && tf->use_bf16) {
+		float *vk_output =
+		    iris_transformer_forward_vulkan_resident_flux(tf, combined_transposed, combined_img_seq, /* extract_seq = target only */ img_seq, txt_emb, txt_seq,
+		                                                  t_emb, combined_rope_cos, combined_rope_sin, txt_rope_cos, txt_rope_sin);
+		if (vk_output) {
+			free(combined_transposed);
+			free(t_emb);
+			/* RoPE buffers are cached in transformer struct - don't free */
+			return vk_output;
+		}
+		/* Fall through to GEMM-offload path on failure. */
+	}
+#endif
+
 	/* Project combined image latent to hidden */
 	float *combined_hidden = (float *)malloc(combined_img_seq * hidden * sizeof(float));
 	LINEAR_BF16_OR_F32(combined_hidden, combined_transposed, tf->img_in_weight, tf->img_in_weight_bf16, combined_img_seq, tf->latent_channels, hidden);
@@ -4743,6 +4769,26 @@ float *iris_transformer_forward_multirefs_flux(iris_transformer_flux_t *tf, cons
 		else {
 			BF16_DEBUG("[BF16] bf16 pipeline failed for multi-refs, falling back\n");
 		}
+	}
+#endif
+
+#ifdef USE_VULKAN
+	/* Fully GPU-resident Vulkan path for multi-reference img2img. The image
+	 * stream carries [target, ref0, ref1, ...] with the combined RoPE built
+	 * above; the final layer extracts only the target tokens. */
+	if (iris_vk_flux_available() && tf->use_bf16) {
+		float *vk_output =
+		    iris_transformer_forward_vulkan_resident_flux(tf, combined_transposed, combined_img_seq, /* extract_seq = target only */ img_seq, txt_emb, txt_seq,
+		                                                  t_emb, combined_rope_cos, combined_rope_sin, txt_rope_cos, txt_rope_sin);
+		if (vk_output) {
+			free(combined_transposed);
+			free(t_emb);
+			free(combined_rope_cos);
+			free(combined_rope_sin);
+			/* txt_rope is cached - don't free */
+			return vk_output;
+		}
+		/* Fall through to GEMM-offload path on failure. */
 	}
 #endif
 

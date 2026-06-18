@@ -239,6 +239,13 @@ static void print_usage(const char *prog) {
 	fprintf(stderr, "Reference images (img2img / multi-reference):\n");
 	fprintf(stderr, "  -i, --input PATH      Reference image (can specify up to %d)\n", MAX_INPUT_IMAGES);
 	fprintf(stderr, "                        Multiple -i flags combine images via in-context conditioning\n\n");
+	fprintf(stderr, "      --vary N          Variation amount for img2img (0.0-1.0). Re-noises the input\n");
+	fprintf(stderr, "                        and denoises it: low = close to original, high = more change.\n");
+	fprintf(stderr, "                        Uses traditional img2img (single -i) instead of in-context.\n\n");
+	fprintf(stderr, "Inpainting / object removal (img2img only):\n");
+	fprintf(stderr, "      --mask PATH       Black & white mask for img2img: white areas are regenerated,\n");
+	fprintf(stderr, "                        black areas are kept from the input image. Requires one -i input.\n");
+	fprintf(stderr, "                        No effect in text2img, --upscale or --depth modes.\n\n");
 	fprintf(stderr, "Upscaling:\n");
 	fprintf(stderr, "      --upscale         4x upscale input (-i) via RealESRGAN_x4plus, write to -o\n");
 	fprintf(stderr, "                        (uses <model-dir>/RealESRGAN_x4plus.safetensors; no prompt needed)\n\n");
@@ -246,8 +253,12 @@ static void print_usage(const char *prog) {
 	fprintf(stderr, "      --depth           Estimate depth from input (-i) via Depth Anything 3, write to -o\n");
 	fprintf(stderr, "                        (uses <model-dir>/da3-mono-large.safetensors; no prompt needed)\n\n");
 	fprintf(stderr, "Seamless tiling:\n");
-	fprintf(stderr, "      --tileable        Make the output seamlessly tileable.\n");
+	fprintf(stderr, "      --tile            Make the output seamlessly tileable.\n");
 	fprintf(stderr, "                        Generation: circular conv padding.\n");
+	fprintf(stderr, "                        With -i (img2img): convert the photo to a seamless tile by\n");
+	fprintf(stderr, "                        re-synthesizing it with circular padding, staying close to the\n");
+	fprintf(stderr, "                        original. --vary sets the strength (default 0.45): lower\n");
+	fprintf(stderr, "                        stays closer to the source, higher closes the seam harder.\n");
 	fprintf(stderr, "                        With --upscale: keep a tileable input seamless after 4x.\n");
 	fprintf(stderr, "                        With --depth: also flatten the perspective tilt.\n\n");
 	fprintf(stderr, "Output options:\n");
@@ -301,8 +312,9 @@ int main(int argc, char *argv[]) {
 	                                       {"vae-tiling", no_argument, 0, 261},
 	                                       {"upscale", no_argument, 0, 262},
 	                                       {"depth", no_argument, 0, 263},
-	                                       {"tileable", no_argument, 0, 264},
-	                                       {"debug-py", no_argument, 0, 'D'},
+	                                       {"tile", no_argument, 0, 264},
+	                                       {"mask", required_argument, 0, 265},
+	                                       {"vary", required_argument, 0, 266},
 	                                       {"no-license-info", no_argument, 0, 258},
 	                                       {0, 0, 0, 0}};
 
@@ -312,6 +324,8 @@ int main(int argc, char *argv[]) {
 	char *output_path                   = NULL;
 	char *input_paths[MAX_INPUT_IMAGES] = {NULL};
 	int   num_inputs                    = 0;
+	char *mask_path                     = NULL;
+	float variance                      = -1.0f; /* <0 = unset (use in-context img2img) */
 
 	iris_params params = {.width       = DEFAULT_WIDTH,
 	                      .height      = DEFAULT_HEIGHT,
@@ -323,7 +337,6 @@ int main(int argc, char *argv[]) {
 
 	int width_set = 0, height_set = 0, steps_set = 0;
 	int use_mmap        = 1; /* mmap is default (fastest on MPS) */
-	int debug_py        = 0;
 	int force_base      = 0;
 	int no_license_info = 0;
 	int upscale_mode    = 0;
@@ -416,11 +429,14 @@ int main(int argc, char *argv[]) {
 			tileable        = 1;
 			params.circular = 1;
 			break;
+		case 265:
+			mask_path = optarg;
+			break;
+		case 266:
+			variance = atof(optarg);
+			break;
 		case 258:
 			no_license_info = 1;
-			break;
-		case 'D':
-			debug_py = 1;
 			break;
 		default:
 			print_usage(argv[0]);
@@ -457,6 +473,9 @@ int main(int argc, char *argv[]) {
 		print_usage(argv[0]);
 		return 1;
 	}
+
+	if ((mask_path || variance >= 0.0f) && (upscale_mode || depth_mode))
+		LOG_NORMAL("Note: --mask / --vary have no effect in --upscale / --depth modes\n");
 
 	/* ============== Upscale mode (RealESRGAN_x4plus, no diffusion) ============== */
 	if (upscale_mode) {
@@ -582,7 +601,7 @@ int main(int argc, char *argv[]) {
 		return 0;
 	}
 
-	if (!prompt && !debug_py) {
+	if (!prompt) {
 		fprintf(stderr, "Error: Prompt (-p) is required\n\n");
 		print_usage(argv[0]);
 		return 1;
@@ -689,12 +708,7 @@ int main(int argc, char *argv[]) {
 	struct timeval total_start_tv;
 	gettimeofday(&total_start_tv, NULL);
 
-	if (debug_py) {
-		/* ============== Debug mode: use Python inputs ============== */
-		LOG_NORMAL("Debug mode: loading Python inputs from /tmp/py_*.bin\n");
-		output = iris_img2img_debug_py(ctx, &params);
-	}
-	else if (num_inputs > 0) {
+	if (num_inputs > 0) {
 		/* ============== Image-to-image mode (single or multi-reference) ============== */
 		LOG_NORMAL("Loading %d input image%s...", num_inputs, num_inputs > 1 ? "s" : "");
 		if (output_level >= OUTPUT_NORMAL)
@@ -724,8 +738,40 @@ int main(int argc, char *argv[]) {
 		if (!height_set)
 			params.height = inputs[0]->height;
 
-		/* Generate with multi-reference */
-		output = iris_multiref(ctx, prompt, (const iris_image **)inputs, num_inputs, &params);
+		if (mask_path) {
+			/* Masked inpainting / object removal (single input). */
+			if (num_inputs > 1)
+				LOG_NORMAL("Note: --mask uses only the first input image\n");
+			iris_image *mask_img = iris_image_load(mask_path);
+			if (!mask_img) {
+				fprintf(stderr, "\nError: Failed to load mask image: %s\n", mask_path);
+				for (int i = 0; i < num_inputs; i++)
+					iris_image_free(inputs[i]);
+				iris_free(ctx);
+				return 1;
+			}
+			if (variance >= 0.0f)
+				LOG_NORMAL("Note: --vary is ignored when --mask is used\n");
+			output = iris_inpaint(ctx, prompt, inputs[0], mask_img, &params);
+			iris_image_free(mask_img);
+		}
+		else if (tileable) {
+			/* Re-synthesize the whole image seamlessly (circular padding).
+			 * --vary, if given, sets the strength; otherwise use the default. */
+			if (num_inputs > 1)
+				LOG_NORMAL("Note: --tile uses only the first input image\n");
+			output = iris_make_tileable(ctx, prompt, inputs[0], variance, &params);
+		}
+		else if (variance >= 0.0f) {
+			/* Traditional noise-and-denoise variation (single input). */
+			if (num_inputs > 1)
+				LOG_NORMAL("Note: --vary uses only the first input image\n");
+			output = iris_img2img_strength(ctx, prompt, inputs[0], variance, &params);
+		}
+		else {
+			/* Generate with multi-reference */
+			output = iris_multiref(ctx, prompt, (const iris_image **)inputs, num_inputs, &params);
+		}
 
 		for (int i = 0; i < num_inputs; i++) {
 			iris_image_free(inputs[i]);
@@ -733,6 +779,8 @@ int main(int argc, char *argv[]) {
 	}
 	else {
 		/* ============== Text-to-image mode ============== */
+		if (mask_path || variance >= 0.0f)
+			LOG_NORMAL("Note: --mask / --vary have no effect in text-to-image mode (no input image)\n");
 		/* Note: iris_generate handles text encoding internally.
 		 * We can't easily time it separately without modifying the library.
 		 * The progress callbacks will show denoising progress. */

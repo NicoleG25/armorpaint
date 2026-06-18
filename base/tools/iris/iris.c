@@ -14,6 +14,7 @@
 #else
 #include <dirent.h>
 #endif
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -44,6 +45,7 @@ extern void        iris_vae_free(iris_vae_t *vae);
 extern float      *iris_vae_encode(iris_vae_t *vae, const float *img, int batch, int H, int W, int *out_h, int *out_w);
 extern iris_image *iris_vae_decode(iris_vae_t *vae, const float *latent, int batch, int latent_h, int latent_w);
 extern float      *iris_image_to_tensor(const iris_image *img);
+extern iris_image *iris_image_clone(const iris_image *img);
 
 extern iris_transformer_flux_t *iris_transformer_load_flux(FILE *f);
 extern iris_transformer_flux_t *iris_transformer_load_safetensors_flux(const char *model_dir);
@@ -81,6 +83,17 @@ extern float *iris_sample_euler_cfg_multirefs_flux(void *transformer, void *text
                                                    const iris_ref_t *refs, int num_refs, const float *text_emb_cond, int text_seq_cond,
                                                    const float *text_emb_uncond, int text_seq_uncond, float guidance_scale, const float *schedule,
                                                    int num_steps, void (*progress_callback)(int step, int total));
+
+/* Inpainting samplers (masked latent diffusion) */
+extern float *iris_sample_euler_inpaint_refs_flux(void *transformer, void *text_encoder, float *z, int batch, int channels, int h, int w,
+                                                  const float *ref_latent, int ref_h, int ref_w, int t_offset, const float *x0, const float *mask,
+                                                  const float *text_emb, int text_seq, const float *schedule, int num_steps,
+                                                  void (*progress_callback)(int step, int total));
+extern float *iris_sample_euler_cfg_inpaint_refs_flux(void *transformer, void *text_encoder, float *z, int batch, int channels, int h, int w,
+                                                      const float *ref_latent, int ref_h, int ref_w, int t_offset, const float *x0, const float *mask,
+                                                      const float *text_emb_cond, int text_seq_cond, const float *text_emb_uncond, int text_seq_uncond,
+                                                      float guidance_scale, const float *schedule, int num_steps,
+                                                      void (*progress_callback)(int step, int total));
 
 extern float *iris_schedule_linear(int num_steps);
 extern float *iris_schedule_power(int num_steps, float alpha);
@@ -615,8 +628,21 @@ iris_image *iris_generate(iris_ctx *ctx, const char *prompt, const iris_params *
  * Attention Memory Budget
  * ======================================================================== */
 
-/* 4 GB — MPSTemporaryNDArray hard limit. */
+/* Cap on the worst-case attention matrix (num_heads * seq * seq * 4B).
+ *
+ * The Metal path materializes the full [seq, seq] score matrix per head, so it
+ * is bound by the 4 GB MPSTemporaryNDArray hard limit; exceeding it forces
+ * references to be shrunk (e.g. a 1024x1024 reference drops to 720x720).
+ *
+ * The Vulkan resident path uses flash-style attention (iris_vulkan_res_attn.comp,
+ * online softmax) that never materializes that matrix, so the 4 GB cap does not
+ * apply. Use a generous ceiling there so full-resolution references (up to the
+ * VAE max) are kept; real VRAM use scales with seq*hidden, not seq*seq. */
+#ifdef USE_VULKAN
+#define ATTENTION_MAX_BYTES ((size_t)64ULL << 30)
+#else
 #define ATTENTION_MAX_BYTES ((size_t)4ULL << 30)
+#endif
 
 /* Compute worst-case attention matrix size in bytes.
  * All image dimensions are in pixels (multiples of 16).
@@ -877,6 +903,445 @@ iris_image *iris_img2img(iris_ctx *ctx, const char *prompt, const iris_image *in
 
 	free(latent);
 	return result;
+}
+
+/* ========================================================================
+ * Strength-based Image-to-Image (traditional denoising)
+ * ======================================================================== */
+
+/* Traditional img2img variation dial. The input image is VAE-encoded, then
+ * partially re-noised to a starting timestep chosen by `strength` (0 = keep the
+ * input, 1 = full noise, equivalent to txt2img), and denoised from there with
+ * text guidance. Lower strength stays closer to the original; higher strength
+ * permits larger changes. Unlike the in-context iris_img2img(), the reference is
+ * NOT fed through attention -- this is the classic noise-and-denoise approach,
+ * which gives a continuous "how close to the original" control. */
+iris_image *iris_img2img_strength(iris_ctx *ctx, const char *prompt, const iris_image *input, float strength, const iris_params *params) {
+	if (!ctx || !prompt || !input) {
+		set_error("Invalid parameters");
+		return NULL;
+	}
+	iris_params p = params ? *params : (iris_params)IRIS_PARAMS_DEFAULT;
+
+	/* Seamless / tileable generation: enable circular conv padding */
+	iris_circular = p.circular;
+
+	/* Output matches the input dimensions (16-aligned). */
+	p.width  = input->width;
+	p.height = input->height;
+	if (p.width > IRIS_VAE_MAX_DIM || p.height > IRIS_VAE_MAX_DIM) {
+		float scale = (float)IRIS_VAE_MAX_DIM / (p.width > p.height ? p.width : p.height);
+		p.width     = (int)(p.width * scale);
+		p.height    = (int)(p.height * scale);
+	}
+	p.width  = (p.width / 16) * 16;
+	p.height = (p.height / 16) * 16;
+	if (p.width < 64)
+		p.width = 64;
+	if (p.height < 64)
+		p.height = 64;
+
+	if (strength < 0.0f)
+		strength = 0.0f;
+	if (strength > 1.0f)
+		strength = 1.0f;
+
+	if (p.num_steps <= 0)
+		p.num_steps = ctx->default_steps;
+	float guidance = (p.guidance > 0) ? p.guidance : ctx->default_guidance;
+
+	/* Resize input if needed */
+	iris_image       *resized    = NULL;
+	const iris_image *img_to_use = input;
+	if (input->width != p.width || input->height != p.height) {
+		resized = iris_image_resize(input, p.width, p.height);
+		if (!resized) {
+			set_error("Failed to resize input image");
+			return NULL;
+		}
+		img_to_use = resized;
+	}
+
+	/* Encode text (+ unconditioned for CFG in base model) */
+	int    text_seq;
+	float *text_emb = iris_encode_text(ctx, prompt, &text_seq);
+	if (!text_emb) {
+		if (resized)
+			iris_image_free(resized);
+		set_error("Failed to encode prompt");
+		return NULL;
+	}
+	float *text_emb_uncond = NULL;
+	int    text_seq_uncond = 0;
+	if (!ctx->is_distilled) {
+		text_emb_uncond = iris_encode_text(ctx, "", &text_seq_uncond);
+		if (!text_emb_uncond) {
+			free(text_emb);
+			if (resized)
+				iris_image_free(resized);
+			set_error("Failed to encode empty prompt for CFG");
+			return NULL;
+		}
+	}
+
+	/* Release text encoder to free ~8GB before loading transformer */
+	iris_release_text_encoder(ctx);
+	if (!iris_load_transformer_if_needed(ctx)) {
+		free(text_emb);
+		free(text_emb_uncond);
+		if (resized)
+			iris_image_free(resized);
+		return NULL;
+	}
+
+	/* Encode image to latent (x0) */
+	if (iris_phase_callback)
+		iris_phase_callback("encoding input image", 0);
+	float *img_tensor = iris_image_to_tensor(img_to_use);
+	if (resized)
+		iris_image_free(resized);
+	int    latent_h, latent_w;
+	float *x0 = NULL;
+	if (ctx->vae) {
+		x0 = iris_vae_encode(ctx->vae, img_tensor, 1, p.height, p.width, &latent_h, &latent_w);
+	}
+	else {
+		latent_h = p.height / 16;
+		latent_w = p.width / 16;
+		x0       = (float *)calloc(IRIS_LATENT_CHANNELS * latent_h * latent_w, sizeof(float));
+	}
+	free(img_tensor);
+	if (iris_phase_callback)
+		iris_phase_callback("encoding input image", 1);
+	if (!x0) {
+		free(text_emb);
+		free(text_emb_uncond);
+		set_error("Failed to encode image");
+		return NULL;
+	}
+
+	int latent_size   = IRIS_LATENT_CHANNELS * latent_h * latent_w;
+	int image_seq_len = latent_h * latent_w;
+
+	/* Schedule, truncated to start partway through based on strength. */
+	float *schedule     = iris_selected_schedule(&p, image_seq_len);
+	int    actual_steps = (int)ceilf((float)p.num_steps * strength);
+	if (actual_steps < 1)
+		actual_steps = 1;
+	if (actual_steps > p.num_steps)
+		actual_steps = p.num_steps;
+	int   skip    = p.num_steps - actual_steps;
+	float t_start = schedule[skip];
+
+	/* Noise the encoded image to t_start: z = (1 - t)*x0 + t*noise */
+	int64_t seed  = (p.seed < 0) ? (int64_t)time(NULL) : p.seed;
+	float  *noise = iris_init_noise(1, IRIS_LATENT_CHANNELS, latent_h, latent_w, seed);
+	float  *z     = (float *)malloc(latent_size * sizeof(float));
+	for (int i = 0; i < latent_size; i++)
+		z[i] = (1.0f - t_start) * x0[i] + t_start * noise[i];
+	free(noise);
+	free(x0);
+
+	/* Denoise from t_start down to 0 */
+	float *latent;
+	if (ctx->is_distilled) {
+		latent = iris_sample_euler_flux(ctx->transformer, ctx->qwen3_encoder, z, 1, IRIS_LATENT_CHANNELS, latent_h, latent_w, text_emb, text_seq,
+		                                schedule + skip, actual_steps, NULL);
+	}
+	else {
+		latent = iris_sample_euler_cfg_flux(ctx->transformer, ctx->qwen3_encoder, z, 1, IRIS_LATENT_CHANNELS, latent_h, latent_w, text_emb, text_seq,
+		                                    text_emb_uncond, text_seq_uncond, guidance, schedule + skip, actual_steps, NULL);
+	}
+
+	free(z);
+	free(schedule);
+	free(text_emb);
+	free(text_emb_uncond);
+
+	if (!latent) {
+		set_error("Sampling failed");
+		return NULL;
+	}
+
+	iris_image *result = NULL;
+	if (ctx->vae) {
+		iris_release_transformer(ctx);
+		if (iris_phase_callback)
+			iris_phase_callback("decoding image", 0);
+		result = iris_vae_decode(ctx->vae, latent, 1, latent_h, latent_w);
+		if (iris_phase_callback)
+			iris_phase_callback("decoding image", 1);
+	}
+	free(latent);
+	return result;
+}
+
+/* ========================================================================
+ * Inpainting (masked img2img)
+ * ======================================================================== */
+
+/* Masked image-to-image for object removal and local edits. The mask is a
+ * grayscale image: white (255) marks regions to regenerate, black (0) marks
+ * regions to keep. Two things make this seamless and effective:
+ *   1. The keep region is pinned to the original image's diffusion trajectory
+ *      at every denoising step, so it reconstructs the original and blends in
+ *      latent space (no pixel-space seams).
+ *   2. The masked region of the reference fed to attention is neutralized
+ *      (filled with mid-gray) so the model does not "see" — and redraw — the
+ *      content being removed.
+ * Output dimensions always match the (16-aligned) input; any width/height
+ * override in params is ignored since the keep region must align with x0. */
+iris_image *iris_inpaint(iris_ctx *ctx, const char *prompt, const iris_image *input, const iris_image *mask, const iris_params *params) {
+	if (!ctx || !prompt || !input || !mask) {
+		set_error("Invalid parameters");
+		return NULL;
+	}
+	iris_params p = params ? *params : (iris_params)IRIS_PARAMS_DEFAULT;
+
+	/* Seamless / tileable generation: enable circular conv padding */
+	iris_circular = p.circular;
+
+	/* Inpainting requires the output grid to match the input, so ignore any
+	 * width/height override and work at the input's dimensions. */
+	p.width  = input->width;
+	p.height = input->height;
+
+	/* Clamp to VAE max dimensions, preserving aspect ratio */
+	if (p.width > IRIS_VAE_MAX_DIM || p.height > IRIS_VAE_MAX_DIM) {
+		float scale = (float)IRIS_VAE_MAX_DIM / (p.width > p.height ? p.width : p.height);
+		p.width     = (int)(p.width * scale);
+		p.height    = (int)(p.height * scale);
+	}
+	p.width  = (p.width / 16) * 16;
+	p.height = (p.height / 16) * 16;
+	if (p.width < 64)
+		p.width = 64;
+	if (p.height < 64)
+		p.height = 64;
+
+	/* Check attention memory budget — shrink if needed (ref == target grid). */
+	int ref_w = p.width, ref_h = p.height;
+	{
+		int ref_dims[2] = {p.height, p.width};
+		if (fit_refs_for_attention(ctx->num_heads, p.height, p.width, ref_dims, 1, IRIS_MAX_SEQ_LEN)) {
+			fprintf(stderr, "Note: image resized from %dx%d to %dx%d (GPU attention memory limit)\n", p.width, p.height, ref_dims[1], ref_dims[0]);
+			ref_h = ref_dims[0];
+			ref_w = ref_dims[1];
+		}
+	}
+	p.width  = ref_w;
+	p.height = ref_h;
+
+	/* Resize input and mask to the working resolution */
+	iris_image *img_r  = (input->width != ref_w || input->height != ref_h) ? iris_image_resize(input, ref_w, ref_h) : iris_image_clone(input);
+	iris_image *mask_r = (mask->width != ref_w || mask->height != ref_h) ? iris_image_resize(mask, ref_w, ref_h) : iris_image_clone(mask);
+	if (!img_r || !mask_r) {
+		if (img_r)
+			iris_image_free(img_r);
+		if (mask_r)
+			iris_image_free(mask_r);
+		set_error("Failed to resize input/mask");
+		return NULL;
+	}
+
+	/* Build the neutralized reference: a copy of the input with masked pixels
+	 * blended toward mid-gray so the model does not see the removed content. */
+	iris_image *ref_img = iris_image_clone(img_r);
+	if (!ref_img) {
+		iris_image_free(img_r);
+		iris_image_free(mask_r);
+		set_error("Out of memory");
+		return NULL;
+	}
+	{
+		int ic = ref_img->channels;
+		int mc = mask_r->channels;
+		int n  = ref_w * ref_h;
+		for (int i = 0; i < n; i++) {
+			float m = mask_r->data[(size_t)i * mc] / 255.0f;
+			if (m > 0.0f) {
+				for (int c = 0; c < ic; c++) {
+					uint8_t *px = &ref_img->data[(size_t)i * ic + c];
+					*px         = (uint8_t)((1.0f - m) * (*px) + m * 128.0f + 0.5f);
+				}
+			}
+		}
+	}
+
+	/* Resolve steps and guidance */
+	if (p.num_steps <= 0)
+		p.num_steps = ctx->default_steps;
+	float guidance = (p.guidance > 0) ? p.guidance : ctx->default_guidance;
+
+	/* Encode text */
+	int    text_seq;
+	float *text_emb = iris_encode_text(ctx, prompt, &text_seq);
+	if (!text_emb) {
+		iris_image_free(img_r);
+		iris_image_free(mask_r);
+		iris_image_free(ref_img);
+		set_error("Failed to encode prompt");
+		return NULL;
+	}
+	float *text_emb_uncond = NULL;
+	int    text_seq_uncond = 0;
+	if (!ctx->is_distilled) {
+		text_emb_uncond = iris_encode_text(ctx, "", &text_seq_uncond);
+		if (!text_emb_uncond) {
+			free(text_emb);
+			iris_image_free(img_r);
+			iris_image_free(mask_r);
+			iris_image_free(ref_img);
+			set_error("Failed to encode empty prompt for CFG");
+			return NULL;
+		}
+	}
+
+	/* Release text encoder to free ~8GB before loading transformer */
+	iris_release_text_encoder(ctx);
+	if (!iris_load_transformer_if_needed(ctx)) {
+		free(text_emb);
+		free(text_emb_uncond);
+		iris_image_free(img_r);
+		iris_image_free(mask_r);
+		iris_image_free(ref_img);
+		return NULL;
+	}
+
+	/* Encode original image (x0, keep target) and the neutralized reference */
+	if (iris_phase_callback)
+		iris_phase_callback("encoding reference image", 0);
+	int    latent_h = 0, latent_w = 0, rh2 = 0, rw2 = 0;
+	float *orig_tensor = iris_image_to_tensor(img_r);
+	float *ref_tensor  = iris_image_to_tensor(ref_img);
+	float *x0          = NULL;
+	float *ref_latent  = NULL;
+	if (ctx->vae) {
+		x0         = iris_vae_encode(ctx->vae, orig_tensor, 1, ref_h, ref_w, &latent_h, &latent_w);
+		ref_latent = iris_vae_encode(ctx->vae, ref_tensor, 1, ref_h, ref_w, &rh2, &rw2);
+	}
+	else {
+		latent_h = rh2 = ref_h / 16;
+		latent_w = rw2 = ref_w / 16;
+		x0             = (float *)calloc(IRIS_LATENT_CHANNELS * latent_h * latent_w, sizeof(float));
+		ref_latent     = (float *)calloc(IRIS_LATENT_CHANNELS * latent_h * latent_w, sizeof(float));
+	}
+	free(orig_tensor);
+	free(ref_tensor);
+	iris_image_free(ref_img);
+	if (iris_phase_callback)
+		iris_phase_callback("encoding reference image", 1);
+
+	if (!x0 || !ref_latent) {
+		free(text_emb);
+		free(text_emb_uncond);
+		free(x0);
+		free(ref_latent);
+		iris_image_free(img_r);
+		iris_image_free(mask_r);
+		set_error("Failed to encode image");
+		return NULL;
+	}
+
+	/* Build the latent-resolution mask (white = 1 = generate) */
+	float      *mask_lat = (float *)malloc((size_t)latent_h * latent_w * sizeof(float));
+	iris_image *ml       = iris_image_resize(mask_r, latent_w, latent_h);
+	if (!ml || !mask_lat) {
+		free(text_emb);
+		free(text_emb_uncond);
+		free(x0);
+		free(ref_latent);
+		free(mask_lat);
+		if (ml)
+			iris_image_free(ml);
+		iris_image_free(img_r);
+		iris_image_free(mask_r);
+		set_error("Failed to build mask");
+		return NULL;
+	}
+	{
+		int mc = ml->channels;
+		for (int i = 0; i < latent_h * latent_w; i++)
+			mask_lat[i] = ml->data[(size_t)i * mc] / 255.0f;
+	}
+	iris_image_free(ml);
+	iris_image_free(img_r);
+	iris_image_free(mask_r);
+
+	int out_lat_h     = latent_h;
+	int out_lat_w     = latent_w;
+	int image_seq_len = out_lat_h * out_lat_w;
+
+	float *schedule = iris_selected_schedule(&p, image_seq_len);
+
+	int64_t seed = (p.seed < 0) ? (int64_t)time(NULL) : p.seed;
+	float  *z    = iris_init_noise(1, IRIS_LATENT_CHANNELS, out_lat_h, out_lat_w, seed);
+
+	int t_offset = 10;
+
+	float *latent;
+	if (ctx->is_distilled) {
+		latent = iris_sample_euler_inpaint_refs_flux(ctx->transformer, ctx->qwen3_encoder, z, 1, IRIS_LATENT_CHANNELS, out_lat_h, out_lat_w, ref_latent,
+		                                             latent_h, latent_w, t_offset, x0, mask_lat, text_emb, text_seq, schedule, p.num_steps, NULL);
+	}
+	else {
+		latent = iris_sample_euler_cfg_inpaint_refs_flux(ctx->transformer, ctx->qwen3_encoder, z, 1, IRIS_LATENT_CHANNELS, out_lat_h, out_lat_w, ref_latent,
+		                                                 latent_h, latent_w, t_offset, x0, mask_lat, text_emb, text_seq, text_emb_uncond, text_seq_uncond,
+		                                                 guidance, schedule, p.num_steps, NULL);
+	}
+
+	free(z);
+	free(x0);
+	free(ref_latent);
+	free(mask_lat);
+	free(schedule);
+	free(text_emb);
+	free(text_emb_uncond);
+
+	if (!latent) {
+		set_error("Sampling failed");
+		return NULL;
+	}
+
+	iris_image *result = NULL;
+	if (ctx->vae) {
+		iris_release_transformer(ctx);
+		if (iris_phase_callback)
+			iris_phase_callback("decoding image", 0);
+		result = iris_vae_decode(ctx->vae, latent, 1, out_lat_h, out_lat_w);
+		if (iris_phase_callback)
+			iris_phase_callback("decoding image", 1);
+	}
+	free(latent);
+	return result;
+}
+
+/* ========================================================================
+ * Make Tileable (turn a photo into a seamless tile)
+ * ======================================================================== */
+
+/* Turn a non-tiling photo into a seamless tile while staying close to it.
+ *
+ * The whole image is re-synthesized with a low-strength, circular-padded
+ * img2img: the circular (wrap-around) convolutions make the output tile
+ * seamlessly, and the low strength keeps every pixel close to the original
+ * texture instead of inventing new content. Nothing is masked or regenerated
+ * from scratch, so no unrelated content can appear at the borders.
+ *
+ * `strength` trades fidelity for seamlessness: lower stays closer to the
+ * original but may leave a faint seam; higher closes the seam but drifts
+ * further from the source. Pass a negative value to use the default. */
+iris_image *iris_make_tileable(iris_ctx *ctx, const char *prompt, const iris_image *input, float strength, const iris_params *params) {
+	if (!ctx || !prompt || !input) {
+		set_error("Invalid parameters");
+		return NULL;
+	}
+	iris_params p = params ? *params : (iris_params)IRIS_PARAMS_DEFAULT;
+	p.circular    = 1; /* tiling requires circular conv padding */
+
+	if (strength < 0.0f)
+		strength = 0.45f; /* default: close the seam while staying close to the source */
+	return iris_img2img_strength(ctx, prompt, input, strength, &p);
 }
 
 /* ========================================================================
@@ -1180,114 +1645,4 @@ float *iris_denoise_step(iris_ctx *ctx, const float *z, float t, const float *te
 	}
 
 	return iris_transformer_forward_flux(ctx->transformer, z, latent_h, latent_w, text_emb, text_len, t);
-}
-
-/* Debug function: img2img with external inputs from Python */
-iris_image *iris_img2img_debug_py(iris_ctx *ctx, const iris_params *params) {
-	if (!ctx) {
-		set_error("Invalid context");
-		return NULL;
-	}
-
-	iris_params p;
-	if (params) {
-		p = *params;
-	}
-	else {
-		p = (iris_params)IRIS_PARAMS_DEFAULT;
-	}
-
-	/* Load Python's noise */
-	FILE *f_noise = fopen("/tmp/py_noise.bin", "rb");
-	if (!f_noise) {
-		set_error("Cannot open /tmp/py_noise.bin");
-		return NULL;
-	}
-	fseek(f_noise, 0, SEEK_END);
-	int noise_size = ftell(f_noise) / sizeof(float);
-	fseek(f_noise, 0, SEEK_SET);
-	float *noise = (float *)malloc(noise_size * sizeof(float));
-	fread(noise, sizeof(float), noise_size, f_noise);
-	fclose(f_noise);
-	fprintf(stderr, "[DEBUG] Loaded noise: %d floats\n", noise_size);
-
-	/* Load Python's ref_latent */
-	FILE *f_ref = fopen("/tmp/py_ref_latent.bin", "rb");
-	if (!f_ref) {
-		free(noise);
-		set_error("Cannot open /tmp/py_ref_latent.bin");
-		return NULL;
-	}
-	fseek(f_ref, 0, SEEK_END);
-	int ref_size = ftell(f_ref) / sizeof(float);
-	fseek(f_ref, 0, SEEK_SET);
-	float *ref_latent = (float *)malloc(ref_size * sizeof(float));
-	fread(ref_latent, sizeof(float), ref_size, f_ref);
-	fclose(f_ref);
-	fprintf(stderr, "[DEBUG] Loaded ref_latent: %d floats\n", ref_size);
-
-	/* Load Python's text_emb */
-	FILE *f_txt = fopen("/tmp/py_text_emb.bin", "rb");
-	if (!f_txt) {
-		free(noise);
-		free(ref_latent);
-		set_error("Cannot open /tmp/py_text_emb.bin");
-		return NULL;
-	}
-	fseek(f_txt, 0, SEEK_END);
-	int txt_size = ftell(f_txt) / sizeof(float);
-	fseek(f_txt, 0, SEEK_SET);
-	float *text_emb = (float *)malloc(txt_size * sizeof(float));
-	fread(text_emb, sizeof(float), txt_size, f_txt);
-	fclose(f_txt);
-	int text_seq = 512;
-	fprintf(stderr, "[DEBUG] Loaded text_emb: %d floats (%d x %d)\n", txt_size, text_seq, txt_size / text_seq);
-
-	/* Load transformer */
-	if (!iris_load_transformer_if_needed(ctx)) {
-		free(noise);
-		free(ref_latent);
-		free(text_emb);
-		return NULL;
-	}
-
-	/* Dimensions */
-	int latent_h      = p.height / 16;
-	int latent_w      = p.width / 16;
-	int image_seq_len = latent_h * latent_w;
-
-	/* Get schedule */
-	float *schedule = iris_selected_schedule(&p, image_seq_len);
-
-	/* Sample with refs */
-	float *latent = iris_sample_euler_refs_flux(ctx->transformer, NULL, noise, 1, IRIS_LATENT_CHANNELS, latent_h, latent_w, ref_latent, latent_h, latent_w,
-	                                            10,                                             /* t_offset */
-	                                            text_emb, text_seq, schedule, p.num_steps, NULL /* progress_callback */
-	);
-
-	free(noise);
-	free(ref_latent);
-	free(schedule);
-	free(text_emb);
-
-	if (!latent) {
-		set_error("Sampling failed");
-		return NULL;
-	}
-
-	/* Decode */
-	iris_image *result = NULL;
-	if (ctx->vae) {
-		/* One-shot generation: free the transformer (and its GPU buffers)
-		 * before decode so the VAE work set doesn't share peak memory. */
-		iris_release_transformer(ctx);
-		if (iris_phase_callback)
-			iris_phase_callback("decoding image", 0);
-		result = iris_vae_decode(ctx->vae, latent, 1, latent_h, latent_w);
-		if (iris_phase_callback)
-			iris_phase_callback("decoding image", 1);
-	}
-
-	free(latent);
-	return result;
 }

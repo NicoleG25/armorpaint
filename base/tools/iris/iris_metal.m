@@ -1390,7 +1390,7 @@ static conv2d_graph_cache_t *get_conv2d_graph_cache(int batch, int in_ch, int ou
 			/* Wrap height (dimension 2) on the width-wrapped tensor. */
 			MPSGraphTensor *hTop    = [graph sliceTensor:wWrap dimension:2 start:(H - padding) length:padding name:nil];
 			MPSGraphTensor *hBottom = [graph sliceTensor:wWrap dimension:2 start:0 length:padding name:nil];
-			convSource = [graph concatTensors:@[ hTop, wWrap, hBottom ] dimension:2 name:nil];
+			convSource              = [graph concatTensors:@[ hTop, wWrap, hBottom ] dimension:2 name:nil];
 
 			convPad = 0; /* padding already applied via the circular wrap */
 		}

@@ -192,8 +192,9 @@ typedef struct {
 	/* Quantization tables (up to 4) */
 	uint16_t qt[4][64];
 
-	/* Huffman tables (DC: 0-1, AC: 2-3) */
-	jpeg_huff_table huff[4];
+	/* Huffman tables (DC: 0-3, AC: 4-7). Progressive/extended JPEGs may use
+	 * up to 4 DC and 4 AC tables; baseline uses only ids 0-1. */
+	jpeg_huff_table huff[8];
 
 	/* DC prediction for each component */
 	int dc_pred[4];
@@ -566,7 +567,7 @@ static int jpeg_decode_block(jpeg_decoder *dec, int comp_idx, int *block) {
 	int              dc_idx  = dec->comp[comp_idx].dc_idx;
 	int              ac_idx  = dec->comp[comp_idx].ac_idx;
 	jpeg_huff_table *dc_huff = &dec->huff[dc_idx];
-	jpeg_huff_table *ac_huff = &dec->huff[ac_idx + 2];
+	jpeg_huff_table *ac_huff = &dec->huff[ac_idx + 4];
 	uint16_t        *qt      = dec->qt[dec->comp[comp_idx].qt_idx];
 
 	memset(block, 0, 64 * sizeof(int));
@@ -813,7 +814,7 @@ static int jpeg_prog_decode_dc_refine(jpeg_decoder *dec, int16_t *coef) {
 
 /* Decode AC coefficients for progressive first scan (Ah == 0) */
 static int jpeg_prog_decode_ac_first(jpeg_decoder *dec, int comp_idx, int16_t *coef) {
-	jpeg_huff_table *ac_huff = &dec->huff[dec->comp[comp_idx].ac_idx + 2];
+	jpeg_huff_table *ac_huff = &dec->huff[dec->comp[comp_idx].ac_idx + 4];
 
 	if (dec->eobrun > 0) {
 		dec->eobrun--;
@@ -879,7 +880,7 @@ static int jpeg_prog_decode_ac_first(jpeg_decoder *dec, int comp_idx, int16_t *c
 
 /* Decode AC coefficient refinement for progressive (Ah != 0) */
 static int jpeg_prog_decode_ac_refine(jpeg_decoder *dec, int comp_idx, int16_t *coef) {
-	jpeg_huff_table *ac_huff = &dec->huff[dec->comp[comp_idx].ac_idx + 2];
+	jpeg_huff_table *ac_huff = &dec->huff[dec->comp[comp_idx].ac_idx + 4];
 	int              p1      = 1 << dec->al; /* Bit to add for positive refinement */
 	int              m1      = -p1;          /* Bit to add for negative refinement */
 
@@ -1321,9 +1322,9 @@ jpeg_image *jpeg_load_mem(const uint8_t *file_data, size_t file_size) {
 				int     tc  = th >> 4;
 				int     idx = th & 0x0F;
 
-				if (tc > 1 || idx > 1)
+				if (tc > 1 || idx > 3)
 					goto fail;
-				int table_idx = tc * 2 + idx;
+				int table_idx = tc * 4 + idx;
 
 				if (off + 16 > end)
 					goto fail;
@@ -1403,10 +1404,10 @@ jpeg_image *jpeg_load_mem(const uint8_t *file_data, size_t file_size) {
 						comp_idx           = j;
 						dec.comp[j].dc_idx = td_ta >> 4;
 						dec.comp[j].ac_idx = td_ta & 0x0F;
-						/* Validate Huffman table indices (DC: 0-1, AC: 0-1) */
-						if (dec.comp[j].dc_idx > 1)
+						/* Validate Huffman table indices (DC: 0-3, AC: 0-3) */
+						if (dec.comp[j].dc_idx > 3)
 							goto fail;
-						if (dec.comp[j].ac_idx > 1)
+						if (dec.comp[j].ac_idx > 3)
 							goto fail;
 						break;
 					}
