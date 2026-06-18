@@ -161,7 +161,8 @@ node_shader_context_t *sculpt_make_sculpt_run(material_t *data, material_context
 	bool           decal    = context_is_decal();
 	bool           particle = g_context->tool == TOOL_TYPE_PARTICLE;
 	// Decal fill layer: displacement must be confined to the decal box projection
-	bool decal_layer = g_context->layer->fill_material != NULL && g_context->layer->uv_type == UV_TYPE_PROJECT && g_context->tool == TOOL_TYPE_FILL;
+	bool decal_layer      = g_context->layer->fill_material != NULL && g_context->layer->uv_type == UV_TYPE_PROJECT && g_context->tool == TOOL_TYPE_FILL;
+	bool sculpt_triplanar = !decal && !decal_layer && (g_context->tool == TOOL_TYPE_FILL || g_context->layer->fill_material != NULL);
 	node_shader_add_out(kong, "tex_coord: float2");
 	node_shader_write_vert(kong, "var madd: float2 = float2(0.5, 0.5);");
 	node_shader_write_vert(kong, "output.tex_coord = input.pos.xy * madd + madd;");
@@ -377,12 +378,44 @@ node_shader_context_t *sculpt_make_sculpt_run(material_t *data, material_context
 		node_shader_write_attrib_frag(kong, "tex_coord = uvsp * constants.brush_scale;");
 	}
 
+	if (sculpt_triplanar) {
+		// Project the world position onto the three axis planes
+		node_shader_add_function(kong, str_octahedron_wrap);
+		node_shader_add_constant(kong, "brush_scale: float", "_brush_scale");
+		// Decode this vertexs world-space surface normal for blending
+		node_shader_write_frag(kong, "var tri_nv: float = floor(read_undo.a) / 255.0;");
+		node_shader_write_frag(kong, "var tri_oct: float2 = float2(read_undo.a - floor(read_undo.a), tri_nv) * 2.0 - 1.0;");
+		node_shader_write_frag(kong, "var tri_nz: float = 1.0 - abs(tri_oct.x) - abs(tri_oct.y);");
+		node_shader_write_frag(kong, "var tri_nor: float3 = float3(tri_oct.xy, tri_nz);");
+		node_shader_write_frag(kong, "if (tri_nz < 0.0) { tri_nor.xy = octahedron_wrap(tri_oct.xy); }");
+		node_shader_write_frag(kong, "tri_nor = normalize((constants.W * float4(normalize(tri_nor), 0.0)).xyz);");
+		node_shader_write_frag(kong, "var tri_weight: float3 = tri_nor * tri_nor;");
+		node_shader_write_frag(kong, "var tri_max: float = max(tri_weight.x, max(tri_weight.y, tri_weight.z));");
+		node_shader_write_frag(kong, "tri_weight = max3(tri_weight - float3(tri_max * 0.75, tri_max * 0.75, tri_max * 0.75), float3(0.0, 0.0, 0.0));");
+		node_shader_write_frag(kong, "var tex_coord_blend: float3 = tri_weight * (1.0 / (tri_weight.x + tri_weight.y + tri_weight.z));");
+		node_shader_write_frag(kong, "tex_coord = wposition.yz * constants.brush_scale * 0.5;");
+		node_shader_write_frag(kong, "var tex_coord1: float2 = wposition.xz * constants.brush_scale * 0.5;");
+		node_shader_write_frag(kong, "var tex_coord2: float2 = wposition.xy * constants.brush_scale * 0.5;");
+		f32 sculpt_uv_angle = g_context->layer->fill_material != NULL ? g_context->layer->angle : g_context->brush_angle + g_context->brush_nodes_angle;
+		if (sculpt_uv_angle != 0.0) {
+			node_shader_add_constant(kong, "brush_angle: float2", "_brush_angle");
+			node_shader_write_frag(kong, "tex_coord = float2(tex_coord.x * constants.brush_angle.x - tex_coord.y * constants.brush_angle.y, tex_coord.x * "
+			                             "constants.brush_angle.y + tex_coord.y * constants.brush_angle.x);");
+			node_shader_write_frag(kong, "tex_coord1 = float2(tex_coord1.x * constants.brush_angle.x - tex_coord1.y * constants.brush_angle.y, tex_coord1.x * "
+			                             "constants.brush_angle.y + tex_coord1.y * constants.brush_angle.x);");
+			node_shader_write_frag(kong, "tex_coord2 = float2(tex_coord2.x * constants.brush_angle.x - tex_coord2.y * constants.brush_angle.y, tex_coord2.x * "
+			                             "constants.brush_angle.y + tex_coord2.y * constants.brush_angle.x);");
+		}
+		parser_material_triplanar = true;
+	}
+
 	// parser_material_parse may add vertex elements
 	i32 velen = con_paint->data->vertex_elements->length;
 	// parser_material_parse_height             = true;
 	// parser_material_parse_height_as_channel  = true;
 	shader_out_t *sout                       = parser_material_parse(g_context->material->canvas, con_paint, kong, matcon);
 	con_paint->data->vertex_elements->length = velen;
+	parser_material_triplanar                = false;
 	// node_shader_write_frag(kong, string("var height: float = %s.r;", sout->out_basecol));
 	node_shader_write_frag(kong, string("var disp: float3 = %s;", sout->out_basecol));
 
@@ -519,7 +552,7 @@ node_shader_context_t *sculpt_make_sculpt_run(material_t *data, material_context
 	node_shader_write_frag(kong, "var raw_undo: float4 = texpaint_sculpt_undo[uint2(uint(sculpt_uv.x * constants.texpaint_undo_size.x), uint(sculpt_uv.y * "
 	                             "constants.texpaint_undo_size.y))];");
 
-	if (g_context->layer->fill_material != NULL) {
+	if (g_context->layer->fill_material != NULL || g_context->tool == TOOL_TYPE_FILL) {
 		node_shader_add_function(kong, str_octahedron_wrap);
 		node_shader_write_frag(kong, "var nor_v: float = floor(raw_undo.a) / 255.0;");
 		node_shader_write_frag(kong, "var nor_oct: float2 = float2(raw_undo.a - floor(raw_undo.a), nor_v) * 2.0 - 1.0;");
