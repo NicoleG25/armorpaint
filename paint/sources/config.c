@@ -128,7 +128,6 @@ void config_save() {
 	json_encode_i32("scene_atlas_res", g_config->scene_atlas_res);
 	json_encode_bool("grid_snap", g_config->grid_snap);
 	json_encode_bool("experimental", g_config->experimental);
-	json_encode_i32("neural_backend", g_config->neural_backend);
 	json_encode_i32("neural_res", g_config->neural_res);
 	json_encode_i32("render_mode", g_config->render_mode);
 	json_encode_i32("workspace", g_config->workspace);
@@ -260,7 +259,6 @@ void config_init() {
 		g_config->view2d_grid_cell    = 64;
 		g_config->view2d_grid_snap    = false;
 		g_config->experimental        = false;
-		g_config->neural_backend      = NEURAL_BACKEND_VULKAN;
 		g_config->neural_res          = 512;
 #if defined(IRON_ANDROID) || defined(IRON_IOS)
 		g_config->render_mode = RENDER_MODE_FORWARD;

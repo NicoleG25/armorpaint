@@ -4,37 +4,11 @@
 static string_array_t *edit_image_node_flux_klein_args(char *dir) {
 	string_array_t *argv = any_array_create_from_raw(
 	    (void *[]){
-	        string("%s/%s", dir, neural_node_sd_bin()),
-	        "--diffusion-model",
-	        string("%s/flux-2-klein-4b-Q8_0.gguf", dir),
-	        "--taesd",
-	        string("%s/taef2.safetensors", dir),
-	        "--llm",
-	        string("%s/Qwen3-4B-Q8_0.gguf", dir),
-	        "--steps",
-	        "4",
+	        string("%s/%s", dir, neural_node_iris_bin()),
+	        "-d",
+	        string("%s", dir),
 	    },
-	    9);
-	return argv;
-}
-
-static string_array_t *edit_image_node_qwen_args(char *dir) {
-	string_array_t *argv = any_array_create_from_raw(
-	    (void *[]){
-	        string("%s/%s", dir, neural_node_sd_bin()),
-	        "--diffusion-model",
-	        string("%s/qwen-image-edit-2511-Q4_K_S.gguf", dir),
-	        "--vae",
-	        string("%s/Qwen_Image-VAE.safetensors", dir),
-	        "--llm",
-	        string("%s/Qwen2.5-VL-7B-Instruct-Q4_K_S.gguf", dir),
-	        "--llm_vision",
-	        string("%s/mmproj-F16.gguf", dir),
-	        "--qwen-image-zero-cond-t",
-	        "--steps",
-	        "30",
-	    },
-	    12);
+	    3);
 	return argv;
 }
 
@@ -44,7 +18,7 @@ void edit_image_node_button(i32 node_id) {
 	char             *node_name = parser_material_node_name(node, NULL);
 	ui_handle_t      *h         = ui_handle(node_name);
 
-	string_array_t *models           = any_array_create_from_raw((void *[]){"FLUX 2 klein", "Qwen Image Edit"}, 2);
+	string_array_t *models           = any_array_create_from_raw((void *[]){"FLUX 2 klein"}, 1);
 	i32             model            = ui_combo(ui_nest(h, 0), models, tr("Model"), false, UI_ALIGN_LEFT, true);
 	char           *prompt           = ui_text_area(ui_nest(h, 1), UI_ALIGN_LEFT, true, tr("prompt"), true);
 	node->buttons->buffer[0]->height = string_split(prompt, "\n")->length + 4;
@@ -74,17 +48,9 @@ void edit_image_node_button(i32 node_id) {
 			if (model == 0) {
 				argv = edit_image_node_flux_klein_args(dir);
 			}
-			else {
-				argv = edit_image_node_qwen_args(dir);
-			}
 
-			string_array_push(argv, "--cfg-scale");
-			string_array_push(argv, "1.0");
-			string_array_push(argv, "--diffusion-fa");
-			string_array_push(argv, "--offload-to-cpu");
-			string_array_push(argv, "--strength");
-			string_array_push(argv, string("%f", strength));
-			string_array_push(argv, "-s");
+			// string_array_push(argv, string("%f", strength));
+			string_array_push(argv, "--seed");
 			string_array_push(argv, "-1");
 			string_array_push(argv, "-W");
 			string_array_push(argv, string("%d", g_config->neural_res));
@@ -92,12 +58,15 @@ void edit_image_node_button(i32 node_id) {
 			string_array_push(argv, string("%d", g_config->neural_res));
 			string_array_push(argv, "-p");
 			string_array_push(argv, prompt);
-			string_array_push(argv, "-r");
+			string_array_push(argv, "-i");
 			string_array_push(argv, string("%s/input.png", dir));
 			string_array_push(argv, "-o");
 			string_array_push(argv, string("%s/output.png", dir));
 			if (tiled) {
-				string_array_push(argv, "--circular");
+				string_array_push(argv, "--tileable");
+			}
+			if (g_config->neural_res >= 2048) {
+				string_array_push(argv, "--vae-tiling");
 			}
 			string_array_push(argv, NULL);
 

@@ -6,6 +6,7 @@ gpu_texture_t *image_to_pbr_node_result_normal    = NULL;
 gpu_texture_t *image_to_pbr_node_result_occlusion = NULL;
 gpu_texture_t *image_to_pbr_node_result_height    = NULL;
 gpu_texture_t *image_to_pbr_node_result_roughness = NULL;
+i32            image_to_pbr_node_node_id          = -1;
 
 char *image_to_pbr_node_vector(ui_node_t *node, ui_node_socket_t *socket) {
 	gpu_texture_t *result = NULL;
@@ -62,71 +63,52 @@ void image_to_pbr_node_check_result(void (*done)(gpu_texture_t *)) {
 	}
 }
 
-void image_to_pbr_node_run_sd(char *model, char *prompt, void (*done)(gpu_texture_t *)) {
+void image_to_pbr_node_run_da3(bool tileable, int width, int height, void (*done)(gpu_texture_t *)) {
 	char           *dir  = neural_node_dir();
 	string_array_t *argv = any_array_create_from_raw(
 	    (void *[]){
-	        string("%s/%s", dir, neural_node_sd_bin()),
-	        "-m",
-	        string("%s/%s", dir, model),
-	        "--sampling-method",
-	        "ddim_trailing",
-	        "--steps",
-	        "10",
-	        "-s",
-	        "-1",
+	        string("%s/%s", dir, neural_node_iris_bin()),
+	        "-d",
+	        string("%s", dir),
+	        "--depth",
 	        "-W",
-	        "768",
+	        string("%d", width),
 	        "-H",
-	        "768",
-	        "-p",
-	        prompt,
+	        string("%d", height),
 	        "-i",
 	        string("%s/input.png", dir),
 	        "-o",
 	        string("%s/output.png", dir),
-	        NULL,
 	    },
-	    20);
+	    12);
+	if (tileable) {
+		string_array_push(argv, "--tileable");
+	}
+	string_array_push(argv, NULL);
 
 	iron_exec_async(argv->buffer[0], argv->buffer);
 	sys_notify_on_update(image_to_pbr_node_check_result, done);
 }
 
 void image_to_pbr_node_all_done(void *_) {
+	int              res_w = image_to_pbr_node_result_height->width;
+	int              res_h = image_to_pbr_node_result_height->height;
+	render_target_t *occmap;
 	{
 		render_target_t *t = render_target_create();
 		t->name            = "occmap";
-		t->width           = 768;
-		t->height          = 768;
+		t->width           = res_w;
+		t->height          = res_h;
 		t->format          = "RGBA32";
 		render_path_create_render_target(t);
-	}
-	// Ping-pong targets for the blur
-	{
-		render_target_t *t = render_target_create();
-		t->name            = "occmap_blur";
-		t->width           = 768;
-		t->height          = 768;
-		t->format          = "R8";
-		render_path_create_render_target(t);
-	}
-	render_target_t *occmap_blurred;
-	{
-		render_target_t *t = render_target_create();
-		t->name            = "occmap_blurred";
-		t->width           = 768;
-		t->height          = 768;
-		t->format          = "R8";
-		render_path_create_render_target(t);
-		occmap_blurred = t;
+		occmap = t;
 	}
 	render_target_t *normmap;
 	{
 		render_target_t *t = render_target_create();
 		t->name            = "normmap";
-		t->width           = 768;
-		t->height          = 768;
+		t->width           = res_w;
+		t->height          = res_h;
 		t->format          = "RGBA32";
 		render_path_create_render_target(t);
 		normmap = t;
@@ -134,8 +116,8 @@ void image_to_pbr_node_all_done(void *_) {
 	{
 		render_target_t *t = render_target_create();
 		t->name            = "_height_map";
-		t->width           = 768;
-		t->height          = 768;
+		t->width           = res_w;
+		t->height          = res_h;
 		t->format          = "RGBA32";
 		t->_image          = image_to_pbr_node_result_height;
 		any_map_set(render_path_render_targets, t->name, t);
@@ -144,8 +126,8 @@ void image_to_pbr_node_all_done(void *_) {
 	{
 		render_target_t *t = render_target_create();
 		t->name            = "_normal_map";
-		t->width           = 768;
-		t->height          = 768;
+		t->width           = res_w;
+		t->height          = res_h;
 		t->format          = "RGBA32";
 		t->_image          = image_to_pbr_node_result_normal;
 		any_map_set(render_path_render_targets, t->name, t);
@@ -157,6 +139,7 @@ void image_to_pbr_node_all_done(void *_) {
 	render_path_load_shader("Scene/ssao_blur_pass/ssao_blur_pass_x");
 	render_path_load_shader("Scene/ssao_blur_pass/ssao_blur_pass_y");
 
+	// Normal map
 	render_path_set_target("normmap", NULL, NULL, GPU_CLEAR_NONE, 0, 0.0);
 	render_path_bind_target("_height_map", "height_map");
 	render_path_draw_shader("Scene/depth_to_normal_pass/depth_to_normal_pass");
@@ -166,88 +149,117 @@ void image_to_pbr_node_all_done(void *_) {
 	gc_root(image_to_pbr_node_result_normal);
 	normal_map_rt->_image = normmap->_image;
 
+	// Occlusion
 	render_path_set_target("occmap", NULL, NULL, GPU_CLEAR_NONE, 0, 0.0);
 	render_path_bind_target("_height_map", "height_map");
 	render_path_bind_target("_normal_map", "normal_map");
 	render_path_draw_shader("Scene/depth_to_ao_pass/depth_to_ao_pass");
 
-	// Blur
-	render_path_set_target("occmap_blur", NULL, NULL, GPU_CLEAR_NONE, 0, 0.0);
-	render_path_bind_target("occmap", "tex");
-	render_path_bind_target("_normal_map", "gbuffer0");
-	render_path_draw_shader("Scene/ssao_blur_pass/ssao_blur_pass_x");
-
-	render_path_set_target("occmap_blurred", NULL, NULL, GPU_CLEAR_NONE, 0, 0.0);
-	render_path_bind_target("occmap_blur", "tex");
-	render_path_bind_target("_normal_map", "gbuffer0");
-	render_path_draw_shader("Scene/ssao_blur_pass/ssao_blur_pass_y");
-
-	// Second blur
-	render_path_set_target("occmap_blur", NULL, NULL, GPU_CLEAR_NONE, 0, 0.0);
-	render_path_bind_target("occmap_blurred", "tex");
-	render_path_bind_target("_normal_map", "gbuffer0");
-	render_path_draw_shader("Scene/ssao_blur_pass/ssao_blur_pass_x");
-
-	render_path_set_target("occmap_blurred", NULL, NULL, GPU_CLEAR_NONE, 0, 0.0);
-	render_path_bind_target("occmap_blur", "tex");
-	render_path_bind_target("_normal_map", "gbuffer0");
-	render_path_draw_shader("Scene/ssao_blur_pass/ssao_blur_pass_y");
-
 	gc_unroot(image_to_pbr_node_result_occlusion);
-	image_to_pbr_node_result_occlusion = occmap_blurred->_image;
+	image_to_pbr_node_result_occlusion = occmap->_image;
 	gc_root(image_to_pbr_node_result_occlusion);
-}
 
-void image_to_pbr_node_roughness_done(gpu_texture_t *tex) {
-	gc_unroot(image_to_pbr_node_result_roughness);
-	image_to_pbr_node_result_roughness = tex;
-	gc_root(image_to_pbr_node_result_roughness);
-	// image_to_pbr_node_run_sd("marigold-iid-lighting-v1-1.q8_0.gguf", "_diffuse_shading", function(tex: gpu_texture_t) {
-	sys_notify_on_next_frame(&image_to_pbr_node_all_done, NULL);
-}
+	// Base color
+	char          *dir       = neural_node_dir();
+	gpu_texture_t *input_tex = iron_load_texture(string("%s%sinput.png", dir, PATH_SEP));
+	buffer_t      *in_px     = gpu_get_texture_pixels(input_tex);
+	buffer_t      *occ_px    = gpu_get_texture_pixels(occmap->_image);
 
-void image_to_pbr_node_base_done(gpu_texture_t *tex) {
-	//
-	buffer_t *pixels = gpu_get_texture_pixels(tex);
-	for (uint32_t i = 0; i < pixels->length; i += 4) {
-		for (uint32_t c = 0; c < 3; ++c) {
-			int v                 = (int)(pixels->buffer[i + c] * 2.5f);
-			pixels->buffer[i + c] = v > 255 ? 255 : v;
+	int bw = occmap->_image->width;
+	int bh = occmap->_image->height;
+
+	const float linear_light_fac = 0.3f;
+	const float subtract_fac     = 0.3f;
+	const float bright           = 0.1f;
+	const float contr            = 0.0f;
+	const float bc_a             = 1.0f + contr;
+	const float bc_b             = bright - contr * 0.5f;
+
+	buffer_t *base_px = buffer_create(bw * bh * 4);
+	for (int y = 0; y < bh; ++y) {
+		for (int x = 0; x < bw; ++x) {
+			int bi = (y * bw + x) * 4;
+
+			float occ     = occ_px->buffer[bi] / 255.0f;
+			float inv_occ = 1.0f - occ;
+			for (int c = 0; c < 3; ++c) {
+				float col = in_px->buffer[bi + c] / 255.0f;
+				col += linear_light_fac * (2.0f * (inv_occ - 0.5f));
+				col -= subtract_fac * inv_occ;
+				col = bc_a * col + bc_b;
+				if (col < 0.0f)
+					col = 0.0f;
+				if (col > 1.0f)
+					col = 1.0f;
+				base_px->buffer[bi + c] = (int)(col * 255.0f);
+			}
+			base_px->buffer[bi + 3] = 255;
 		}
 	}
-	gpu_texture_t *bright = gpu_create_texture_from_bytes(pixels, tex->width, tex->height, GPU_TEXTURE_FORMAT_RGBA32);
-	//
+	gpu_texture_t *base = gpu_create_texture_from_bytes(base_px, bw, bh, GPU_TEXTURE_FORMAT_RGBA32);
 
 	gc_unroot(image_to_pbr_node_result_base);
-	image_to_pbr_node_result_base = bright;
+	image_to_pbr_node_result_base = base;
 	gc_root(image_to_pbr_node_result_base);
-	image_to_pbr_node_run_sd("marigold-iid-appearance-v1-1.q8_0.gguf", "_roughness", &image_to_pbr_node_roughness_done);
+
+	// Roughness
+	buffer_t *rough_px = buffer_create(bw * bh * 4);
+	for (int y = 0; y < bh; ++y) {
+		for (int x = 0; x < bw; ++x) {
+			int   bi  = (y * bw + x) * 4;
+			float lum = (base_px->buffer[bi] * 0.299f + base_px->buffer[bi + 1] * 0.587f + base_px->buffer[bi + 2] * 0.114f) / 255.0f;
+
+			float detail = 0.0f;
+			int   count  = 0;
+			for (int oy = -1; oy <= 1; ++oy) {
+				for (int ox = -1; ox <= 1; ++ox) {
+					int sx = x + ox;
+					int sy = y + oy;
+					if (sx < 0 || sx >= bw || sy < 0 || sy >= bh) {
+						continue;
+					}
+					int   si   = (sy * bw + sx) * 4;
+					float slum = (base_px->buffer[si] * 0.299f + base_px->buffer[si + 1] * 0.587f + base_px->buffer[si + 2] * 0.114f) / 255.0f;
+					float d    = slum - lum;
+					detail += d < 0.0f ? -d : d;
+					count += 1;
+				}
+			}
+			detail = count > 0 ? detail / count : 0.0f;
+
+			float rough = 0.5f + detail * 4.0f;
+			if (rough > 1.0f) {
+				rough = 1.0f;
+			}
+			int v                    = (int)(rough * 255.0f);
+			rough_px->buffer[bi]     = v;
+			rough_px->buffer[bi + 1] = v;
+			rough_px->buffer[bi + 2] = v;
+			rough_px->buffer[bi + 3] = 255;
+		}
+	}
+	gpu_texture_t *rough = gpu_create_texture_from_bytes(rough_px, bw, bh, GPU_TEXTURE_FORMAT_RGBA32);
+
+	gc_unroot(image_to_pbr_node_result_roughness);
+	image_to_pbr_node_result_roughness = rough;
+	gc_root(image_to_pbr_node_result_roughness);
+
+	ui_node_canvas_t *canvas = ui_nodes_get_canvas(true);
+	ui_node_t        *node   = ui_get_node(canvas->nodes, image_to_pbr_node_node_id);
+	if (node != NULL) {
+		any_imap_set(neural_node_results, node->outputs->buffer[0]->id, image_to_pbr_node_result_base);
+		any_imap_set(neural_node_results, node->outputs->buffer[1]->id, image_to_pbr_node_result_occlusion);
+		any_imap_set(neural_node_results, node->outputs->buffer[2]->id, image_to_pbr_node_result_roughness);
+		any_imap_set(neural_node_results, node->outputs->buffer[3]->id, image_to_pbr_node_result_normal);
+		any_imap_set(neural_node_results, node->outputs->buffer[4]->id, image_to_pbr_node_result_height);
+	}
 }
 
-void image_to_pbr_node_height_done(gpu_texture_t *tex) {
+void image_to_pbr_node_depth_done(gpu_texture_t *tex) {
 	gc_unroot(image_to_pbr_node_result_height);
 	image_to_pbr_node_result_height = tex;
 	gc_root(image_to_pbr_node_result_height);
-	image_to_pbr_node_run_sd("marigold-iid-lighting-v1-1.q8_0.gguf", "_base", &image_to_pbr_node_base_done);
-}
-
-void image_to_pbr_node_normals_done(gpu_texture_t *tex) {
-	gc_unroot(image_to_pbr_node_result_normal);
-	image_to_pbr_node_result_normal = tex;
-	gc_root(image_to_pbr_node_result_normal);
-	image_to_pbr_node_run_sd("marigold-depth-v1-1.q8_0.gguf", "_height", &image_to_pbr_node_height_done);
-}
-
-void image_to_pbr_node_normals_only_done(gpu_texture_t *tex) {
-	gc_unroot(image_to_pbr_node_result_normal);
-	image_to_pbr_node_result_normal = tex;
-	gc_root(image_to_pbr_node_result_normal);
-}
-
-void image_to_pbr_node_height_only_done(gpu_texture_t *tex) {
-	gc_unroot(image_to_pbr_node_result_height);
-	image_to_pbr_node_result_height = tex;
-	gc_root(image_to_pbr_node_result_height);
+	sys_notify_on_next_frame(&image_to_pbr_node_all_done, NULL);
 }
 
 void image_to_pbr_node_button(i32 node_id) {
@@ -258,19 +270,10 @@ void image_to_pbr_node_button(i32 node_id) {
 
 	string_array_t *models = any_array_create_from_raw(
 	    (void *[]){
-	        "Marigold",
+	        "DA3MONO",
 	    },
 	    1);
 	i32 model = ui_combo(ui_nest(h, 0), models, tr("Model"), false, UI_ALIGN_LEFT, true);
-
-	string_array_t *channels = any_array_create_from_raw(
-	    (void *[]){
-	        "All",
-	        "Normal Map",
-	        "Height",
-	    },
-	    3);
-	i32 channel = ui_combo(ui_nest(h, 1), channels, tr("Channels"), false, UI_ALIGN_LEFT, true);
 
 	if (neural_node_button(node, models->buffer[model])) {
 		ui_node_t     *from_node = neural_from_node(node->inputs->buffer[0], 0);
@@ -285,15 +288,9 @@ void image_to_pbr_node_button(i32 node_id) {
 #endif
 			iron_write_png(string("%s%sinput.png", dir, PATH_SEP), input_buf, input->width, input->height, 0);
 
-			if (channel == 1) { // Normal Map only
-				image_to_pbr_node_run_sd("marigold-normals-v1-1.q8_0.gguf", "_normals", &image_to_pbr_node_normals_only_done);
-			}
-			else if (channel == 2) { // Height only
-				image_to_pbr_node_run_sd("marigold-depth-v1-1.q8_0.gguf", "_height", &image_to_pbr_node_height_only_done);
-			}
-			else { // All
-				image_to_pbr_node_run_sd("marigold-normals-v1-1.q8_0.gguf", "_normals", &image_to_pbr_node_normals_done);
-			}
+			bool tileable             = node->buttons->buffer[1]->default_value->buffer[0] > 0.0;
+			image_to_pbr_node_node_id = node_id;
+			image_to_pbr_node_run_da3(tileable, input->width, input->height, &image_to_pbr_node_depth_done);
 		}
 	}
 }
@@ -385,9 +382,18 @@ void image_to_pbr_node_init() {
 	                                                                       .min           = 0.0,
 	                                                                       .max           = 1.0,
 	                                                                       .precision     = 100,
-	                                                                       .height        = 3}),
+	                                                                       .height        = 2}),
+	                                      GC_ALLOC_INIT(ui_node_button_t, {.name          = _tr("Tiled"),
+	                                                                       .type          = "BOOL",
+	                                                                       .output        = 0,
+	                                                                       .default_value = f32_array_create_x(0),
+	                                                                       .data          = NULL,
+	                                                                       .min           = 0.0,
+	                                                                       .max           = 1.0,
+	                                                                       .precision     = 100,
+	                                                                       .height        = 0}),
 	                                  },
-	                                  1),
+	                                  2),
 	                              .width = 0,
 	                              .flags = 0});
 

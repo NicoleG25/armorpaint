@@ -4232,7 +4232,14 @@ scene_t *startup_get_scene(void) {
 				ve->data                       = "float2";
 				sc->vertex_elements->buffer[0] = ve;
 			}
-			sc->constants     = (shader_const_t_array_t *)any_array_create(0);
+			sc->constants = (shader_const_t_array_t *)any_array_create(1);
+			{
+				shader_const_t *c        = (shader_const_t *)gc_alloc(sizeof(shader_const_t));
+				c->name                  = "texel_size";
+				c->type                  = "float2";
+				c->link                  = "_screen_size_inv";
+				sc->constants->buffer[0] = c;
+			}
 			sc->texture_units = (tex_unit_t_array_t *)any_array_create(1);
 			{
 				tex_unit_t *tu               = (tex_unit_t *)gc_alloc(sizeof(tex_unit_t));

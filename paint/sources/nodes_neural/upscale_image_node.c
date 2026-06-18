@@ -16,25 +16,34 @@ void upscale_image_node_button(i32 node_id) {
 		ui_node_t     *from_node = neural_from_node(node->inputs->buffer[0], 0);
 		gpu_texture_t *input     = ui_nodes_get_node_preview_image(from_node);
 		if (input != NULL) {
-			buffer_t *input_buf = gpu_get_texture_pixels(input);
-
 			char *dir = neural_node_dir();
+
+#ifdef IRON_BGRA
+			buffer_t *input_buf = buffer_bgra_swap(gpu_get_texture_pixels(input)); // Vulkan non-rt textures need a flip
+#else
+			buffer_t *input_buf = gpu_get_texture_pixels(input);
+#endif
 			iron_write_png(string("%s%sinput.png", dir, PATH_SEP), input_buf, input->width, input->height, 0);
 
 			string_array_t *argv = any_array_create_from_raw(
 			    (void *[]){
-			        string("%s/%s", dir, neural_node_sd_bin()),
-			        "-M",
-			        "upscale",
-			        "--upscale-model",
-			        string("%s/RealESRGAN_x4plus.pth", dir),
+			        string("%s/%s", dir, neural_node_iris_bin()),
+			        "-d",
+			        string("%s", dir),
+			        "--upscale",
 			        "-i",
 			        string("%s/input.png", dir),
 			        "-o",
 			        string("%s/output.png", dir),
-			        NULL,
 			    },
-			    10);
+			    8);
+
+			bool tileable = node->buttons->buffer[1]->default_value->buffer[0] > 0.0;
+			if (tileable) {
+				string_array_push(argv, "--tileable");
+			}
+			string_array_push(argv, NULL);
+
 			iron_exec_async(argv->buffer[0], argv->buffer);
 			sys_notify_on_update(neural_node_check_result, node);
 		}
@@ -89,8 +98,17 @@ void upscale_image_node_init() {
 	                                                                       .max           = 1.0,
 	                                                                       .precision     = 100,
 	                                                                       .height        = 2}),
+	                                      GC_ALLOC_INIT(ui_node_button_t, {.name          = _tr("Tiled"),
+	                                                                       .type          = "BOOL",
+	                                                                       .output        = 0,
+	                                                                       .default_value = f32_array_create_x(0),
+	                                                                       .data          = NULL,
+	                                                                       .min           = 0.0,
+	                                                                       .max           = 1.0,
+	                                                                       .precision     = 100,
+	                                                                       .height        = 0}),
 	                                  },
-	                                  1),
+	                                  2),
 	                              .width = 0,
 	                              .flags = 0});
 

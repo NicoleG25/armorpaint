@@ -2,7 +2,7 @@
 #include "../global.h"
 
 char *neural_node_vector(ui_node_t *node, ui_node_socket_t *socket) {
-	gpu_texture_t *result = any_imap_get(neural_node_results, node->id);
+	gpu_texture_t *result = any_imap_get(neural_node_results, socket->id);
 	if (result == NULL) {
 		return "float3(0.0, 0.0, 0.0)";
 	}
@@ -14,7 +14,7 @@ char *neural_node_vector(ui_node_t *node, ui_node_socket_t *socket) {
 }
 
 char *neural_node_value(ui_node_t *node, ui_node_socket_t *socket) {
-	gpu_texture_t *result = any_imap_get(neural_node_results, node->id);
+	gpu_texture_t *result = any_imap_get(neural_node_results, socket->id);
 	if (result == NULL) {
 		return "0.0";
 	}
@@ -69,7 +69,7 @@ void neural_node_load_result(ui_node_t *node) {
 	char *file = string("%s%soutput.png", neural_node_dir(), PATH_SEP);
 	if (iron_file_exists(file)) {
 		gpu_texture_t *result = iron_load_texture(file);
-		any_imap_set(neural_node_results, node->id, result);
+		any_imap_set(neural_node_results, node->outputs->buffer[0]->id, result);
 		ui_nodes_hwnd->redraws   = 2;
 		ui_view2d_hwnd->redraws  = 2;
 		ui_node_canvas_t *canvas = ui_nodes_get_canvas(true);
@@ -105,27 +105,15 @@ char *neural_node_bin_ext() {
 #endif
 }
 
-char *neural_node_sd_bin() {
-	if (g_config->neural_backend == NEURAL_BACKEND_VULKAN) {
-		return string("sd_vulkan%s", neural_node_bin_ext());
-	}
-	if (g_config->neural_backend == NEURAL_BACKEND_CUDA) {
-		return string("sd_cuda%s", neural_node_bin_ext());
-	}
-	return string("sd_cpu%s", neural_node_bin_ext());
+char *neural_node_iris_bin() {
+	return string("iris%s", neural_node_bin_ext());
 }
 
 char *neural_node_llama_bin() {
 #ifdef IRON_MACOS
 	return "llama_metal";
 #endif
-	if (g_config->neural_backend == NEURAL_BACKEND_VULKAN) {
-		return string("llama_vulkan%s", neural_node_bin_ext());
-	}
-	if (g_config->neural_backend == NEURAL_BACKEND_CUDA) {
-		return string("llama_cuda%s", neural_node_bin_ext());
-	}
-	return string("llama_cpu%s", neural_node_bin_ext());
+	return string("llama_vulkan%s", neural_node_bin_ext());
 }
 
 char *neural_node_dir() {
@@ -162,10 +150,8 @@ void neural_node_download_done(char *url) {
 	console_log(string("%s %s", tr("Downloaded file from"), url));
 
 #ifdef IRON_LINUX
-	neural_node_chmod_x(url, "sd_vulkan");
-	neural_node_chmod_x(url, "sd_cpu");
+	neural_node_chmod_x(url, "iris");
 	neural_node_chmod_x(url, "llama_vulkan");
-	neural_node_chmod_x(url, "llama_cpu");
 #endif
 
 #ifdef WITH_COMPRESS
@@ -194,20 +180,13 @@ void neural_node_download_models(string_array_t *models) {
 	}
 
 #ifdef IRON_WINDOWS
-	neural_node_download("https://huggingface.co/armory3d/sd_bin/resolve/main/windows_x64/sd_cpu.exe");
-	neural_node_download("https://huggingface.co/armory3d/sd_bin/resolve/main/windows_x64/sd_vulkan.exe");
-	neural_node_download("https://huggingface.co/armory3d/sd_bin/resolve/main/windows_x64/sd_cuda.exe");
-	neural_node_download("https://huggingface.co/armory3d/llamacpp_bin/resolve/main/windows_x64/llama_cpu.exe");
+	neural_node_download("https://huggingface.co/armory3d/iris_bin/resolve/main/windows_x64/iris.exe");
 	neural_node_download("https://huggingface.co/armory3d/llamacpp_bin/resolve/main/windows_x64/llama_vulkan.exe");
-	neural_node_download("https://huggingface.co/armory3d/llamacpp_bin/resolve/main/windows_x64/llama_cuda.exe");
 #elif defined(IRON_LINUX)
-	neural_node_download("https://huggingface.co/armory3d/sd_bin/resolve/main/linux_x64/sd_cpu");
-	neural_node_download("https://huggingface.co/armory3d/sd_bin/resolve/main/linux_x64/sd_vulkan");
-	neural_node_download("https://huggingface.co/armory3d/llamacpp_bin/resolve/main/linux_x64/llama_cpu");
+	neural_node_download("https://huggingface.co/armory3d/iris_bin/resolve/main/linux_x64/iris");
 	neural_node_download("https://huggingface.co/armory3d/llamacpp_bin/resolve/main/linux_x64/llama_vulkan");
 #else
-	neural_node_download("https://huggingface.co/armory3d/sd_bin/resolve/main/macos/sd_cpu");
-	neural_node_download("https://huggingface.co/armory3d/sd_bin/resolve/main/macos/sd_vulkan");
+	neural_node_download("https://huggingface.co/armory3d/iris_bin/resolve/main/macos/iris");
 	neural_node_download("https://huggingface.co/armory3d/llamacpp_bin/resolve/main/macos/llama_metal");
 #endif
 

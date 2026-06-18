@@ -275,12 +275,6 @@ typedef enum {
 } layout_size_t;
 
 typedef enum {
-	NEURAL_BACKEND_CPU    = 0,
-	NEURAL_BACKEND_VULKAN = 1,
-	NEURAL_BACKEND_CUDA   = 2,
-} neural_backend_t;
-
-typedef enum {
 	PREFERENCES_TAB_INTERFACE = 0,
 	PREFERENCES_TAB_THEME     = 1,
 	PREFERENCES_TAB_USAGE     = 2,

@@ -4,53 +4,11 @@
 string_array_t *text_to_image_node_flux_klein_args(char *dir, char *prompt) {
 	string_array_t *argv = any_array_create_from_raw(
 	    (void *[]){
-	        string("%s/%s", dir, neural_node_sd_bin()),
-	        "--diffusion-model",
-	        string("%s/flux-2-klein-4b-Q8_0.gguf", dir),
-	        "--taesd",
-	        string("%s/taef2.safetensors", dir),
-	        "--llm",
-	        string("%s/Qwen3-4B-Q8_0.gguf", dir),
-	        "--steps",
-	        "4",
+	        string("%s/%s", dir, neural_node_iris_bin()),
+	        "-d",
+	        string("%s", dir),
 	    },
-	    9);
-	return argv;
-}
-
-string_array_t *text_to_image_node_zimage_args(char *dir, char *prompt) {
-	string_array_t *argv = any_array_create_from_raw(
-	    (void *[]){
-	        string("%s/%s", dir, neural_node_sd_bin()),
-	        "--diffusion-model",
-	        string("%s/z_image_turbo-Q4_K.gguf", dir),
-	        "--vae",
-	        string("%s/ae.safetensors", dir),
-	        "--llm",
-	        string("%s/Qwen3-4B-Instruct-2507-Q4_K_S.gguf", dir),
-	        "--steps",
-	        "40",
-	    },
-	    9);
-	return argv;
-}
-
-string_array_t *text_to_image_node_qwen_args(char *dir, char *prompt) {
-	string_array_t *argv = any_array_create_from_raw(
-	    (void *[]){
-	        string("%s/%s", dir, neural_node_sd_bin()),
-	        "--diffusion-model",
-	        string("%s/qwen-image-2512-Q4_K_S.gguf", dir),
-	        "--vae",
-	        string("%s/Qwen_Image-VAE.safetensors", dir),
-	        "--llm",
-	        string("%s/Qwen2.5-VL-7B-Instruct-Q4_K_S.gguf", dir),
-	        "--llm_vision",
-	        string("%s/mmproj-F16.gguf", dir),
-	        "--steps",
-	        "20",
-	    },
-	    11);
+	    3);
 	return argv;
 }
 
@@ -60,37 +18,27 @@ void text_to_image_node_run(ui_node_t *node, void (*callback)(ui_node_t *)) {
 	i32          model     = ui_nest(h, 0)->i;
 	char        *prompt    = ui_nest(h, 1)->text;
 	char        *dir       = neural_node_dir();
-	if (prompt == NULL || string_equals(prompt, "")) {
-		prompt = ".";
-	}
 
 	string_array_t *argv;
 	if (model == 0) {
 		argv = text_to_image_node_flux_klein_args(dir, prompt);
 	}
-	else if (model == 1) {
-		argv = text_to_image_node_zimage_args(dir, prompt);
-	}
-	else {
-		argv = text_to_image_node_qwen_args(dir, prompt);
-	}
 
-	string_array_push(argv, "--cfg-scale");
-	string_array_push(argv, "1.0");
-	string_array_push(argv, "--diffusion-fa");
-	string_array_push(argv, "--offload-to-cpu");
+	if (g_config->neural_res >= 2048) {
+		string_array_push(argv, "--vae-tiling");
+	}
 	string_array_push(argv, "-W");
 	string_array_push(argv, string("%d", g_config->neural_res));
 	string_array_push(argv, "-H");
 	string_array_push(argv, string("%d", g_config->neural_res));
-	string_array_push(argv, "-s");
+	string_array_push(argv, "--seed");
 	string_array_push(argv, "-1");
 	string_array_push(argv, "-o");
 	string_array_push(argv, string("%s/output.png", dir));
 	string_array_push(argv, "-p");
 	string_array_push(argv, string("'%s'", prompt));
 	if (node->buttons->buffer[1]->default_value->buffer[0] > 0.0) {
-		string_array_push(argv, "--circular");
+		string_array_push(argv, "--tileable");
 	}
 	string_array_push(argv, NULL);
 
@@ -105,10 +53,8 @@ void text_to_image_node_button(i32 node_id) {
 	string_array_t *models    = any_array_create_from_raw(
         (void *[]){
             "FLUX 2 klein",
-            "Z-Image-Turbo",
-            "Qwen Image",
         },
-        3);
+        1);
 	i32   model                      = ui_combo(ui_nest(h, 0), models, tr("Model"), false, UI_ALIGN_LEFT, true);
 	char *prompt                     = ui_text_area(ui_nest(h, 1), UI_ALIGN_LEFT, true, tr("prompt"), true);
 	node->buttons->buffer[0]->height = string_split(prompt, "\n")->length + 2;

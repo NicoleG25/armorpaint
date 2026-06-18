@@ -100,8 +100,12 @@ gpu_texture_t *ui_nodes_get_node_preview_image(ui_node_t *n) {
 			img = rt->_image;
 		}
 	}
-	else if (starts_with(n->type, "NEURAL_") && !string_equals(n->type, "NEURAL_IMAGE_TO_PBR")) {
-		img = any_imap_get(neural_node_results, n->id);
+	else if (starts_with(n->type, "NEURAL_")) {
+		i32 socket = i32_imap_get(g_context->node_preview_socket_map, n->id);
+		if (socket < 0 || socket >= n->outputs->length) {
+			socket = 0;
+		}
+		img = any_imap_get(neural_node_results, n->outputs->buffer[socket]->id);
 	}
 	else if (ui_nodes_canvas_type == CANVAS_TYPE_MATERIAL) {
 		img = any_imap_get(g_context->node_preview_map, n->id);

@@ -7,78 +7,30 @@ void neural_node_models_init() {
 	    (void *[]){
 	        GC_ALLOC_INIT(neural_node_model_t, {.name   = "FLUX 2 klein",
 	                                            .memory = "4GB",
-	                                            .size   = "8.2GB",
-	                                            .nodes  = "Text to Image, Edit Image, Inpaint Image, Tile Image",
+	                                            .size   = "8.7GB",
+	                                            .nodes  = "Text to Image, Edit Image, Inpaint Image",
 	                                            .urls   = any_array_create_from_raw(
                                                     (void *[]){
-                                                        "https://huggingface.co/leejet/FLUX.2-klein-4B-GGUF/resolve/main/flux-2-klein-4b-Q8_0.gguf",
-                                                        "https://huggingface.co/madebyollin/taef2/resolve/main/taef2.safetensors",
-                                                        "https://huggingface.co/unsloth/Qwen3-4B-GGUF/resolve/main/Qwen3-4B-Q8_0.gguf",
+                                                        "https://huggingface.co/armory3d/FLUX.2-klein-4B-GGUF/resolve/main/flux-2-klein-4b-Q8_0.gguf",
+                                                        "https://huggingface.co/armory3d/FLUX.2-klein-4B-GGUF/resolve/main/Qwen3-4B-Q8_0.gguf",
+                                                        "https://huggingface.co/armory3d/FLUX.2-klein-4B-GGUF/resolve/main/vae.safetensors",
+                                                        "https://huggingface.co/armory3d/FLUX.2-klein-4B-GGUF/resolve/main/tokenizer.json",
                                                     },
-                                                    3),
-	                                            .web     = "https://huggingface.co/leejet/FLUX.2-klein-4B-GGUF",
+                                                    4),
+	                                            .web     = "https://huggingface.co/armory3d/FLUX.2-klein-4B-GGUF",
 	                                            .license = "apache-2.0"}),
 
-	        GC_ALLOC_INIT(neural_node_model_t, {.name   = "Z-Image-Turbo",
-	                                            .memory = "4GB",
-	                                            .size   = "6.7GB",
-	                                            .nodes  = "Text to Image",
+	        GC_ALLOC_INIT(neural_node_model_t, {.name   = "DA3MONO",
+	                                            .memory = "6GB",
+	                                            .size   = "1.4GB",
+	                                            .nodes  = "Image to PBR",
 	                                            .urls   = any_array_create_from_raw(
                                                     (void *[]){
-                                                        "https://huggingface.co/armory3d/z_image_turbo/resolve/main/Qwen3-4B-Instruct-2507-Q4_K_S.gguf",
-                                                        "https://huggingface.co/armory3d/z_image_turbo/resolve/main/ae.safetensors",
-                                                        "https://huggingface.co/armory3d/z_image_turbo/resolve/main/z_image_turbo-Q4_K.gguf",
+                                                        "https://huggingface.co/armory3d/DA3MONO-LARGE/resolve/main/da3-mono-large.safetensors",
                                                     },
-                                                    3),
-	                                            .web     = "https://huggingface.co/armory3d/z_image_turbo",
+                                                    1),
+	                                            .web     = "https://huggingface.co/armory3d/DA3MONO-LARGE",
 	                                            .license = "apache-2.0"}),
-
-	        GC_ALLOC_INIT(neural_node_model_t,
-	                      {.name   = "Qwen Image",
-	                       .memory = "13GB",
-	                       .size   = "16.9GB",
-	                       .nodes  = "Text to Image",
-	                       .urls   = any_array_create_from_raw(
-                               (void *[]){
-                                   "https://huggingface.co/unsloth/Qwen-Image-2512-GGUF/resolve/main/qwen-image-2512-Q4_K_S.gguf",
-                                   "https://huggingface.co/QuantStack/Qwen-Image-GGUF/resolve/main/VAE/Qwen_Image-VAE.safetensors",
-                                   "https://huggingface.co/unsloth/Qwen2.5-VL-7B-Instruct-GGUF/resolve/main/Qwen2.5-VL-7B-Instruct-Q4_K_S.gguf",
-                               },
-                               3),
-	                       .web     = "https://huggingface.co/unsloth/Qwen-Image-2512-GGUF",
-	                       .license = "apache-2.0"}),
-
-	        GC_ALLOC_INIT(neural_node_model_t,
-	                      {.name   = "Qwen Image Edit",
-	                       .memory = "13GB",
-	                       .size   = "18.3GB",
-	                       .nodes  = "Edit Image",
-	                       .urls   = any_array_create_from_raw(
-                               (void *[]){
-                                   "https://huggingface.co/unsloth/Qwen-Image-Edit-2511-GGUF/resolve/main/qwen-image-edit-2511-Q4_K_S.gguf",
-                                   "https://huggingface.co/QuantStack/Qwen-Image-GGUF/resolve/main/VAE/Qwen_Image-VAE.safetensors",
-                                   "https://huggingface.co/unsloth/Qwen2.5-VL-7B-Instruct-GGUF/resolve/main/Qwen2.5-VL-7B-Instruct-Q4_K_S.gguf",
-                                   "https://huggingface.co/unsloth/Qwen2.5-VL-7B-Instruct-GGUF/resolve/main/mmproj-F16.gguf",
-                               },
-                               4),
-	                       .web     = "https://huggingface.co/unsloth/Qwen-Image-Edit-2511-GGUF",
-	                       .license = "apache-2.0"}),
-
-	        GC_ALLOC_INIT(neural_node_model_t,
-	                      {.name   = "Marigold",
-	                       .memory = "6GB",
-	                       .size   = "13.7GB",
-	                       .nodes  = "Image to Depth, Image to Normal Map Node, Image to PBR",
-	                       .urls   = any_array_create_from_raw(
-                               (void *[]){
-                                   "https://huggingface.co/armory3d/marigold-v1-1-gguf/resolve/main/marigold-depth-v1-1.q8_0.gguf",
-                                   "https://huggingface.co/armory3d/marigold-v1-1-gguf/resolve/main/marigold-normals-v1-1.q8_0.gguf",
-                                   "https://huggingface.co/armory3d/marigold-v1-1-gguf/resolve/main/marigold-iid-appearance-v1-1.q8_0.gguf",
-                                   "https://huggingface.co/armory3d/marigold-v1-1-gguf/resolve/main/marigold-iid-lighting-v1-1.q8_0.gguf",
-                               },
-                               4),
-	                       .web     = "https://huggingface.co/armory3d/marigold-v1-1-gguf",
-	                       .license = "openrail"}),
 
 	        GC_ALLOC_INIT(neural_node_model_t, {.name   = "Real-ESRGAN",
 	                                            .memory = "1GB",
@@ -86,7 +38,7 @@ void neural_node_models_init() {
 	                                            .nodes  = "Upscale Image",
 	                                            .urls   = any_array_create_from_raw(
                                                     (void *[]){
-                                                        "https://huggingface.co/armory3d/Real-ESRGAN/resolve/main/RealESRGAN_x4plus.pth",
+                                                        "https://huggingface.co/armory3d/Real-ESRGAN/resolve/main/RealESRGAN_x4plus.safetensors",
                                                     },
                                                     1),
 	                                            .web     = "https://huggingface.co/armory3d/Real-ESRGAN",
@@ -117,6 +69,6 @@ void neural_node_models_init() {
 	                                            .web     = "https://huggingface.co/unsloth/Qwen3.6-27B-GGUF",
 	                                            .license = "apache-2.0"}),
 	    },
-	    8);
+	    5);
 	gc_root(neural_node_models);
 }

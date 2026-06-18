@@ -110,7 +110,7 @@ static char *texture_mesh_node_grid_prompt(char *prompt) {
 
 static string_array_t *texture_mesh_node_flux_klein_args(char *dir, char *prompt) {
 	any_array_t *argv = any_array_create(0);
-	any_array_push(argv, string("%s/%s", dir, neural_node_sd_bin()));
+	any_array_push(argv, string("%s/%s", dir, neural_node_iris_bin()));
 	any_array_push(argv, "--diffusion-model");
 	any_array_push(argv, string("%s/flux-2-klein-4b-Q8_0.gguf", dir));
 	any_array_push(argv, "--vae");
@@ -143,7 +143,7 @@ static string_array_t *texture_mesh_node_flux_klein_args(char *dir, char *prompt
 
 static string_array_t *texture_mesh_node_qwen_args(char *dir, char *prompt) {
 	any_array_t *argv = any_array_create(0);
-	any_array_push(argv, string("%s/%s", dir, neural_node_sd_bin()));
+	any_array_push(argv, string("%s/%s", dir, neural_node_iris_bin()));
 	any_array_push(argv, "--diffusion-model");
 	any_array_push(argv, string("%s/qwen-image-edit-2511-Q4_K_S.gguf", dir));
 	any_array_push(argv, "--vae");
@@ -181,7 +181,7 @@ static void texture_mesh_node_run_upscale(char *dir) {
 	char           *grid = string("%s%soutput_grid.png", dir, PATH_SEP);
 	string_array_t *argv = any_array_create_from_raw(
 	    (void *[]){
-	        string("%s/%s", dir, neural_node_sd_bin()),
+	        string("%s/%s", dir, neural_node_iris_bin()),
 	        "-M",
 	        "upscale",
 	        "--upscale-model",
@@ -269,7 +269,7 @@ static void texture_mesh_node_project(ui_node_t *node) {
 		}
 
 		gpu_texture_t *sd_tex = iron_load_texture(output);
-		any_imap_set(neural_node_results, node->id, sd_tex);
+		any_imap_set(neural_node_results, node->outputs->buffer[0]->id, sd_tex);
 		any_map_set(data_cached_images, node_name, sd_tex);
 
 		texture_mesh_node_set_view(v);

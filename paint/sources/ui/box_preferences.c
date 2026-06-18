@@ -859,28 +859,6 @@ void box_preferences_model_panel(neural_node_model_t *m) {
 
 void box_preferences_neural_tab() {
 	ui_text(tr("All processing is done locally on device"), UI_ALIGN_LEFT, 0x00000000);
-	ui_handle_t *h_inference = ui_handle(__ID__);
-	h_inference->i           = g_config->neural_backend;
-#ifdef IRON_WINDOWS
-	string_array_t *inference_combo = any_array_create_from_raw(
-	    (void *[]){
-	        "CPU",
-	        "Vulkan",
-	        "CUDA",
-	    },
-	    3);
-#else
-	string_array_t *inference_combo = any_array_create_from_raw(
-	    (void *[]){
-	        "CPU",
-	        "Vulkan",
-	    },
-	    2);
-#endif
-	g_config->neural_backend = ui_combo(h_inference, inference_combo, tr("Inference Backend"), true, UI_ALIGN_LEFT, true);
-	if (g_ui->is_hovered) {
-		ui_tooltip(tr("Backend for neural node processing"));
-	}
 
 	ui_handle_t *h_neural_res        = ui_handle(__ID__);
 	h_neural_res->i                  = g_config->neural_res == 2048 ? 2 : (g_config->neural_res == 1024 ? 1 : 0);

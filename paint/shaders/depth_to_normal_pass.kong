@@ -1,7 +1,7 @@
 
 #[set(everything)]
 const constants: {
-	empty: float4;
+	texel_size: float2;
 };
 
 #[set(everything)]
@@ -28,31 +28,31 @@ fun depth_to_normal_pass_vert(input: vert_in): vert_out {
 }
 
 fun depth_to_normal_pass_frag(input: vert_out): float4 {
-	var ts: float = 1.0 / 768.0;
-	var h00: float = sample_lod(height_map, sampler_linear, input.tex + float2(-2.0 * ts, -2.0 * ts), 0.0).r;
-	var h01: float = sample_lod(height_map, sampler_linear, input.tex + float2(-ts,       -2.0 * ts), 0.0).r;
-	var h02: float = sample_lod(height_map, sampler_linear, input.tex + float2(0.0,       -2.0 * ts), 0.0).r;
-	var h03: float = sample_lod(height_map, sampler_linear, input.tex + float2( ts,       -2.0 * ts), 0.0).r;
-	var h04: float = sample_lod(height_map, sampler_linear, input.tex + float2( 2.0 * ts, -2.0 * ts), 0.0).r;
-	var h10: float = sample_lod(height_map, sampler_linear, input.tex + float2(-2.0 * ts, -ts),       0.0).r;
-	var h11: float = sample_lod(height_map, sampler_linear, input.tex + float2(-ts,       -ts),       0.0).r;
-	var h12: float = sample_lod(height_map, sampler_linear, input.tex + float2(0.0,       -ts),       0.0).r;
-	var h13: float = sample_lod(height_map, sampler_linear, input.tex + float2( ts,       -ts),       0.0).r;
-	var h14: float = sample_lod(height_map, sampler_linear, input.tex + float2( 2.0 * ts, -ts),       0.0).r;
-	var h20: float = sample_lod(height_map, sampler_linear, input.tex + float2(-2.0 * ts,  0.0),      0.0).r;
-	var h21: float = sample_lod(height_map, sampler_linear, input.tex + float2(-ts,        0.0),      0.0).r;
-	var h23: float = sample_lod(height_map, sampler_linear, input.tex + float2( ts,        0.0),      0.0).r;
-	var h24: float = sample_lod(height_map, sampler_linear, input.tex + float2( 2.0 * ts,  0.0),      0.0).r;
-	var h30: float = sample_lod(height_map, sampler_linear, input.tex + float2(-2.0 * ts,  ts),       0.0).r;
-	var h31: float = sample_lod(height_map, sampler_linear, input.tex + float2(-ts,        ts),       0.0).r;
-	var h32: float = sample_lod(height_map, sampler_linear, input.tex + float2(0.0,        ts),       0.0).r;
-	var h33: float = sample_lod(height_map, sampler_linear, input.tex + float2( ts,        ts),       0.0).r;
-	var h34: float = sample_lod(height_map, sampler_linear, input.tex + float2( 2.0 * ts,  ts),       0.0).r;
-	var h40: float = sample_lod(height_map, sampler_linear, input.tex + float2(-2.0 * ts,  2.0 * ts), 0.0).r;
-	var h41: float = sample_lod(height_map, sampler_linear, input.tex + float2(-ts,        2.0 * ts), 0.0).r;
-	var h42: float = sample_lod(height_map, sampler_linear, input.tex + float2(0.0,        2.0 * ts), 0.0).r;
-	var h43: float = sample_lod(height_map, sampler_linear, input.tex + float2( ts,        2.0 * ts), 0.0).r;
-	var h44: float = sample_lod(height_map, sampler_linear, input.tex + float2( 2.0 * ts,  2.0 * ts), 0.0).r;
+	var ts: float2 = constants.texel_size;
+	var h00: float = sample_lod(height_map, sampler_linear, input.tex + float2(-2.0, -2.0) * ts, 0.0).r;
+	var h01: float = sample_lod(height_map, sampler_linear, input.tex + float2(-1.0, -2.0) * ts, 0.0).r;
+	var h02: float = sample_lod(height_map, sampler_linear, input.tex + float2( 0.0, -2.0) * ts, 0.0).r;
+	var h03: float = sample_lod(height_map, sampler_linear, input.tex + float2( 1.0, -2.0) * ts, 0.0).r;
+	var h04: float = sample_lod(height_map, sampler_linear, input.tex + float2( 2.0, -2.0) * ts, 0.0).r;
+	var h10: float = sample_lod(height_map, sampler_linear, input.tex + float2(-2.0, -1.0) * ts, 0.0).r;
+	var h11: float = sample_lod(height_map, sampler_linear, input.tex + float2(-1.0, -1.0) * ts, 0.0).r;
+	var h12: float = sample_lod(height_map, sampler_linear, input.tex + float2( 0.0, -1.0) * ts, 0.0).r;
+	var h13: float = sample_lod(height_map, sampler_linear, input.tex + float2( 1.0, -1.0) * ts, 0.0).r;
+	var h14: float = sample_lod(height_map, sampler_linear, input.tex + float2( 2.0, -1.0) * ts, 0.0).r;
+	var h20: float = sample_lod(height_map, sampler_linear, input.tex + float2(-2.0,  0.0) * ts, 0.0).r;
+	var h21: float = sample_lod(height_map, sampler_linear, input.tex + float2(-1.0,  0.0) * ts, 0.0).r;
+	var h23: float = sample_lod(height_map, sampler_linear, input.tex + float2( 1.0,  0.0) * ts, 0.0).r;
+	var h24: float = sample_lod(height_map, sampler_linear, input.tex + float2( 2.0,  0.0) * ts, 0.0).r;
+	var h30: float = sample_lod(height_map, sampler_linear, input.tex + float2(-2.0,  1.0) * ts, 0.0).r;
+	var h31: float = sample_lod(height_map, sampler_linear, input.tex + float2(-1.0,  1.0) * ts, 0.0).r;
+	var h32: float = sample_lod(height_map, sampler_linear, input.tex + float2( 0.0,  1.0) * ts, 0.0).r;
+	var h33: float = sample_lod(height_map, sampler_linear, input.tex + float2( 1.0,  1.0) * ts, 0.0).r;
+	var h34: float = sample_lod(height_map, sampler_linear, input.tex + float2( 2.0,  1.0) * ts, 0.0).r;
+	var h40: float = sample_lod(height_map, sampler_linear, input.tex + float2(-2.0,  2.0) * ts, 0.0).r;
+	var h41: float = sample_lod(height_map, sampler_linear, input.tex + float2(-1.0,  2.0) * ts, 0.0).r;
+	var h42: float = sample_lod(height_map, sampler_linear, input.tex + float2( 0.0,  2.0) * ts, 0.0).r;
+	var h43: float = sample_lod(height_map, sampler_linear, input.tex + float2( 1.0,  2.0) * ts, 0.0).r;
+	var h44: float = sample_lod(height_map, sampler_linear, input.tex + float2( 2.0,  2.0) * ts, 0.0).r;
 	var dx: float = 2.0 * (h00 - h04) + 1.0 * (h01 - h03)
 	              + 3.0 * (h10 - h14) + 2.0 * (h11 - h13)
 	              + 4.0 * (h20 - h24) + 3.0 * (h21 - h23)

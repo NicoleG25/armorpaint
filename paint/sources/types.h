@@ -132,7 +132,6 @@ typedef struct config {
 	i32                  scene_atlas_res;
 	bool                 grid_snap;
 	bool                 experimental;
-	i32                  neural_backend;
 	i32                  neural_res;
 	render_mode_t        render_mode;
 	workspace_t          workspace;
