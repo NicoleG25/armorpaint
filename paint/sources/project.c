@@ -144,8 +144,8 @@ void project_new(bool reset_layers) {
 		mesh->name       = "Tessellated";
 		raw              = import_mesh_raw_mesh(mesh);
 	}
-	else if (string_equals(mesh_name, "sphere_1024")) {
-		raw_mesh_t *mesh = geom_make_uv_sphere(1, 1024, 512, true, 1.0);
+	else if (string_equals(mesh_name, "sphere_2048")) {
+		raw_mesh_t *mesh = geom_make_uv_sphere(1, 4096, 2048, true, 1.0);
 		mesh->name       = "Tessellated";
 		raw              = import_mesh_raw_mesh(mesh);
 	}
@@ -155,8 +155,8 @@ void project_new(bool reset_layers) {
 		raw              = import_mesh_raw_mesh(mesh);
 		// viewport_set_view(0, 0, 0.75, 0, 0, 0); // Top
 	}
-	else if (string_equals(mesh_name, "plane_1024")) {
-		raw_mesh_t *mesh = geom_make_plane(1, 1, 1024, 1024, 1.0);
+	else if (string_equals(mesh_name, "plane_2048")) {
+		raw_mesh_t *mesh = geom_make_plane(1, 1, 2048, 2048, 1.0);
 		mesh->name       = "Tessellated";
 		raw              = import_mesh_raw_mesh(mesh);
 		// viewport_set_view(0, 0, 0.75, 0, 0, 0); // Top

@@ -11,9 +11,9 @@ void project_fetch_default_meshes() {
 			project_default_mesh_list->buffer[i] = substring(project_default_mesh_list->buffer[i], 0, string_length(s) - 4); // Trim .arm
 		}
 		any_array_push(project_default_mesh_list, "plane");
-		any_array_push(project_default_mesh_list, "plane_1024");
+		any_array_push(project_default_mesh_list, "plane_2048");
 		any_array_push(project_default_mesh_list, "sphere");
-		any_array_push(project_default_mesh_list, "sphere_1024");
+		any_array_push(project_default_mesh_list, "sphere_2048");
 	}
 }
 
