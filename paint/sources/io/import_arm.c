@@ -637,6 +637,12 @@ void import_arm_run_project(char *path) {
 
 	tab_timeline_import(g_project);
 
+	// Select the first stage
+	if (g_project->stages != NULL && g_project->stages->length > 0) {
+		tab_stages_selected = 0;
+		tab_stages_apply(g_project->stages->buffer[0]);
+	}
+
 	sys_notify_on_next_frame(&import_arm_run_project_on_next_frame, NULL);
 
 	base_update_workflow();
