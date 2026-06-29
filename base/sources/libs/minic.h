@@ -78,6 +78,7 @@ minic_val_t  minic_ctx_call_fn(minic_ctx_t *ctx, void *fn_ptr, minic_val_t *args
 // valid as long as the owning minic_ctx_t has not been freed
 minic_val_t minic_call_fn(void *fn_ptr, minic_val_t *args, int argc);
 void       *minic_alloc(int size); // allocate in the active context's arena
+bool        minic_in_arena(void *p); // true if p points into the active arena (script value) vs native C memory
 
 // Host api registration (idempotent, safe to re-run)
 void minic_register(const char *name, const char *sig, minic_ext_fn_raw_t fn); // sig like "f(p,i)" using i/f/p/b/c/v
