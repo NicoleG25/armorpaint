@@ -26,7 +26,9 @@
 
 #include "types.h"
 
-void console_log(char *s);
+void   console_log(char *s);
+bool   point_in_aabb(object_t *object, vec4_t point);
+vec4_t raycast_aabb_mouse(object_t *object);
 
 static const char *minic_read_str(minic_val_t v) {
 	if (v.type == MINIC_T_PTR && v.p != NULL) {
@@ -148,12 +150,28 @@ static void minic_unbox(float *dst, const minic_val_t *src, int n) {
 	}
 }
 
+// Normalize math-type representation into raw floats: arena pointers are script values
+// stored as boxed minic_val_t, anything else is a native C struct field
+static void minic_read_floats(float *dst, void *p, int n) {
+	if (p == NULL) {
+		for (int i = 0; i < n; ++i) {
+			dst[i] = 0.0f;
+		}
+	}
+	else if (minic_in_arena(p)) {
+		minic_unbox(dst, (minic_val_t *)p, n);
+	}
+	else {
+		memcpy(dst, p, n * sizeof(float));
+	}
+}
+
 // clang-format off
-static vec2_t minic_get_vec2(void *p) { vec2_t v; minic_unbox(&v.x, (minic_val_t *)p, 2); return v; }
-static vec4_t minic_get_vec4(void *p) { vec4_t v; minic_unbox(&v.x, (minic_val_t *)p, 4); return v; }
-static quat_t minic_get_quat(void *p) { quat_t q; minic_unbox(&q.x, (minic_val_t *)p, 4); return q; }
-static mat3_t minic_get_mat3(void *p) { mat3_t m; minic_unbox(m.m, (minic_val_t *)p, 9); return m; }
-static mat4_t minic_get_mat4(void *p) { mat4_t m; minic_unbox(m.m, (minic_val_t *)p, 16); return m; }
+static vec2_t minic_get_vec2(void *p) { vec2_t v; minic_read_floats(&v.x, p, 2); return v; }
+static vec4_t minic_get_vec4(void *p) { vec4_t v; minic_read_floats(&v.x, p, 4); return v; }
+static quat_t minic_get_quat(void *p) { quat_t q; minic_read_floats(&q.x, p, 4); return q; }
+static mat3_t minic_get_mat3(void *p) { mat3_t m; minic_read_floats(m.m, p, 9); return m; }
+static mat4_t minic_get_mat4(void *p) { mat4_t m; minic_read_floats(m.m, p, 16); return m; }
 static void minic_set_vec2(minic_val_t *o, vec2_t v) { minic_box(o, &v.x, 2); }
 static void minic_set_vec4(minic_val_t *o, vec4_t v) { minic_box(o, &v.x, 4); }
 static void minic_set_quat(minic_val_t *o, quat_t q) { minic_box(o, &q.x, 4); }
@@ -169,8 +187,6 @@ static void minic_set_mat4(minic_val_t *o, mat4_t m) { minic_box(o, m.m, 16); }
 #define M4(i) minic_get_mat4(_a[i].p)
 #define AF(i) (_a[i].f)
 #define AP(i) (_a[i].p)
-
-vec4_t raycast_aabb(object_t *object, f32 mouse_x, f32 mouse_y);
 
 // One X(return-kind, name, call) line per math function; expanded twice:
 // once to define the mn_* wrappers, once to register them
@@ -257,7 +273,8 @@ vec4_t raycast_aabb(object_t *object, f32 mouse_x, f32 mouse_y);
 	X(V4, transform_look, transform_look(AP(0)))                             \
 	X(V4, transform_right, transform_right(AP(0)))                           \
 	X(V4, transform_up, transform_up(AP(0)))                                 \
-	X(V4, raycast_aabb, raycast_aabb((object_t *)AP(0), AF(1), AF(2)))       \
+	X(V4, raycast_aabb_mouse, raycast_aabb_mouse((object_t *)AP(0)))         \
+	X(I, point_in_aabb, point_in_aabb((object_t *)AP(0), V4(1)))             \
 	X(VOID, line_draw_render, line_draw_render(M4(0)))                       \
 	X(VOID, line_draw_bounds, line_draw_bounds(M4(0), V4(1)))                \
 	X(VOID, shape_draw_sphere, shape_draw_sphere(M4(0)))                     \
