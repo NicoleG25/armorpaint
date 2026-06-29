@@ -12,6 +12,7 @@
 #define MINIC_MAX_INT_TYPEDEFS  128
 #define MINIC_MAX_STRUCT_FIELDS 32
 #define MINIC_MAX_STRUCTS       64
+#define MINIC_MAX_GLOBALS       64
 #define MINIC_MAX_NAME          64
 
 typedef unsigned char minic_u8;
@@ -83,10 +84,11 @@ void minic_register(const char *name, const char *sig, minic_ext_fn_raw_t fn); /
 void minic_register_native(const char *name, minic_native_fn_t fn);
 void minic_struct_begin(const char *name, int size);
 void minic_struct_field(const char *field, int offset, minic_type_t type, minic_type_t deref_type, const char *struct_type);
-void minic_register_struct(const char *name, const char **fields, int field_count); // script-layout struct (boxed fields)
+void minic_register_struct(const char *name, const char **fields, int field_count);                   // script-layout struct (boxed fields)
 void minic_register_enum(const char *typedef_name, const char **names, const int *values, int count); // values NULL = 0,1,2...
 void minic_enum_const_add(const char *name, int value);
 void minic_int_typedef_add(const char *name);
+void minic_register_global(const char *name, const void *ptr, minic_type_t type);
 void minic_register_builtins(void);
 
 // Registry lookups (used by the interpreter)
@@ -94,11 +96,12 @@ minic_ext_func_t *minic_ext_func_get(const char *name);
 minic_val_t       minic_dispatch(minic_ext_func_t *ef, minic_val_t *args, int argc);
 int               minic_enum_const_get(const char *name); // -1 if unknown
 bool              minic_is_int_typedef(const char *name);
+bool              minic_global_get(const char *name, minic_val_t *out); // false if unknown
 
 // Native struct registration helpers:
 //   MINIC_STRUCT(my_t); MINIC_I(count); MINIC_S(name); MINIC_O(child, other_t); MINIC_END();
-#define MINIC_STRUCT(T) \
-	{ \
+#define MINIC_STRUCT(T)       \
+	{                         \
 		typedef T minic_st_t; \
 		minic_struct_begin(#T, (int)sizeof(minic_st_t))
 #define MINIC_FIELD(f, t, dt, s) minic_struct_field(#f, (int)offsetof(minic_st_t, f), t, dt, s)
@@ -109,13 +112,13 @@ bool              minic_is_int_typedef(const char *name);
 #define MINIC_P(f)               MINIC_FIELD(f, MINIC_T_PTR, MINIC_T_PTR, NULL)     // untyped pointer
 #define MINIC_O(f, T2)           MINIC_FIELD(f, MINIC_T_PTR, MINIC_T_PTR, #T2)      // pointer to struct T2
 #define MINIC_E(f, T2)           MINIC_FIELD(f, MINIC_T_EMBED, MINIC_T_PTR, #T2)    // embedded struct T2
-#define MINIC_END() }
+#define MINIC_END()              }
 
 // Enum registration helper (sequential values starting at 0):
 //   MINIC_ENUM("my_enum_t", "MY_A", "MY_B", "MY_C");
-#define MINIC_ENUM(T, ...) \
-	do { \
-		static const char *_minic_names[] = {__VA_ARGS__}; \
+#define MINIC_ENUM(T, ...)                                                                                 \
+	do {                                                                                                   \
+		static const char *_minic_names[] = {__VA_ARGS__};                                                 \
 		minic_register_enum(T, _minic_names, NULL, (int)(sizeof(_minic_names) / sizeof(_minic_names[0]))); \
 	} while (0)
 

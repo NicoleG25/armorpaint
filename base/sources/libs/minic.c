@@ -16,18 +16,19 @@
 //    ██║   ╚██████╔╝██║  ██╗███████╗██║ ╚████║
 //    ╚═╝    ╚═════╝ ╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝
 
-#define MINIC_TOK_LIST                                                                                                                                    \
-	X(TOK_INT, "'int'")                                                                                                                                   \
-	X(TOK_FLOAT, "'float'")                                                                                                                               \
-	X(TOK_CHAR, "'char'") X(TOK_DOUBLE, "'double'") X(TOK_BOOL, "'bool'") X(TOK_RETURN, "'return'") X(TOK_IF, "'if'") X(TOK_ELSE, "'else'")               \
-	    X(TOK_WHILE, "'while'") X(TOK_FOR, "'for'") X(TOK_BREAK, "'break'") X(TOK_CONTINUE, "'continue'") X(TOK_STRUCT, "'struct'")                       \
-	        X(TOK_TYPEDEF, "'typedef'") X(TOK_ENUM, "'enum'") X(TOK_VOID, "'void'") X(TOK_IDENT, "identifier") X(TOK_NUMBER, "number")                    \
-	            X(TOK_CHAR_LIT, "char literal") X(TOK_STR_LIT, "string literal") X(TOK_LPAREN, "'('") X(TOK_RPAREN, "')'") X(TOK_LBRACE, "'{'")           \
-	                X(TOK_RBRACE, "'}'") X(TOK_LBRACKET, "'['") X(TOK_RBRACKET, "']'") X(TOK_SEMICOLON, "';'") X(TOK_COMMA, "','") X(TOK_ASSIGN, "'='")   \
-	                    X(TOK_PLUS_ASSIGN, "'+='") X(TOK_MINUS_ASSIGN, "'-='") X(TOK_MUL_ASSIGN, "'*='") X(TOK_DIV_ASSIGN, "'/='") X(TOK_EQ, "'=='")      \
-	                        X(TOK_NEQ, "'!='") X(TOK_LT, "'<'") X(TOK_GT, "'>'") X(TOK_LE, "'<='") X(TOK_GE, "'>='") X(TOK_AND, "'&&'") X(TOK_OR, "'||'") \
-	                            X(TOK_NOT, "'!'") X(TOK_AMP, "'&'") X(TOK_PLUS, "'+'") X(TOK_MINUS, "'-'") X(TOK_INC, "'++'") X(TOK_DEC, "'--'")          \
-	                                X(TOK_STAR, "'*'") X(TOK_SLASH, "'/'") X(TOK_DOT, "'.'") X(TOK_ARROW, "'->'") X(TOK_EOF, "end of file")
+#define MINIC_TOK_LIST                                                                                                                                        \
+	X(TOK_INT, "'int'")                                                                                                                                       \
+	X(TOK_FLOAT, "'float'")                                                                                                                                   \
+	X(TOK_CHAR, "'char'")                                                                                                                                     \
+	X(TOK_DOUBLE, "'double'") X(TOK_BOOL, "'bool'") X(TOK_RETURN, "'return'") X(TOK_IF, "'if'") X(TOK_ELSE, "'else'") X(TOK_WHILE, "'while'")                 \
+	    X(TOK_FOR, "'for'") X(TOK_BREAK, "'break'") X(TOK_CONTINUE, "'continue'") X(TOK_STRUCT, "'struct'") X(TOK_TYPEDEF, "'typedef'") X(TOK_ENUM, "'enum'") \
+	        X(TOK_VOID, "'void'") X(TOK_IDENT, "identifier") X(TOK_NUMBER, "number") X(TOK_CHAR_LIT, "char literal") X(TOK_STR_LIT, "string literal")         \
+	            X(TOK_LPAREN, "'('") X(TOK_RPAREN, "')'") X(TOK_LBRACE, "'{'") X(TOK_RBRACE, "'}'") X(TOK_LBRACKET, "'['") X(TOK_RBRACKET, "']'")             \
+	                X(TOK_SEMICOLON, "';'") X(TOK_COMMA, "','") X(TOK_ASSIGN, "'='") X(TOK_PLUS_ASSIGN, "'+='") X(TOK_MINUS_ASSIGN, "'-='")                   \
+	                    X(TOK_MUL_ASSIGN, "'*='") X(TOK_DIV_ASSIGN, "'/='") X(TOK_EQ, "'=='") X(TOK_NEQ, "'!='") X(TOK_LT, "'<'") X(TOK_GT, "'>'")            \
+	                        X(TOK_LE, "'<='") X(TOK_GE, "'>='") X(TOK_AND, "'&&'") X(TOK_OR, "'||'") X(TOK_NOT, "'!'") X(TOK_AMP, "'&'") X(TOK_PLUS, "'+'")   \
+	                            X(TOK_MINUS, "'-'") X(TOK_INC, "'++'") X(TOK_DEC, "'--'") X(TOK_STAR, "'*'") X(TOK_SLASH, "'/'") X(TOK_DOT, "'.'")            \
+	                                X(TOK_ARROW, "'->'") X(TOK_EOF, "end of file")
 
 typedef enum {
 #define X(t, s) t,
@@ -969,6 +970,11 @@ static minic_val_t minic_parse_primary(minic_env_t *e) {
 		int ec = minic_enum_const_get(name);
 		if (ec >= 0) {
 			return minic_val_int(ec);
+		}
+		// Check for a registered host global
+		minic_val_t gv;
+		if (minic_var_find(e, name) == NULL && minic_global_get(name, &gv)) {
+			return gv;
 		}
 		return minic_var_get(e, name);
 	}
@@ -1917,12 +1923,20 @@ typedef struct {
 	int  value;
 } minic_enum_const_t;
 
+typedef struct {
+	char         name[MINIC_MAX_NAME];
+	const void  *ptr;  // points at the live host variable
+	minic_type_t type; // MINIC_T_INT or MINIC_T_FLOAT
+} minic_global_t;
+
 static minic_ext_func_t   minic_ext_funcs[MINIC_MAX_EXTFUNS];
 static int                minic_ext_func_count = 0;
 static minic_enum_const_t minic_enum_consts[MINIC_MAX_ENUM_CONSTS];
 static int                minic_enum_const_count = 0;
 static char               minic_int_typedefs[MINIC_MAX_INT_TYPEDEFS][MINIC_MAX_NAME];
 static int                minic_int_typedef_count = 0;
+static minic_global_t     minic_globals[MINIC_MAX_GLOBALS];
+static int                minic_global_count = 0;
 
 minic_struct_t         minic_structs[MINIC_MAX_STRUCTS];
 int                    minic_struct_count = 0;
@@ -1993,6 +2007,38 @@ int minic_enum_const_get(const char *name) {
 		}
 	}
 	return -1;
+}
+
+void minic_register_global(const char *name, const void *ptr, minic_type_t type) {
+	for (int i = 0; i < minic_global_count; ++i) {
+		if (strcmp(minic_globals[i].name, name) == 0) {
+			minic_globals[i].ptr  = ptr;
+			minic_globals[i].type = type;
+			return;
+		}
+	}
+	if (minic_global_count >= MINIC_MAX_GLOBALS) {
+		return;
+	}
+	strncpy(minic_globals[minic_global_count].name, name, MINIC_MAX_NAME - 1);
+	minic_globals[minic_global_count].ptr  = ptr;
+	minic_globals[minic_global_count].type = type;
+	minic_global_count++;
+}
+
+bool minic_global_get(const char *name, minic_val_t *out) {
+	for (int i = 0; i < minic_global_count; ++i) {
+		if (strcmp(minic_globals[i].name, name) == 0) {
+			if (minic_globals[i].type == MINIC_T_FLOAT) {
+				*out = minic_val_float(*(const float *)minic_globals[i].ptr);
+			}
+			else {
+				*out = minic_val_int(*(const int *)minic_globals[i].ptr);
+			}
+			return true;
+		}
+	}
+	return false;
 }
 
 void minic_int_typedef_add(const char *name) {
