@@ -103,6 +103,85 @@ void main() {\n\
 	}
 }
 
+// Autocomplete popup (ctrl+space) listing the script api from minic_api.c
+#define TAB_SCRIPTS_AC_MAX 8
+bool tab_scripts_ac_show   = false;
+i32  tab_scripts_ac_offset = 0;
+
+static bool tab_scripts_is_ident(char c) {
+	return c == '_' || (c >= '0' && c <= '9') || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
+}
+
+static i32 tab_scripts_line_start(char *text, i32 line) {
+	i32 pos = 0;
+	i32 l   = 0;
+	while (l < line && text[pos] != '\0') {
+		if (text[pos] == '\n') {
+			l++;
+		}
+		pos++;
+	}
+	return pos;
+}
+
+static i32 tab_scripts_prefix_len(char *text, i32 cursor) {
+	i32 n = 0;
+	while (cursor - n - 1 >= 0 && tab_scripts_is_ident(text[cursor - n - 1])) {
+		n++;
+	}
+	return n;
+}
+
+static i32 tab_scripts_suffix_len(char *text, i32 cursor) {
+	i32 n = 0;
+	while (tab_scripts_is_ident(text[cursor + n])) {
+		n++;
+	}
+	return n;
+}
+
+// Collect up to TAB_SCRIPTS_AC_MAX api symbols containing prefix
+static i32 tab_scripts_autocomplete_matches(char *prefix, char **names) {
+	char *lower_prefix = to_lower_case(prefix);
+	i32   func_count   = minic_ext_func_count_get();
+	i32   global_count = minic_global_count_get();
+	i32   total        = func_count + global_count;
+	i32   n            = 0;
+	for (i32 i = 0; i < total && n < TAB_SCRIPTS_AC_MAX; ++i) {
+		char *name = (char *)(i < func_count ? minic_ext_func_name_at(i) : minic_global_name_at(i - func_count));
+		if (starts_with(to_lower_case(name), lower_prefix)) {
+			names[n++] = name;
+		}
+	}
+	for (i32 i = 0; i < total && n < TAB_SCRIPTS_AC_MAX; ++i) {
+		char *name  = (char *)(i < func_count ? minic_ext_func_name_at(i) : minic_global_name_at(i - func_count));
+		char *lower = to_lower_case(name);
+		if (!starts_with(lower, lower_prefix) && string_index_of(lower, lower_prefix) >= 0) {
+			names[n++] = name;
+		}
+	}
+	return n;
+}
+
+// Replace the whole identifier around the cursor with the chosen symbol
+static void tab_scripts_autocomplete_complete(char *name, i32 prefix_len, i32 suffix_len) {
+	tab_scripts_prepare();
+	char *text   = g_project->script_datas->buffer[tab_scripts_selected];
+	i32   line   = tab_scripts_hscript->i;
+	i32   col    = g_ui->cursor_x;
+	i32   cur    = tab_scripts_line_start(text, line) + col;
+	char *before = substring(text, 0, cur - prefix_len);
+	char *after  = substring(text, cur + suffix_len, string_length(text));
+	tab_scripts_set(string("%s%s%s", before, name, after));
+	tab_scripts_hscript->text = g_project->script_datas->buffer[tab_scripts_selected];
+	i32 new_col               = col - prefix_len + string_length(name);
+	g_ui->cursor_x            = new_col;
+	g_ui->highlight_anchor    = new_col;
+	g_ui->cursor_sticky_x     = new_col;
+	strcpy(g_ui->text_selected, ui_extract_line(tab_scripts_hscript->text, line)); // Keep the active line in sync
+	tab_scripts_ac_show = false;
+}
+
 void tab_scripts_draw(ui_handle_t *htab) {
 	if (ui_tab(htab, tr("Scripts"), false, -1, false)) {
 
@@ -159,8 +238,97 @@ void tab_scripts_draw(ui_handle_t *htab) {
 		tab_scripts_prepare();
 
 		tab_scripts_hscript->text = g_project->script_datas->buffer[tab_scripts_selected];
+
+		bool ac_selected = g_ui->text_selected_handle == tab_scripts_hscript;
+		if (!ac_selected) {
+			tab_scripts_ac_show = false;
+		}
+
+		// Open the autocomplete popup on ctrl+space
+		if (ac_selected && g_ui->is_ctrl_down && g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_SPACE) {
+			tab_scripts_ac_show   = true;
+			tab_scripts_ac_offset = 0;
+			g_ui->is_key_pressed  = false; // Consume so the editor ignores ctrl+space
+			minic_register_builtins();     // Ensure the script api is registered
+		}
+
+		bool ac_accept = false;
+		if (tab_scripts_ac_show && ac_selected && g_ui->is_key_pressed) {
+			if (g_ui->key_code == KEY_CODE_DOWN) {
+				tab_scripts_ac_offset++;
+				g_ui->is_key_pressed = false;
+				g_ui->key_code       = 0;
+			}
+			else if (g_ui->key_code == KEY_CODE_UP) {
+				tab_scripts_ac_offset--;
+				g_ui->is_key_pressed = false;
+				g_ui->key_code       = 0;
+			}
+			else if (g_ui->key_code == KEY_CODE_RETURN || g_ui->key_code == KEY_CODE_TAB) {
+				ac_accept            = true;
+				g_ui->is_key_pressed = false;
+				g_ui->key_code       = 0;
+			}
+			else if (g_ui->key_code == KEY_CODE_ESCAPE) {
+				tab_scripts_ac_show  = false;
+				g_ui->is_key_pressed = false;
+				g_ui->key_code       = 0;
+			}
+		}
+
 		ui_text_area(tab_scripts_hscript, UI_ALIGN_LEFT, true, "", false);
 		g_project->script_datas->buffer[tab_scripts_selected] = tab_scripts_hscript->text;
+
+		// Autocomplete popup
+		if (tab_scripts_ac_show && ac_selected) {
+			char *text   = tab_scripts_hscript->text;
+			i32   line   = tab_scripts_hscript->i;
+			i32   col    = g_ui->cursor_x;
+			i32   cur    = tab_scripts_line_start(text, line) + col;
+			i32   plen   = tab_scripts_prefix_len(text, cur);
+			i32   slen   = tab_scripts_suffix_len(text, cur);
+			char *prefix = substring(text, cur - plen, cur);
+
+			char *names[TAB_SCRIPTS_AC_MAX];
+			i32   n = tab_scripts_autocomplete_matches(prefix, names);
+			if (n == 0) {
+				tab_scripts_ac_show = false;
+			}
+			else {
+				tab_scripts_ac_offset = tab_scripts_ac_offset < 0 ? 0 : (tab_scripts_ac_offset > n - 1 ? n - 1 : tab_scripts_ac_offset);
+				if (ac_accept) {
+					tab_scripts_autocomplete_complete(names[tab_scripts_ac_offset], plen, slen);
+				}
+				else {
+					// Draw the list below the caret
+					i32 row_h = math_floor(g_ui->font_size + 8 * UI_SCALE());
+					f32 pad   = 8 * UI_SCALE();
+					f32 max_w = 0;
+					for (i32 i = 0; i < n; ++i) {
+						f32 w = draw_string_width(g_font, g_ui->font_size, names[i]);
+						max_w = w > max_w ? w : max_w;
+					}
+					f32 px = g_ui->cursor_screen_x;
+					f32 py = g_ui->cursor_screen_y + UI_ELEMENT_H();
+					f32 pw = max_w + pad * 2;
+					f32 ph = row_h * n;
+
+					ui_draw_shadow(px, py, pw, ph);
+					draw_set_color(g_theme->SEPARATOR_COL);
+					draw_filled_rect(px, py, pw, ph);
+					draw_set_font(g_font, g_ui->font_size);
+					for (i32 i = 0; i < n; ++i) {
+						f32 iy = py + row_h * i;
+						if (i == tab_scripts_ac_offset) {
+							draw_set_color(g_theme->HIGHLIGHT_COL);
+							draw_filled_rect(px, iy, pw, row_h);
+						}
+						draw_set_color(g_theme->TEXT_COL);
+						draw_string(names[i], px + pad, iy + math_floor((row_h - g_ui->font_size) / 2.0));
+					}
+				}
+			}
+		}
 
 		ui_text_area_line_numbers    = false;
 		ui_text_area_scroll_past_end = false;
