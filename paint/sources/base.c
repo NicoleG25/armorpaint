@@ -904,9 +904,10 @@ void base_update_workspace() {
 		ui_base_htabs->buffer[TAB_AREA_SIDEBAR0]->i      = 2; // Script
 		g_config->layout_tabs->buffer[TAB_AREA_SIDEBAR0] = 2;
 
-		g_config->layout->buffer[LAYOUT_SIZE_STATUS_H]   = iron_window_height() * 0.3;
-		g_config->layout->buffer[LAYOUT_SIZE_SIDEBAR_W]  = iron_window_width() * 0.52;
-		float h                                          = UI_ELEMENT_H() + UI_ELEMENT_OFFSET() + 2;
+		g_config->layout->buffer[LAYOUT_SIZE_STATUS_H]  = iron_window_height() * 0.3;
+		g_config->layout->buffer[LAYOUT_SIZE_SIDEBAR_W] = iron_window_width() * 0.52;
+		float h                                         = UI_ELEMENT_H() + UI_ELEMENT_OFFSET() + 2;
+		h += UI_ELEMENT_H() * 3.5; // Small material panel
 		g_config->layout->buffer[LAYOUT_SIZE_SIDEBAR_H0] = iron_window_height() - h;
 		g_config->layout->buffer[LAYOUT_SIZE_SIDEBAR_H1] = h;
 		render_path_resize();
