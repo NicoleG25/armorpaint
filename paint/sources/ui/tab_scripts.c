@@ -182,6 +182,58 @@ static void tab_scripts_autocomplete_complete(char *name, i32 prefix_len, i32 su
 	tab_scripts_ac_show = false;
 }
 
+static void tab_scripts_toggle_comment() {
+	tab_scripts_prepare();
+	char *text  = g_project->script_datas->buffer[tab_scripts_selected];
+	i32   line  = tab_scripts_hscript->i;
+	i32   col   = g_ui->cursor_x;
+	i32   start = tab_scripts_line_start(text, line);
+	i32   end   = start;
+	while (text[end] != '\0' && text[end] != '\n') {
+		end++;
+	}
+	// Indentation level: first non-space char on the line
+	i32 ind = start;
+	while (ind < end && text[ind] == ' ') {
+		ind++;
+	}
+	i32 ind_col = ind - start;
+
+	i32   delta;
+	char *before = substring(text, 0, ind);
+	if (text[ind] == '/' && ind + 1 < end && text[ind + 1] == '/') {
+		// Remove "// " or "//"
+		i32   remove = (ind + 2 < end && text[ind + 2] == ' ') ? 3 : 2;
+		char *after  = substring(text, ind + remove, string_length(text));
+		tab_scripts_set(string("%s%s", before, after));
+		delta = -remove;
+	}
+	else {
+		// Prepend "// "
+		char *after = substring(text, ind, string_length(text));
+		tab_scripts_set(string("%s// %s", before, after));
+		delta = 3;
+	}
+
+	tab_scripts_hscript->text = g_project->script_datas->buffer[tab_scripts_selected];
+
+	// Keep the caret on the same characters
+	i32 new_col;
+	if (col <= ind_col) {
+		new_col = col; // Caret within indentation, unaffected
+	}
+	else if (delta < 0 && col < ind_col - delta) {
+		new_col = ind_col; // Caret was inside the removed "// "
+	}
+	else {
+		new_col = col + delta;
+	}
+	g_ui->cursor_x         = new_col;
+	g_ui->highlight_anchor = new_col;
+	g_ui->cursor_sticky_x  = new_col;
+	strcpy(g_ui->text_selected, ui_extract_line(tab_scripts_hscript->text, line)); // Keep the active line in sync
+}
+
 void tab_scripts_draw(ui_handle_t *htab) {
 	if (ui_tab(htab, tr("Scripts"), false, -1, false)) {
 
@@ -250,6 +302,13 @@ void tab_scripts_draw(ui_handle_t *htab) {
 			tab_scripts_ac_offset = 0;
 			g_ui->is_key_pressed  = false; // Consume so the editor ignores ctrl+space
 			minic_register_builtins();     // Ensure the script api is registered
+		}
+
+		// Toggle line comment on ctrl+/
+		if (ac_selected && g_ui->is_ctrl_down && g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_SLASH) {
+			tab_scripts_toggle_comment();
+			g_ui->is_key_pressed = false; // Consume so the editor ignores ctrl+/
+			g_ui->key_code       = 0;
 		}
 
 		bool ac_accept = false;
