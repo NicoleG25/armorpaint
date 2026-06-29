@@ -1128,6 +1128,37 @@ void ui_insert_chars_at(char *str, int at, char *cs) {
 	}
 }
 
+// Number of leading spaces to step over when moving/removing a tab backwards
+static int ui_tab_dedent_count(char *str, int cursor_x) {
+	int n = cursor_x % 4;
+	if (n == 0) {
+		n = 4;
+	}
+	if (cursor_x < n) {
+		return 0;
+	}
+	for (int i = 1; i <= n; ++i) {
+		if (str[cursor_x - i] != ' ') {
+			return 0;
+		}
+	}
+	return n;
+}
+
+// Number of trailing spaces to step over when moving/removing a tab forwards
+static int ui_tab_indent_count(char *str, int cursor_x, int len) {
+	int n = 4 - (cursor_x % 4);
+	if (cursor_x + n > len) {
+		return 0;
+	}
+	for (int i = 0; i < n; ++i) {
+		if (str[cursor_x + i] != ' ') {
+			return 0;
+		}
+	}
+	return n;
+}
+
 void ui_update_text_edit(int align, bool editable, bool live_update) {
 	char text[1024];
 	strcpy(text, current->text_selected);
@@ -1142,9 +1173,9 @@ void ui_update_text_edit(int align, bool editable, bool live_update) {
 				current->cursor_x = i;
 			}
 			else if (current->cursor_x > 0) {
-				if (!current->tab_switch_enabled && current->cursor_x >= 4 && text[current->cursor_x - 1] == ' ' && text[current->cursor_x - 2] == ' ' &&
-				    text[current->cursor_x - 3] == ' ' && text[current->cursor_x - 4] == ' ') {
-					current->cursor_x -= 4; // Tab
+				int n = current->tab_switch_enabled ? 0 : ui_tab_dedent_count(text, current->cursor_x);
+				if (n > 0) {
+					current->cursor_x -= n; // Tab
 				}
 				else {
 					current->cursor_x--;
@@ -1162,9 +1193,9 @@ void ui_update_text_edit(int align, bool editable, bool live_update) {
 				current->cursor_x = i;
 			}
 			else if (current->cursor_x < strlen(text)) {
-				if (!current->tab_switch_enabled && current->cursor_x + 4 <= strlen(text) && text[current->cursor_x] == ' ' &&
-				    text[current->cursor_x + 1] == ' ' && text[current->cursor_x + 2] == ' ' && text[current->cursor_x + 3] == ' ') {
-					current->cursor_x += 4; // Tab
+				int n = current->tab_switch_enabled ? 0 : ui_tab_indent_count(text, current->cursor_x, strlen(text));
+				if (n > 0) {
+					current->cursor_x += n; // Tab
 				}
 				else {
 					current->cursor_x++;
@@ -1172,11 +1203,21 @@ void ui_update_text_edit(int align, bool editable, bool live_update) {
 			}
 		}
 		else if (editable && current->key_code == KEY_CODE_BACKSPACE) { // Remove char
-			if (current->cursor_x > 0 && current->highlight_anchor == current->cursor_x) {
-				if (!current->tab_switch_enabled && current->cursor_x >= 4 && text[current->cursor_x - 1] == ' ' && text[current->cursor_x - 2] == ' ' &&
-				    text[current->cursor_x - 3] == ' ' && text[current->cursor_x - 4] == ' ') {
-					ui_remove_chars_at(text, current->cursor_x - 4, 4); // Tab
-					current->cursor_x -= 4;
+			if (current->is_ctrl_down) {                                // Remove previous word
+				int i = current->cursor_x;
+				while (i > 0 && text[i - 1] == ' ')
+					i--;
+				while (i > 0 && text[i - 1] != ' ')
+					i--;
+				ui_remove_chars_at(text, i, current->cursor_x - i);
+				current->cursor_x         = i;
+				current->highlight_anchor = i;
+			}
+			else if (current->cursor_x > 0 && current->highlight_anchor == current->cursor_x) {
+				int n = current->tab_switch_enabled ? 0 : ui_tab_dedent_count(text, current->cursor_x);
+				if (n > 0) {
+					ui_remove_chars_at(text, current->cursor_x - n, n); // Tab
+					current->cursor_x -= n;
 				}
 				else {
 					ui_remove_char_at(text, current->cursor_x - 1);
@@ -1194,11 +1235,21 @@ void ui_update_text_edit(int align, bool editable, bool live_update) {
 			}
 		}
 		else if (editable && current->key_code == KEY_CODE_DELETE) {
-			if (current->highlight_anchor == current->cursor_x) {
+			if (current->is_ctrl_down) { // Remove next word
+				int i   = current->cursor_x;
 				int len = strlen(text);
-				if (!current->tab_switch_enabled && current->cursor_x + 4 <= len && text[current->cursor_x] == ' ' && text[current->cursor_x + 1] == ' ' &&
-				    text[current->cursor_x + 2] == ' ' && text[current->cursor_x + 3] == ' ') {
-					ui_remove_chars_at(text, current->cursor_x, 4); // Tab
+				while (i < len && text[i] != ' ')
+					i++;
+				while (i < len && text[i] == ' ')
+					i++;
+				ui_remove_chars_at(text, current->cursor_x, i - current->cursor_x);
+				current->highlight_anchor = current->cursor_x;
+			}
+			else if (current->highlight_anchor == current->cursor_x) {
+				int len = strlen(text);
+				int n   = current->tab_switch_enabled ? 0 : ui_tab_indent_count(text, current->cursor_x, len);
+				if (n > 0) {
+					ui_remove_chars_at(text, current->cursor_x, n); // Tab
 				}
 				else {
 					ui_remove_char_at(text, current->cursor_x);
@@ -1323,6 +1374,8 @@ void ui_update_text_edit(int align, bool editable, bool live_update) {
 	float cursor_x   = align == UI_ALIGN_LEFT ? current->_x + strw + off : current->_x + current->_w - strw - off;
 	draw_set_color(theme->TEXT_COL); // Cursor
 	draw_filled_rect(cursor_x, current->_y + current->button_offset_y * 1.5, 1.0 * UI_SCALE(), cursor_height);
+	current->cursor_screen_x = cursor_x;
+	current->cursor_screen_y = current->_y;
 
 	strcpy(current->text_selected, text);
 	if (live_update && current->text_selected_handle != NULL) {

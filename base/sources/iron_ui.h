@@ -196,7 +196,9 @@ typedef struct ui {
 	int                 cursor_x; // Text input
 	int                 highlight_anchor;
 	int                 cursor_sticky_x; // Remember column for vertical navigation
-	f32_array_t        *ratios;          // Splitting rows
+	float               cursor_screen_x; // Caret screen position, updated while editing
+	float               cursor_screen_y;
+	f32_array_t        *ratios; // Splitting rows
 	int                 current_ratio;
 	float               x_before_split;
 	int                 w_before_split;
