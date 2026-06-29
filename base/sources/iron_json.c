@@ -66,8 +66,25 @@ static void store_ptr_abs(void *ptr) {
 	wi += PTR_SIZE;
 }
 
+static uint32_t json_string_len(char *str, uint32_t len) {
+	uint32_t out = 0;
+	for (uint32_t i = 0; i < len; ++i) {
+		// Escaped \" collapses to one byte
+		if (str[i] == '\\' && i + 1 < len && str[i + 1] == '"') {
+			i++;
+		}
+		out++;
+	}
+	return out;
+}
+
 static void store_string_bytes(char *str, uint32_t len) {
 	for (uint32_t i = 0; i < len; ++i) {
+		if (str[i] == '\\' && i + 1 < len && str[i + 1] == '"') {
+			store_u8('"');
+			i++;
+			continue;
+		}
 		store_u8(str[i]);
 	}
 	store_u8('\0');
@@ -212,7 +229,7 @@ static void token_write() {
 			uint32_t strings_length = 0;
 			for (uint32_t i = 0; i < count; ++i) {
 				store_ptr(bottom + count * PTR_SIZE + strings_length);
-				uint32_t length = t.end - t.start; // String length
+				uint32_t length = json_string_len(source + t.start, t.end - t.start);
 				strings_length += length;
 				strings_length += 1; // '\0'
 				ti++;
