@@ -215,12 +215,11 @@ void transform_compute_radius(transform_t *raw) {
 
 void transform_compute_dim(transform_t *raw) {
 	if (raw->object->raw == NULL && string_equals(raw->object->ext_type, "mesh_object_t")) {
-		//// TODO
-		// mesh_object_t *mo    = (mesh_object_t *)raw->object->ext;
-		// vec4_t         aabb  = mesh_data_calculate_aabb(mo->data);
-		// _obj_t        *o_raw = gc_alloc(sizeof(_obj_t));
-		// o_raw->dimensions    = f32_array_create_xyz(aabb.x, aabb.y, aabb.z);
-		// raw->object->raw     = o_raw;
+		mesh_object_t *mo    = (mesh_object_t *)raw->object->ext;
+		vec4_t         aabb  = mesh_data_calculate_aabb(mo->data);
+		obj_t         *o_raw = gc_alloc(sizeof(obj_t));
+		o_raw->dimensions    = f32_array_create_xyz(aabb.x, aabb.y, aabb.z);
+		raw->object->raw     = o_raw;
 	}
 
 	if (raw->object->raw == NULL || raw->object->raw->dimensions == NULL) {
