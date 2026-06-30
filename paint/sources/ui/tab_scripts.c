@@ -1,8 +1,12 @@
 
 #include "../global.h"
 
-ui_text_coloring_t *tab_scripts_text_coloring = NULL;
-i32                 tab_scripts_selected      = 0;
+ui_text_coloring_t *tab_scripts_text_coloring    = NULL;
+i32                 tab_scripts_selected         = 0;
+gpu_texture_t      *tab_scripts_minimap_tex      = NULL;
+i32                 tab_scripts_minimap_selected = -1;
+extern bool         tab_scripts_minimap_dirty;
+bool                tab_scripts_minimap_scrolling = false;
 
 void tab_scripts_prepare() {
 	if (g_project->script_datas == NULL) {
@@ -27,6 +31,7 @@ char *tab_scripts_get() {
 void tab_scripts_set(char *s) {
 	tab_scripts_prepare();
 	g_project->script_datas->buffer[tab_scripts_selected] = string_copy(s);
+	tab_scripts_minimap_dirty                             = true;
 }
 
 void tab_scripts_create(char *name) {
@@ -234,8 +239,131 @@ static void tab_scripts_toggle_comment() {
 	strcpy(g_ui->text_selected, ui_extract_line(tab_scripts_hscript->text, line)); // Keep the active line in sync
 }
 
+static bool tab_scripts_minimap_visible(f32 *x, f32 *y, f32 *w, f32 *h) {
+	if (g_ui->_window_w <= 800 * UI_SCALE()) {
+		return false;
+	}
+	f32 mm_w = 150 * UI_SCALE();
+	*x       = g_ui->_window_w - mm_w;
+	*y       = g_ui->window_header_h;
+	*w       = mm_w;
+	*h       = g_ui->_window_h - g_ui->window_header_h;
+	return true;
+}
+
+static void tab_scripts_cache_minimap() {
+	tab_scripts_minimap_dirty = false;
+
+	char *text = tab_scripts_get();
+	if (text == NULL) {
+		return;
+	}
+	f32             line_h = 2 * UI_SCALE();
+	f32             char_w = 1 * UI_SCALE();
+	i32             tex_w  = math_floor(150 * UI_SCALE());
+	string_array_t *lines  = string_split(text, "\n");
+	i32             tex_h  = math_floor(lines->length * line_h);
+	if (tex_h < 1) {
+		tex_h = 1;
+	}
+
+	// Create the render target
+	if (tab_scripts_minimap_tex == NULL || tab_scripts_minimap_tex->width != tex_w || tab_scripts_minimap_tex->height != tex_h) {
+		if (tab_scripts_minimap_tex != NULL) {
+			gpu_delete_texture(tab_scripts_minimap_tex);
+		}
+		gc_unroot(tab_scripts_minimap_tex);
+		tab_scripts_minimap_tex = gpu_create_render_target(tex_w, tex_h, GPU_TEXTURE_FORMAT_RGBA32);
+		gc_root(tab_scripts_minimap_tex);
+	}
+
+	// Render each word as a small rect
+	draw_begin(tab_scripts_minimap_tex, true, 0x00000000);
+	draw_set_color(g_theme->HOVER_COL);
+	for (i32 i = 0; i < lines->length; ++i) {
+		string_array_t *words = string_split(lines->buffer[i], " ");
+		f32             x     = 0;
+		for (i32 j = 0; j < words->length; ++j) {
+			i32 len = string_length(words->buffer[j]);
+			if (len > 0) {
+				draw_filled_rect(x, i * line_h, len * char_w, line_h);
+			}
+			x += (len + 1) * char_w;
+		}
+	}
+	draw_end();
+}
+
+static void tab_scripts_draw_minimap(f32 mm_x, f32 mm_y, f32 mm_w, f32 mm_h) {
+	if (tab_scripts_minimap_tex == NULL) {
+		return;
+	}
+	f32             line_h          = 2 * UI_SCALE();
+	string_array_t *lines           = string_split(tab_scripts_hscript->text, "\n");
+	f32             content_h       = lines->length * UI_ELEMENT_H();
+	f32             full_h          = lines->length * line_h;
+	f32             scroll_progress = content_h > 0 ? -g_ui->current_window->scroll_offset / content_h : 0;
+	f32             out_of_screen   = full_h - mm_h;
+	if (out_of_screen < 0) {
+		out_of_screen = 0;
+	}
+
+	// Draw the visible region of the cached minimap
+	f32 tex_h = tab_scripts_minimap_tex->height;
+	f32 sh    = tex_h < mm_h ? tex_h : mm_h;
+	f32 sy    = out_of_screen * scroll_progress;
+	if (sy > tex_h - sh) {
+		sy = tex_h - sh;
+	}
+	if (sy < 0) {
+		sy = 0;
+	}
+	draw_set_color(0xffffffff);
+	draw_sub_image(tab_scripts_minimap_tex, 0, sy, mm_w, sh, mm_x, mm_y);
+
+	i32 offset = math_floor(sy / line_h);
+
+	// View box
+	f32 visible_area = out_of_screen > 0 ? mm_h : full_h;
+	f32 box_h        = (mm_h / UI_ELEMENT_H()) * line_h;
+	f32 box_y        = mm_y + scroll_progress * visible_area;
+	if (box_y < mm_y) {
+		box_y = mm_y;
+	}
+	else if (box_y > mm_y + mm_h - box_h) {
+		box_y = mm_y + mm_h - box_h;
+	}
+	draw_set_color(0x11ffffff);
+	draw_filled_rect(mm_x, box_y, mm_w, box_h);
+
+	// Drag the minimap to scroll the text area
+	if (tab_scripts_minimap_scrolling && content_h > mm_h) {
+		f32 my_local      = g_ui->input_y - (g_ui->_window_y + mm_y);
+		i32 picked        = offset + math_floor(my_local / line_h);
+		f32 visible_lines = mm_h / UI_ELEMENT_H();
+		f32 target        = (picked - visible_lines / 2) * UI_ELEMENT_H();
+		f32 max_scroll    = (lines->length - 1) * UI_ELEMENT_H(); // Last line at the top
+		if (target < 0) {
+			target = 0;
+		}
+		else if (target > max_scroll) {
+			target = max_scroll;
+		}
+		g_ui->current_window->scroll_offset = -target;
+	}
+}
+
 void tab_scripts_draw(ui_handle_t *htab) {
 	if (ui_tab(htab, tr("Scripts"), false, -1, false)) {
+
+		// Cache minimap
+		f32  mm_x, mm_y, mm_w, mm_h;
+		bool minimap_on = tab_scripts_minimap_visible(&mm_x, &mm_y, &mm_w, &mm_h);
+		if (minimap_on && tab_scripts_minimap_dirty) {
+			draw_end();
+			tab_scripts_cache_minimap();
+			draw_begin(&g_ui->current_window->texture, false, 0);
+		}
 
 		ui_begin_sticky();
 		f32_array_t *row = f32_array_create_from_raw(
@@ -335,8 +463,36 @@ void tab_scripts_draw(ui_handle_t *htab) {
 			}
 		}
 
+
+		if (ac_selected && g_ui->is_key_pressed) {
+			tab_scripts_minimap_dirty = true;
+		}
+
+		if (tab_scripts_minimap_selected != tab_scripts_selected) {
+			tab_scripts_minimap_selected = tab_scripts_selected;
+			tab_scripts_minimap_dirty    = true;
+		}
+
+		minimap_on = tab_scripts_minimap_visible(&mm_x, &mm_y, &mm_w, &mm_h);
+		if (minimap_on && g_ui->input_started && ui_input_in_rect(g_ui->_window_x + mm_x, g_ui->_window_y + mm_y, mm_w, mm_h)) {
+			tab_scripts_minimap_scrolling = true;
+		}
+		if (!g_ui->input_down) {
+			tab_scripts_minimap_scrolling = false;
+		}
+
+		// Prevent text area clicks while scrolling the minimap
+		bool _input_enabled = g_ui->input_enabled;
+		if (tab_scripts_minimap_scrolling) {
+			g_ui->input_enabled = false;
+		}
 		ui_text_area(tab_scripts_hscript, UI_ALIGN_LEFT, true, "", false);
+		g_ui->input_enabled                                   = _input_enabled;
 		g_project->script_datas->buffer[tab_scripts_selected] = tab_scripts_hscript->text;
+
+		if (minimap_on) {
+			tab_scripts_draw_minimap(mm_x, mm_y, mm_w, mm_h);
+		}
 
 		// Autocomplete popup
 		if (tab_scripts_ac_show && ac_selected) {

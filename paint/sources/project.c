@@ -264,6 +264,7 @@ void project_new(bool reset_layers) {
 	viewport_reset();
 	viewport_scale_to_bounds(1.8);
 	render_path_raytrace_ready = false;
+	tab_scripts_minimap_dirty  = true;
 
 	sys_notify_on_next_frame(&project_new_on_next_frame, NULL);
 }
