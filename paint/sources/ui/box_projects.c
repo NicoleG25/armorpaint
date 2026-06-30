@@ -234,14 +234,32 @@ void box_projects_show() {
 	ui_box_show_custom(&box_projects_show_box, 600, 400, NULL, draggable, "");
 }
 
+void box_projects_recent_load(char *path) {
+	if (!iron_file_exists(path)) {
+		return;
+	}
+	gpu_texture_t *current = _draw_current;
+	bool           in_use  = gpu_in_use;
+	if (in_use)
+		draw_end();
+
+	import_arm_run_project(path);
+
+	if (in_use)
+		draw_begin(current, false, 0);
+	ui_box_hide();
+}
+
 void box_projects_recent_tab() {
 	if (ui_tab(box_projects_htab, tr("Recent"), true, -1, false)) {
 
 		box_projects_draw_badge();
 
 		g_ui->enabled              = g_config->recent_projects->length > 0;
+		bool was_typing            = g_ui->is_typing;
 		box_projects_hsearch->text = string_copy(ui_text_input(box_projects_hsearch, tr("Search"), UI_ALIGN_LEFT, true, true));
 		g_ui->enabled              = true;
+		char *first_path           = NULL; // Most recent project that passes the search filter
 		for (i32 i = 0; i < g_config->recent_projects->length; ++i) {
 			char *path = g_config->recent_projects->buffer[i];
 #ifdef IRON_WINDOWS
@@ -254,21 +272,19 @@ void box_projects_recent_tab() {
 			if (string_index_of(to_lower_case(file), to_lower_case(box_projects_hsearch->text)) < 0) {
 				continue; // Search filter
 			}
-			if (ui_button(file, UI_ALIGN_LEFT, "") && iron_file_exists(path)) {
-				gpu_texture_t *current = _draw_current;
-				bool           in_use  = gpu_in_use;
-				if (in_use)
-					draw_end();
-
-				import_arm_run_project(path);
-
-				if (in_use)
-					draw_begin(current, false, 0);
-				ui_box_hide();
+			if (first_path == NULL) {
+				first_path = path;
+			}
+			if (ui_button(file, UI_ALIGN_LEFT, "")) {
+				box_projects_recent_load(path);
 			}
 			if (g_ui->is_hovered) {
 				ui_tooltip(path);
 			}
+		}
+
+		if (first_path != NULL && !was_typing && g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_RETURN) {
+			box_projects_recent_load(first_path);
 		}
 
 		g_ui->enabled = g_config->recent_projects->length > 0;

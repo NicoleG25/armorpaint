@@ -20,6 +20,10 @@ void ui_box_init() {
 }
 
 void ui_box_render() {
+	if (g_ui->is_key_pressed) {
+		ui_box_hwnd->redraws = 2;
+	}
+
 	if (!ui_menu_show) {
 		bool in_use    = g_ui->combo_selected_handle != NULL;
 		bool is_escape = g_ui->is_escape_down;
