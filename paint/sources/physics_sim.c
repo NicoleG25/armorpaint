@@ -92,13 +92,35 @@ void sim_remove_body(physics_body_t *pb) {
 	physics_body_remove(pb);
 }
 
+mesh_data_t *mesh_data_duplicate(mesh_data_t *source) {
+	mesh_data_t *raw = gc_alloc(sizeof(mesh_data_t));
+	raw->name        = string_copy(source->name);
+	raw->scale_pos   = source->scale_pos;
+	raw->scale_tex   = source->scale_tex;
+
+	raw->vertex_arrays = (vertex_array_t_array_t *)any_array_create_from_raw((void *[]){}, 0);
+	for (i32 i = 0; i < source->vertex_arrays->length; ++i) {
+		vertex_array_t *src = source->vertex_arrays->buffer[i];
+		vertex_array_t *va =
+		    GC_ALLOC_INIT(vertex_array_t,
+		                  {.attrib = string_copy(src->attrib), .data = string_copy(src->data), .values = i16_array_create_from_array(src->values)});
+		any_array_push(raw->vertex_arrays, va);
+	}
+
+	raw->index_array = u32_array_create_from_array(source->index_array);
+
+	return mesh_data_create(raw);
+}
+
 void sim_duplicate() {
 	// Mesh
 	mesh_object_t *so = g_context->paint_object;
 	if (so == NULL) {
 		return;
 	}
-	mesh_object_t *dup = scene_add_mesh_object(so->data, so->material, so->base->parent);
+
+	mesh_data_t   *data = mesh_data_duplicate(so->data);
+	mesh_object_t *dup  = scene_add_mesh_object(data, so->material, so->base->parent);
 	transform_set_matrix(dup->base->transform, so->base->transform->local);
 	any_array_push(g_project->_->paint_objects, dup);
 
@@ -110,6 +132,7 @@ void sim_duplicate() {
 		ext = string_copy(_import_mesh_number_ext(++i));
 	}
 	dup->base->name = string("%s%s", oname, ext);
+	dup->data->name = dup->base->name;
 
 	// Physics
 	physics_body_t *pb = any_imap_get(physics_body_object_map, so->base->uid);

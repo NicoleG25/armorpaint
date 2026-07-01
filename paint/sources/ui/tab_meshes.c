@@ -265,17 +265,21 @@ void tab_meshes_draw_context_menu() {
 	if (ui_menu_button(tr("Export"), "", ICON_EXPORT)) {
 		g_context->export_mesh_index = i + 1;
 		box_export_show_mesh();
+		return;
 	}
 	if (g_project->_->paint_objects->length > 1 && ui_menu_button(tr("Delete"), "delete", ICON_DELETE)) {
 		sys_notify_on_next_frame(tab_meshes_draw_context_menu_delete, o);
+		return;
 	}
 	if (ui_menu_button(tr("Duplicate"), "ctrl+d", ICON_DUPLICATE)) {
 		sim_duplicate();
+		return;
 	}
 
 #ifdef WITH_PLUGINS
 	if (ui_menu_button(tr("UV Unwrap"), "", ICON_NONE)) {
 		plugin_uv_unwrap_per_object_button(o);
+		return;
 	}
 #endif
 
