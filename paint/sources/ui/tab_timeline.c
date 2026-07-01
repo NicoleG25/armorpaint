@@ -64,6 +64,8 @@ static i32             tab_timeline_tween_tex0   = 0;
 static i32             tab_timeline_tween_tex1   = 0;
 static i32             tab_timeline_tween_factor = 0;
 
+static bool tab_timeline_stage_rename_init = false;
+
 static void tab_timeline_copy_tex(gpu_texture_t *dst, gpu_texture_t *src) {
 	draw_begin(dst, true, 0x00000000);
 	draw_set_pipeline(pipes_copy);
@@ -957,6 +959,54 @@ void tab_timeline_draw_edit() {
 	}
 }
 
+void tab_timeline_stage_rename_box_draw() {
+	stage_t     *s = tab_stages_get_stage();
+	ui_handle_t *h = ui_handle(__ID__);
+
+	if (tab_timeline_stage_rename_init) {
+		h->text = string_copy(s->name);
+		ui_start_text_edit(h, UI_ALIGN_LEFT);
+		tab_timeline_stage_rename_init = false;
+	}
+
+	char *name = ui_text_input(h, tr("Name"), UI_ALIGN_LEFT, true, false);
+	ui_end_element();
+	ui_row2();
+	if (ui_icon_button(tr("Cancel"), ICON_CLOSE, UI_ALIGN_CENTER)) {
+		ui_box_hide();
+	}
+	if (ui_icon_button(tr("OK"), ICON_CHECK, UI_ALIGN_CENTER) || g_ui->is_return_down) {
+		if (string_length(name) > 0) {
+			s->name = string_copy(name);
+		}
+		ui_box_hide();
+	}
+}
+
+void tab_timeline_draw_stage_menu() {
+	if (ui_menu_button(tr("New"), "", ICON_PLUS)) {
+		stage_t *s = tab_stages_create_stage(string("%s %s", tr("Stage"), i32_to_string(g_project->stages->length + 1)));
+		any_array_push(g_project->stages, s);
+		tab_stages_selected = g_project->stages->length - 1;
+		tab_stages_apply(s);
+	}
+
+	g_ui->enabled = g_project->stages != NULL && g_project->stages->length > 1;
+	if (ui_menu_button(tr("Remove"), "", ICON_DELETE)) {
+		array_splice(g_project->stages, tab_stages_selected, 1);
+		if (tab_stages_selected >= g_project->stages->length) {
+			tab_stages_selected = g_project->stages->length - 1;
+		}
+		tab_stages_apply(g_project->stages->buffer[tab_stages_selected]);
+	}
+	g_ui->enabled = true;
+
+	if (ui_menu_button(tr("Rename"), "", ICON_EDIT)) {
+		tab_timeline_stage_rename_init = true;
+		ui_box_show_custom(&tab_timeline_stage_rename_box_draw, 400, 130, NULL, true, tr("Rename Stage"));
+	}
+}
+
 void tab_timeline_draw(ui_handle_t *htab) {
 	if (ui_tab(htab, tr("Timeline"), false, -1, false) && g_ui->_window_h > ui_statusbar_default_h * UI_SCALE()) {
 
@@ -986,11 +1036,8 @@ void tab_timeline_draw(ui_handle_t *htab) {
 			}
 		}
 
-		if (ui_icon_button(tr("Stage"), ICON_PLUS, UI_ALIGN_CENTER)) {
-			stage_t *s = tab_stages_create_stage(string("%s %s", tr("Stage"), i32_to_string(g_project->stages->length + 1)));
-			any_array_push(g_project->stages, s);
-			tab_stages_selected = g_project->stages->length - 1;
-			tab_stages_apply(s);
+		if (ui_button(tr("Stage"), UI_ALIGN_CENTER, "")) {
+			ui_menu_draw(&tab_timeline_draw_stage_menu, -1, -1);
 		}
 
 		ui_handle_t *stage_handle = ui_handle(__ID__);
