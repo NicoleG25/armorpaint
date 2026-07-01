@@ -100,11 +100,22 @@ ui_node_t *util_clone_canvas_node(ui_node_t *n) {
 	r->x         = n->x;
 	r->y         = n->y;
 	r->color     = n->color;
-	r->inputs    = util_clone_canvas_sockets(n->inputs);
-	r->outputs   = util_clone_canvas_sockets(n->outputs);
-	r->buttons   = util_clone_canvas_buttons(n->buttons);
-	r->width     = n->width;
-	r->flags     = n->flags;
+
+	u32 _length = 0;
+	if (n->inputs != NULL && n->inputs->length < 9 && string_equals(n->type, "OUTPUT_MATERIAL_PBR")) {
+		// Base workflow
+		_length           = n->inputs->length;
+		n->inputs->length = 9;
+	}
+	r->inputs = util_clone_canvas_sockets(n->inputs);
+	if (_length != 0) {
+		n->inputs->length = _length;
+	}
+
+	r->outputs = util_clone_canvas_sockets(n->outputs);
+	r->buttons = util_clone_canvas_buttons(n->buttons);
+	r->width   = n->width;
+	r->flags   = n->flags;
 	return r;
 }
 
