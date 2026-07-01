@@ -102,16 +102,23 @@ void sim_remove_body(physics_body_t *pb) {
 }
 
 void sim_duplicate() {
-	if (g_context->selected_object == NULL) {
+	// Mesh
+	mesh_object_t *so = g_context->paint_object;
+	if (so == NULL) {
 		return;
 	}
-
-	// Mesh
-	mesh_object_t *so  = g_context->selected_object->ext;
 	mesh_object_t *dup = scene_add_mesh_object(so->data, so->material, so->base->parent);
 	transform_set_matrix(dup->base->transform, so->base->transform->local);
 	any_array_push(g_project->_->paint_objects, dup);
-	dup->base->name = so->base->name;
+
+	// Ensure unique name
+	char *oname = so->base->name;
+	char *ext   = "";
+	i32   i     = 0;
+	while (!_import_mesh_is_unique_name(string("%s%s", oname, ext))) {
+		ext = string_copy(_import_mesh_number_ext(++i));
+	}
+	dup->base->name = string("%s%s", oname, ext);
 
 	// Physics
 	physics_body_t *pb = any_imap_get(physics_body_object_map, so->base->uid);
@@ -124,7 +131,7 @@ void sim_duplicate() {
 }
 
 void sim_delete() {
-	mesh_object_t *so = g_context->selected_object->ext;
+	mesh_object_t *so = g_context->paint_object;
 	array_remove(g_project->_->paint_objects, so);
 	mesh_object_remove(so);
 	physics_body_t *pb = any_imap_get(physics_body_object_map, so->base->uid);

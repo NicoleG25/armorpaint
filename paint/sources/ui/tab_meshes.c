@@ -8,6 +8,29 @@ i32        tab_meshes_mesh_name_edit = -1;
 any_map_t *tab_meshes_preview_map    = NULL;
 any_map_t *tab_meshes_override_map   = NULL; // object uid -> overridden material index
 
+void tab_meshes_set_drag_mesh(mesh_object_t *o, f32 off_x, f32 off_y) {
+	base_drag_off_x = off_x;
+	base_drag_off_y = off_y;
+	gc_unroot(base_drag_mesh);
+	base_drag_mesh = o;
+	gc_root(base_drag_mesh);
+	g_context->drag_dest = array_index_of(g_project->_->paint_objects, o);
+}
+
+void tab_meshes_accept_mesh_drop(mesh_object_t *mesh) {
+	i32 pos = array_index_of(g_project->_->paint_objects, mesh);
+	if (pos == -1) {
+		return;
+	}
+	i32 dest = g_context->drag_dest;
+	if (dest == pos || dest == pos + 1) {
+		return;
+	}
+	array_remove(g_project->_->paint_objects, mesh);
+	i32 new_pos = dest > pos ? dest - 1 : dest;
+	array_insert(g_project->_->paint_objects, new_pos, mesh);
+}
+
 void tab_meshes_set_override(mesh_object_t *o, i32 mat_index) {
 	// Render an object with a chosen material instead of the painted layers
 	if (tab_meshes_override_map == NULL) {
@@ -32,6 +55,64 @@ i32 tab_meshes_get_override(mesh_object_t *o) {
 	}
 	char *v = any_map_get(tab_meshes_override_map, i32_to_string(o->base->uid));
 	return v != NULL ? parse_int(v) : -1;
+}
+
+void tab_meshes_on_material_deleted(i32 deleted_index) {
+	if (tab_meshes_override_map == NULL) {
+		return;
+	}
+	bool changed = false;
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		mesh_object_t *o   = g_project->_->paint_objects->buffer[i];
+		i32            idx = tab_meshes_get_override(o);
+		if (idx < 0) {
+			continue;
+		}
+		if (idx == deleted_index) {
+			tab_meshes_set_override(o, -1); // Reset
+			changed = true;
+		}
+		else if (idx > deleted_index) {
+			tab_meshes_set_override(o, idx - 1); // Offset by deleted material
+			changed = true;
+		}
+	}
+	if (changed) {
+		g_project->mesh_materials = i32_array_create(0);
+		g_context->ddirty         = 2;
+	}
+}
+
+void tab_meshes_on_material_reordered(i32 old_index, i32 new_index) {
+	if (tab_meshes_override_map == NULL || old_index == new_index) {
+		return;
+	}
+	bool changed = false;
+	for (i32 i = 0; i < g_project->_->paint_objects->length; ++i) {
+		mesh_object_t *o   = g_project->_->paint_objects->buffer[i];
+		i32            idx = tab_meshes_get_override(o);
+		if (idx < 0) {
+			continue;
+		}
+		i32 new_idx = idx;
+		if (idx == old_index) {
+			new_idx = new_index;
+		}
+		else if (old_index < new_index && idx > old_index && idx <= new_index) {
+			new_idx = idx - 1;
+		}
+		else if (old_index > new_index && idx >= new_index && idx < old_index) {
+			new_idx = idx + 1;
+		}
+		if (new_idx != idx) {
+			tab_meshes_set_override(o, new_idx);
+			changed = true;
+		}
+	}
+	if (changed) {
+		g_project->mesh_materials = i32_array_create(0);
+		g_context->ddirty         = 2;
+	}
 }
 
 void tab_meshes_draw_context_menu_delete_next_frame(mesh_object_t *o) {
@@ -64,6 +145,10 @@ static char *f32_to_string2(float f) {
 	return f32_to_string((int)(f * 100) / 100.0);
 }
 
+void tab_meshes_duplicate_next_frame(void *_) {
+	sim_duplicate();
+}
+
 void tab_meshes_draw_context_menu() {
 	i32            i = _tab_meshes_draw_i;
 	mesh_object_t *o = g_project->_->paint_objects->buffer[i];
@@ -85,10 +170,9 @@ void tab_meshes_draw_context_menu() {
 	}
 #endif
 
-	g_context->selected_object = o->base;
-	ui_handle_t *h             = ui_handle(__ID__);
+	ui_handle_t *h = ui_handle(__ID__);
 
-	transform_t *t   = g_context->selected_object->transform;
+	transform_t *t   = o->base->transform;
 	vec4_t       rot = quat_get_euler(t->rot);
 	rot              = vec4_mult(rot, 180 / 3.141592);
 	f32  f           = 0.0;
@@ -422,10 +506,18 @@ void tab_meshes_append_shape(char *mesh_name) {
 	mesh_data_t *md   = mesh_data_create(raw);
 	md->_->handle     = md->name;
 	mesh_object_t *mo = scene_add_mesh_object(md, g_project->_->paint_objects->buffer[0]->material, NULL);
-	mo->base->name    = md->name;
-	obj_t *o          = GC_ALLOC_INIT(obj_t, {0});
-	o->_              = GC_ALLOC_INIT(obj_runtime_t, {._gc = scene_raw});
-	mo->base->raw     = o;
+
+	// Ensure unique name
+	char *ext = "";
+	i32   n   = 0;
+	while (!_import_mesh_is_unique_name(string("%s%s", md->name, ext))) {
+		ext = string_copy(_import_mesh_number_ext(++n));
+	}
+	mo->base->name = string("%s%s", md->name, ext);
+
+	obj_t *o      = GC_ALLOC_INIT(obj_t, {0});
+	o->_          = GC_ALLOC_INIT(obj_runtime_t, {._gc = scene_raw});
+	mo->base->raw = o;
 	any_map_set(data_cached_meshes, md->_->handle, md);
 	any_array_push(g_project->_->paint_objects, mo);
 }
@@ -646,6 +738,21 @@ void tab_meshes_draw_mesh_slot(mesh_object_t *o, i32 i) {
 	f32 uix    = g_ui->_x;
 	f32 uiy    = g_ui->_y;
 
+	// Highlight drag destination
+	if (base_is_dragging && base_drag_mesh != NULL && context_in_meshes()) {
+		f32 absy   = g_ui->_window_y + g_ui->_y;
+		f32 checkw = (g_ui->_window_w / 100.0 * 8) / (float)UI_SCALE();
+		f32 w      = (g_ui->_window_w / (float)UI_SCALE() - 2) - checkw;
+		if (mouse_y > absy + step && mouse_y < absy + step * 3) {
+			g_context->drag_dest = i + 1; // Insert after this slot
+			ui_fill(checkw, step * 2, w, 2 * UI_SCALE(), g_theme->HIGHLIGHT_COL);
+		}
+		else if (i == 0 && mouse_y < absy + step) {
+			g_context->drag_dest = 0; // Insert before the first slot
+			ui_fill(checkw, 0, w, 2 * UI_SCALE(), g_theme->HIGHLIGHT_COL);
+		}
+	}
+
 	// Eye icon
 	f32_array_t *row = f32_array_create_from_raw(
 	    (f32[]){
@@ -732,6 +839,7 @@ void tab_meshes_draw_mesh_slot(mesh_object_t *o, i32 i) {
 			ui_tooltip(o->base->name);
 			if (g_ui->input_started) {
 				g_context->paint_object = o;
+				tab_meshes_set_drag_mesh(o, -(mouse_x - uix - g_ui->_window_x - 3), -(mouse_y - uiy - g_ui->_window_y + 1));
 			}
 			if (g_ui->input_released) {
 				if (sys_time() - g_context->select_time < 0.2) {
@@ -762,6 +870,10 @@ void tab_meshes_draw_mesh_slot(mesh_object_t *o, i32 i) {
 		if (in_focus && g_ui->is_delete_down && g_project->_->paint_objects->length > 1) {
 			g_ui->is_delete_down = false;
 			sys_notify_on_next_frame(&tab_meshes_draw_context_menu_delete, g_context->paint_object);
+		}
+		if (in_focus && g_ui->is_ctrl_down && g_ui->is_key_pressed && g_ui->key_code == KEY_CODE_D) {
+			g_ui->is_key_pressed = false;
+			sys_notify_on_next_frame(&tab_meshes_duplicate_next_frame, NULL);
 		}
 	}
 

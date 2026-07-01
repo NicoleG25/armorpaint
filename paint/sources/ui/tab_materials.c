@@ -67,6 +67,7 @@ void tab_materials_delete_material(slot_material_t *m) {
 	history_delete_material();
 	context_select_material(i == g_project->_->materials->length - 1 ? i - 1 : i + 1);
 	array_splice(g_project->_->materials, i, 1);
+	tab_meshes_on_material_deleted(i);
 	ui_base_hwnds->buffer[1]->redraws = 2;
 	for (i32 i = 0; i < g_project->_->materials->length; ++i) {
 		slot_material_t *m = g_project->_->materials->buffer[i];
@@ -426,6 +427,7 @@ void tab_materials_accept_material_drop(slot_material_t *material) {
 		array_remove(g_project->_->materials, material);
 		i32 new_pos = tab_materials_drag_pos - mat_pos > 0 ? tab_materials_drag_pos - 1 : tab_materials_drag_pos;
 		array_insert(g_project->_->materials, new_pos, material);
+		tab_meshes_on_material_reordered(mat_pos, new_pos);
 	}
 }
 

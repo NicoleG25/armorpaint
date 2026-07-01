@@ -19,10 +19,6 @@ void render_gizmo_update() {
 
 	object_t *paint_object = g_context->paint_object->base;
 
-	if (g_context->tool == TOOL_TYPE_CURSOR && g_context->selected_object != NULL) {
-		paint_object = g_context->selected_object;
-	}
-
 	if (is_object) {
 		gizmo->transform->loc =
 		    (vec4_t){transform_world_x(paint_object->transform), transform_world_y(paint_object->transform), transform_world_z(paint_object->transform), 1.0};

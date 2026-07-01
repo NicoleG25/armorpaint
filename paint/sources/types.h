@@ -384,7 +384,6 @@ typedef struct context {
 	f32                         lock_start_x;
 	f32                         lock_start_y;
 	bool                        registered;
-	struct object              *selected_object;
 	f32                         particle_hit_x;
 	f32                         particle_hit_y;
 	f32                         particle_hit_z;

@@ -463,7 +463,6 @@ void tab_scripts_draw(ui_handle_t *htab) {
 			}
 		}
 
-
 		if (ac_selected && g_ui->is_key_pressed) {
 			tab_scripts_minimap_dirty = true;
 		}
