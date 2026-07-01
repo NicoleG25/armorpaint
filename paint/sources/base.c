@@ -170,6 +170,18 @@ gpu_texture_t *base_get_drag_image() {
 	if (base_drag_layer != NULL) {
 		return base_drag_layer->fill_material != NULL ? base_drag_layer->fill_material->image_icon : base_drag_layer->texpaint_preview;
 	}
+	if (base_drag_mesh != NULL) {
+		gpu_texture_t *preview = tab_meshes_preview_map != NULL ? any_map_get(tab_meshes_preview_map, i32_to_string(base_drag_mesh->base->uid)) : NULL;
+		if (preview != NULL) {
+			return preview;
+		}
+		gpu_texture_t *icons = resource_get("icons.k");
+		gc_unroot(base_drag_rect);
+		base_drag_rect = resource_tile50(icons, ICON_CUBE);
+		gc_root(base_drag_rect);
+		base_drag_tint = g_theme->BUTTON_COL;
+		return icons;
+	}
 	return NULL;
 }
 
@@ -201,7 +213,7 @@ void base_update(void *_) {
 	}
 
 	bool has_drag = base_drag_asset != NULL || base_drag_material != NULL || base_drag_layer != NULL || base_drag_file != NULL || base_drag_swatch != NULL ||
-	                base_drag_brush != NULL || base_drag_font != NULL;
+	                base_drag_brush != NULL || base_drag_font != NULL || base_drag_mesh != NULL;
 
 	if (g_config->touch_ui) {
 		// Touch and hold to activate dragging
@@ -232,6 +244,8 @@ void base_update(void *_) {
 			base_drag_material = NULL;
 			gc_unroot(base_drag_layer);
 			base_drag_layer = NULL;
+			gc_unroot(base_drag_mesh);
+			base_drag_mesh = NULL;
 			gc_unroot(base_drag_brush);
 			base_drag_brush = NULL;
 			gc_unroot(base_drag_font);
@@ -320,6 +334,13 @@ void base_update(void *_) {
 			gc_unroot(base_drag_layer);
 			base_drag_layer = NULL;
 		}
+		else if (base_drag_mesh != NULL) {
+			if (context_in_meshes() && base_is_dragging) {
+				tab_meshes_accept_mesh_drop(base_drag_mesh);
+			}
+			gc_unroot(base_drag_mesh);
+			base_drag_mesh = NULL;
+		}
 		else if (base_drag_brush != NULL) {
 			if (context_in_brushes()) {
 				tab_brushes_accept_brush_drop(base_drag_brush);
@@ -349,7 +370,7 @@ void base_update(void *_) {
 		g_context->ddirty = 0;
 	}
 
-	if (g_context->tool == TOOL_TYPE_CURSOR) {
+	if (g_context->tool == TOOL_TYPE_CURSOR && context_in_3d_view()) {
 		if (keyboard_down("control") && keyboard_started("d")) {
 			sim_duplicate();
 		}
@@ -904,7 +925,7 @@ void base_update_workspace() {
 		ui_base_htabs->buffer[TAB_AREA_SIDEBAR0]->i      = 2; // Script
 		g_config->layout_tabs->buffer[TAB_AREA_SIDEBAR0] = 2;
 
-		g_config->layout->buffer[LAYOUT_SIZE_STATUS_H]  = iron_window_height() * 0.3;
+		g_config->layout->buffer[LAYOUT_SIZE_STATUS_H]  = iron_window_height() * 0.2;
 		g_config->layout->buffer[LAYOUT_SIZE_SIDEBAR_W] = iron_window_width() * 0.52;
 		float h                                         = UI_ELEMENT_H() + UI_ELEMENT_OFFSET() + 2;
 		h += UI_ELEMENT_H() * 3.5; // Small material panel

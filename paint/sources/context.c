@@ -362,6 +362,11 @@ bool context_in_materials() {
 	return string_equals(tab, tr("Materials"));
 }
 
+bool context_in_meshes() {
+	char *tab = ui_hovered_tab_name();
+	return string_equals(tab, tr("Meshes"));
+}
+
 bool context_in_swatches() {
 	char *tab = ui_hovered_tab_name();
 	return string_equals(tab, tr("Swatches"));

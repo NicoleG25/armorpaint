@@ -135,6 +135,7 @@ slot_material_t *base_drag_material = NULL;
 slot_layer_t    *base_drag_layer    = NULL;
 slot_brush_t    *base_drag_brush    = NULL;
 slot_font_t     *base_drag_font     = NULL;
+mesh_object_t   *base_drag_mesh     = NULL;
 bool             base_player_lock   = false;
 
 bool                      ui_base_show = true;

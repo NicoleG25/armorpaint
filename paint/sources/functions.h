@@ -242,6 +242,7 @@ bool                      context_in_3d_view();
 bool                      context_in_paint_area();
 bool                      context_in_layers();
 bool                      context_in_materials();
+bool                      context_in_meshes();
 bool                      context_in_2d_view(view_2d_type_t type);
 bool                      context_in_nodes();
 bool                      context_in_swatches();
@@ -338,6 +339,8 @@ void                      import_mesh_run(char *path, bool _clear_layers, bool r
 void                      import_mesh_finish_import(void *_);
 void                      import_mesh_make_mesh(raw_mesh_t *mesh);
 void                      import_mesh_add_mesh(raw_mesh_t *mesh);
+bool                      _import_mesh_is_unique_name(char *s);
+char                     *_import_mesh_number_ext(i32 i);
 mesh_data_t              *import_mesh_raw_mesh(raw_mesh_t *mesh);
 void                      ui_menubar_init();
 i32                       ui_menu_top_y();
@@ -665,8 +668,11 @@ void                         ui_box_show_custom(void (*commands)(void), i32 mw, 
 void                         ui_box_hide();
 void                         tab_meshes_draw(ui_handle_t *htab);
 void                         tab_meshes_reset_preview_map();
+void                         tab_meshes_accept_mesh_drop(mesh_object_t *mesh);
 void                         tab_meshes_set_override(mesh_object_t *o, i32 mat_index);
 i32                          tab_meshes_get_override(mesh_object_t *o);
+void                         tab_meshes_on_material_deleted(i32 deleted_index);
+void                         tab_meshes_on_material_reordered(i32 old_index, i32 new_index);
 void                         util_particle_init_physics();
 void                         util_particle_update();
 void                         tab_layers_apply_filter(i32 filter);
