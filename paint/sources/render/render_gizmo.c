@@ -29,7 +29,7 @@ void render_gizmo_update() {
 
 	camera_object_t *cam                           = scene_camera;
 	f32              fov                           = cam->data->fov;
-	f32              dist                          = vec4_dist(cam->base->transform->loc, gizmo->transform->loc) / 8.0 * fov;
+	f32              dist                          = vec4_dist(cam->base->transform->loc, gizmo->transform->loc) / 12.0 * fov;
 	gizmo->transform->scale                        = (vec4_t){dist, dist, dist, 1.0};
 	g_context->gizmo_translate_x->transform->scale = (vec4_t){dist, dist, dist, 1.0};
 	g_context->gizmo_translate_y->transform->scale = (vec4_t){dist, dist, dist, 1.0};
