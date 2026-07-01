@@ -91,6 +91,182 @@ void script_tween_to(object_t *o, vec4_t to, f32 speed) {
 	tween_to(GC_ALLOC_INIT(tween_anim_t, {.target = &t->loc.z, .to = to.z, .duration = duration, .ease = ease}));
 }
 
+static void script_timer_done(void *fn) {
+	minic_call_fn(fn, NULL, 0);
+}
+
+void script_timer(f32 delay, void *fn) {
+	tween_timer(delay, script_timer_done, fn);
+}
+
+void *script_update_fn = NULL;
+void  script_on_update(void *_) {
+    iron_delay_idle_sleep();
+    minic_call_fn(script_update_fn, NULL, 0);
+}
+void script_notify_on_update(void *fn) {
+	if (script_update_fn == NULL) {
+		sys_notify_on_update(script_on_update, NULL);
+	}
+	script_update_fn = fn;
+}
+
+void *script_next_frame_fn = NULL;
+void  script_on_next_frame(void *_) {
+    minic_call_fn(script_next_frame_fn, NULL, 0);
+}
+void script_notify_on_next_frame(void *fn) {
+	sys_notify_on_next_frame(script_on_next_frame, NULL);
+	script_next_frame_fn = fn;
+}
+
+void *_ui_files_done;
+void  _ui_files_show_done(char *path) {
+    minic_val_t args[1] = {minic_val_ptr(path)};
+    minic_call_fn(_ui_files_done, args, 1);
+}
+void ui_files_show2(char *filters, bool is_save, bool open_multiple, void *files_done) {
+	_ui_files_done = files_done;
+	ui_files_show(filters, is_save, open_multiple, _ui_files_show_done);
+}
+
+char *project_filepath_get() {
+	return g_project->_->filepath;
+}
+void project_filepath_set(char *s) {
+	g_project->_->filepath = string_copy(s);
+}
+context_t *script_get_context() {
+	return g_context;
+}
+config_t *script_get_config() {
+	return g_config;
+}
+project_t *script_get_project() {
+	return g_project;
+}
+
+object_t *script_get_object(char *s) {
+	for (int i = 0; i < g_project->_->paint_objects->length; ++i) {
+		if (string_equals(g_project->_->paint_objects->buffer[i]->base->name, s)) {
+			return g_project->_->paint_objects->buffer[i]->base;
+		}
+	}
+	return NULL;
+}
+
+extern string_array_t *_path_texture_formats;
+extern string_array_t *_path_mesh_formats;
+
+static any_map_t *custom_texture_importers = NULL;
+static any_map_t *custom_mesh_importers    = NULL;
+
+gpu_texture_t *plugin_import_custom_texture(char *path) {
+	char       *format  = substring(path, string_last_index_of(path, ".") + 1, string_length(path));
+	void       *fn      = any_map_get(custom_texture_importers, format);
+	minic_val_t args[1] = {minic_val_ptr(path)};
+	minic_val_t r       = minic_call_fn(fn, args, 1);
+	return r.p;
+}
+
+raw_mesh_t *plugin_import_custom_mesh(char *path) {
+	char       *format  = substring(path, string_last_index_of(path, ".") + 1, string_length(path));
+	void       *fn      = any_map_get(custom_mesh_importers, format);
+	minic_val_t args[1] = {minic_val_ptr(path)};
+	minic_val_t r       = minic_call_fn(fn, args, 1);
+	return r.p;
+}
+
+void plugin_register_texture(char *format, void *fn) {
+	any_map_set(import_texture_importers, format, plugin_import_custom_texture);
+	any_array_push((any_array_t *)_path_texture_formats, format);
+
+	if (custom_texture_importers == NULL) {
+		custom_texture_importers = any_map_create();
+		gc_root(custom_texture_importers);
+	}
+	any_map_set(custom_texture_importers, format, fn);
+}
+
+void plugin_unregister_texture(char *format) {
+	map_delete(import_texture_importers, format);
+	array_splice((any_array_t *)_path_texture_formats, string_array_index_of(_path_texture_formats, format), 1);
+}
+
+void plugin_register_mesh(char *format, void *fn) {
+	any_map_set(import_mesh_importers, format, plugin_import_custom_mesh);
+	any_array_push((any_array_t *)_path_mesh_formats, format);
+
+	if (custom_mesh_importers == NULL) {
+		custom_mesh_importers = any_map_create();
+		gc_root(custom_mesh_importers);
+	}
+	any_map_set(custom_mesh_importers, format, fn);
+}
+
+void plugin_unregister_mesh(char *format) {
+	map_delete(import_mesh_importers, format);
+	array_splice((any_array_t *)_path_mesh_formats, string_array_index_of(_path_mesh_formats, format), 1);
+}
+
+raw_mesh_t *plugin_make_raw_mesh(char *name, i16_array_t *posa, i16_array_t *nora, u32_array_t *inda, float scale_pos) {
+	raw_mesh_t *mesh = gc_alloc(sizeof(raw_mesh_t));
+	memset(mesh, 0, sizeof(raw_mesh_t));
+	mesh->name         = name;
+	mesh->posa         = posa;
+	mesh->nora         = nora;
+	mesh->inda         = inda;
+	mesh->scale_pos    = scale_pos;
+	mesh->scale_tex    = 1.0f;
+	mesh->vertex_count = posa->length / 4;
+	mesh->index_count  = inda->length;
+	return mesh;
+}
+
+void plugin_material_category_add(char *category_name, any_array_t *node_list) {
+	any_array_push(nodes_material_categories, category_name);
+	nodes_material_init();
+	any_array_push(nodes_material_list, node_list);
+}
+
+void plugin_brush_category_add(char *category_name, any_array_t *node_list) {
+	any_array_push(nodes_brush_categories, category_name);
+	nodes_brush_list_init();
+	any_array_push(nodes_brush_list, node_list);
+}
+
+void plugin_material_category_remove(char *category_name) {
+	int i = array_index_of(nodes_material_categories, category_name);
+	array_splice(nodes_material_list, i, 1);
+	array_splice(nodes_material_categories, i, 1);
+}
+
+void plugin_brush_category_remove(char *category_name) {
+	int i = array_index_of(nodes_brush_categories, category_name);
+	array_splice(nodes_brush_list, i, 1);
+	array_splice(nodes_brush_categories, i, 1);
+}
+
+void plugin_material_custom_nodes_set(char *node_type, void *fn) {
+	any_map_set(parser_material_custom_nodes, node_type, fn);
+}
+
+void plugin_brush_custom_nodes_set(char *node_type, void *fn) {
+	any_map_set(parser_logic_custom_nodes, node_type, fn);
+}
+
+void plugin_material_custom_nodes_remove(char *node_type) {
+	map_delete(parser_material_custom_nodes, node_type);
+}
+
+void plugin_brush_custom_nodes_remove(char *node_type) {
+	map_delete(parser_logic_custom_nodes, node_type);
+}
+
+void *plugin_material_kong_get() {
+	return parser_material_kong;
+}
+
 static f32   _script_fade_opacity = 0.0f;
 static char *_script_fade_stage   = NULL;
 

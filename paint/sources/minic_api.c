@@ -26,10 +26,67 @@
 
 #include "types.h"
 
+typedef struct raw_mesh raw_mesh_t;
+extern context_t       *g_context;
+extern config_t        *g_config;
+extern project_t       *g_project;
+
 void   console_log(char *s);
+void   console_info(char *s);
+void   console_error(char *s);
 bool   point_in_aabb(object_t *object, vec4_t point);
 vec4_t raycast_aabb_mouse(object_t *object);
-void   script_tween_to(object_t *o, vec4_t to, f32 speed);
+void   iron_delay_idle_sleep();
+
+void           ui_box_show_message(char *title, char *text, bool copyable);
+void           ui_files_show2(char *filters, bool is_save, bool open_multiple, void *files_done);
+void           project_save(bool save_and_quit);
+char          *project_filepath_get();
+void           project_filepath_set(char *s);
+void           project_reimport_mesh_skinned(i32 frame);
+void           context_set_viewport_shader(void *viewport_shader);
+void           context_set_viewport_mode(int mode);
+void           context_set_camera_controls(int i);
+void           node_shader_write_frag(void *raw, char *s);
+mesh_object_t *context_main_object();
+void           export_texture_run(char *path, bool bake_material);
+void           context_select_tool(i32 i);
+gpu_texture_t *gpu_create_render_target(i32 width, i32 height, i32 format);
+void           viewport_capture_screenshot_to(gpu_texture_t *target, float x, float y, float w, float h);
+void           viewport_save_texture(gpu_texture_t *screenshot);
+char          *parser_material_parse_value_input(ui_node_socket_t *inp, bool vector_as_grayscale);
+
+void       *plugin_create();
+void        plugin_notify_on_ui(void *plugin, void *f);
+void        plugin_notify_on_update(void *plugin, void *f);
+void        plugin_notify_on_delete(void *plugin, void *f);
+void        plugin_register_texture(char *format, void *fn);
+void        plugin_unregister_texture(char *format);
+void        plugin_register_mesh(char *format, void *fn);
+void        plugin_unregister_mesh(char *format);
+raw_mesh_t *plugin_make_raw_mesh(char *name, i16_array_t *posa, i16_array_t *nora, u32_array_t *inda, float scale_pos);
+void        plugin_material_category_add(char *category_name, any_array_t *node_list);
+void        plugin_brush_category_add(char *category_name, any_array_t *node_list);
+void        plugin_material_category_remove(char *category_name);
+void        plugin_brush_category_remove(char *category_name);
+void        plugin_material_custom_nodes_set(char *node_type, void *fn);
+void        plugin_brush_custom_nodes_set(char *node_type, void *fn);
+void        plugin_material_custom_nodes_remove(char *node_type);
+void        plugin_brush_custom_nodes_remove(char *node_type);
+void       *plugin_material_kong_get();
+
+void       script_tween_to(object_t *o, vec4_t to, f32 speed);
+void       script_notify_on_update(void *fn);
+void       script_notify_on_next_frame(void *fn);
+context_t *script_get_context();
+config_t  *script_get_config();
+project_t *script_get_project();
+void       script_set_stage(char *name);
+void       script_fade_to_stage(char *stage);
+void       script_timer(f32 delay, void *fn);
+char      *script_get_stage();
+void       script_set_tilesheet_anim(object_t *o, char *anim);
+object_t  *script_get_object(char *s);
 
 static const char *minic_read_str(minic_val_t v) {
 	if (v.type == MINIC_T_PTR && v.p != NULL) {
@@ -319,221 +376,6 @@ static void minic_set_mat4(minic_val_t *o, mat4_t m) { minic_box(o, m.m, 16); }
 #define X(kind, n, e) MN_##kind(n, e)
 MINIC_MATH_API
 #undef X
-
-// paint
-
-void *plugin_create();
-void  plugin_notify_on_ui(void *plugin, void *f);
-void  plugin_notify_on_update(void *plugin, void *f);
-void  plugin_notify_on_delete(void *plugin, void *f);
-void  iron_delay_idle_sleep();
-
-void *script_update_fn = NULL;
-void  script_on_update(void *_) {
-    iron_delay_idle_sleep();
-    minic_call_fn(script_update_fn, NULL, 0);
-}
-void script_notify_on_update(void *fn) {
-	if (script_update_fn == NULL) {
-		sys_notify_on_update(script_on_update, NULL);
-	}
-	script_update_fn = fn;
-}
-
-void *script_next_frame_fn = NULL;
-void  script_on_next_frame(void *_) {
-    minic_call_fn(script_next_frame_fn, NULL, 0);
-}
-void script_notify_on_next_frame(void *fn) {
-	sys_notify_on_next_frame(script_on_next_frame, NULL);
-	script_next_frame_fn = fn;
-}
-
-void  console_info(char *s);
-void  console_error(char *s);
-void  ui_box_show_message(char *title, char *text, bool copyable);
-void  ui_files_show(char *filters, bool is_save, bool open_multiple, void (*files_done)(char *));
-void *_ui_files_done;
-void  _ui_files_show_done(char *path) {
-    minic_val_t args[1] = {minic_val_ptr(path)};
-    minic_call_fn(_ui_files_done, args, 1);
-}
-void ui_files_show2(char *filters, bool is_save, bool open_multiple, void *files_done) {
-	_ui_files_done = files_done;
-	ui_files_show(filters, is_save, open_multiple, _ui_files_show_done);
-}
-
-void              project_save(bool save_and_quit);
-extern context_t *g_context;
-extern config_t  *g_config;
-extern project_t *g_project;
-
-char *project_filepath_get() {
-	return g_project->_->filepath;
-}
-void project_filepath_set(char *s) {
-	g_project->_->filepath = string_copy(s);
-}
-context_t *script_get_context() {
-	return g_context;
-}
-config_t *script_get_config() {
-	return g_config;
-}
-project_t *script_get_project() {
-	return g_project;
-}
-
-void  script_set_stage(char *name);
-void  script_fade_to_stage(char *stage);
-char *script_get_stage();
-void  script_set_tilesheet_anim(object_t *o, char *anim);
-
-object_t *script_get_object(char *s) {
-	for (int i = 0; i < g_project->_->paint_objects->length; ++i) {
-		if (string_equals(g_project->_->paint_objects->buffer[i]->base->name, s)) {
-			return g_project->_->paint_objects->buffer[i]->base;
-		}
-	}
-	return NULL;
-}
-
-void           context_set_viewport_shader(void *viewport_shader);
-void           context_set_viewport_mode(int mode);
-void           context_set_camera_controls(int i);
-void           node_shader_write_frag(void *raw, char *s);
-mesh_object_t *context_main_object();
-void           export_texture_run(char *path, bool bake_material);
-void           context_select_tool(i32 i);
-gpu_texture_t *gpu_create_render_target(i32 width, i32 height, i32 format);
-void           viewport_capture_screenshot_to(gpu_texture_t *target, float x, float y, float w, float h);
-void           viewport_save_texture(gpu_texture_t *screenshot);
-void           project_reimport_mesh_skinned(i32 frame);
-char          *parser_material_parse_value_input(ui_node_socket_t *inp, bool vector_as_grayscale);
-
-extern any_map_t      *import_texture_importers;
-extern string_array_t *_path_texture_formats;
-extern any_map_t      *import_mesh_importers;
-extern string_array_t *_path_mesh_formats;
-
-static any_map_t *custom_texture_importers = NULL;
-static any_map_t *custom_mesh_importers    = NULL;
-
-gpu_texture_t *plugin_import_custom_texture(char *path) {
-	char       *format  = substring(path, string_last_index_of(path, ".") + 1, string_length(path));
-	void       *fn      = any_map_get(custom_texture_importers, format);
-	minic_val_t args[1] = {minic_val_ptr(path)};
-	minic_val_t r       = minic_call_fn(fn, args, 1);
-	return r.p;
-}
-typedef struct raw_mesh raw_mesh_t;
-raw_mesh_t             *plugin_import_custom_mesh(char *path) {
-    char       *format  = substring(path, string_last_index_of(path, ".") + 1, string_length(path));
-    void       *fn      = any_map_get(custom_mesh_importers, format);
-    minic_val_t args[1] = {minic_val_ptr(path)};
-    minic_val_t r       = minic_call_fn(fn, args, 1);
-    return r.p;
-}
-
-void plugin_register_texture(char *format, void *fn) {
-	any_map_set(import_texture_importers, format, plugin_import_custom_texture);
-	any_array_push((any_array_t *)_path_texture_formats, format);
-
-	if (custom_texture_importers == NULL) {
-		custom_texture_importers = any_map_create();
-		gc_root(custom_texture_importers);
-	}
-	any_map_set(custom_texture_importers, format, fn);
-}
-
-void plugin_unregister_texture(char *format) {
-	map_delete(import_texture_importers, format);
-	array_splice((any_array_t *)_path_texture_formats, string_array_index_of(_path_texture_formats, format), 1);
-}
-
-void plugin_register_mesh(char *format, void *fn) {
-	any_map_set(import_mesh_importers, format, plugin_import_custom_mesh);
-	any_array_push((any_array_t *)_path_mesh_formats, format);
-
-	if (custom_mesh_importers == NULL) {
-		custom_mesh_importers = any_map_create();
-		gc_root(custom_mesh_importers);
-	}
-	any_map_set(custom_mesh_importers, format, fn);
-}
-
-void plugin_unregister_mesh(char *format) {
-	map_delete(import_mesh_importers, format);
-	array_splice((any_array_t *)_path_mesh_formats, string_array_index_of(_path_mesh_formats, format), 1);
-}
-
-raw_mesh_t *plugin_make_raw_mesh(char *name, i16_array_t *posa, i16_array_t *nora, u32_array_t *inda, float scale_pos) {
-	raw_mesh_t *mesh = gc_alloc(sizeof(raw_mesh_t));
-	memset(mesh, 0, sizeof(raw_mesh_t));
-	mesh->name         = name;
-	mesh->posa         = posa;
-	mesh->nora         = nora;
-	mesh->inda         = inda;
-	mesh->scale_pos    = scale_pos;
-	mesh->scale_tex    = 1.0f;
-	mesh->vertex_count = posa->length / 4;
-	mesh->index_count  = inda->length;
-	return mesh;
-}
-
-extern void *nodes_material_categories;
-extern void *nodes_brush_categories;
-extern void *nodes_material_list;
-extern void *nodes_brush_list;
-void         nodes_material_init();
-void         nodes_brush_list_init();
-
-void plugin_material_category_add(char *category_name, any_array_t *node_list) {
-	any_array_push(nodes_material_categories, category_name);
-	nodes_material_init();
-	any_array_push(nodes_material_list, node_list);
-}
-
-void plugin_brush_category_add(char *category_name, any_array_t *node_list) {
-	any_array_push(nodes_brush_categories, category_name);
-	nodes_brush_list_init();
-	any_array_push(nodes_brush_list, node_list);
-}
-
-void plugin_material_category_remove(char *category_name) {
-	int i = array_index_of(nodes_material_categories, category_name);
-	array_splice(nodes_material_list, i, 1);
-	array_splice(nodes_material_categories, i, 1);
-}
-
-void plugin_brush_category_remove(char *category_name) {
-	int i = array_index_of(nodes_brush_categories, category_name);
-	array_splice(nodes_brush_list, i, 1);
-	array_splice(nodes_brush_categories, i, 1);
-}
-
-extern any_map_t *parser_material_custom_nodes;
-void              plugin_material_custom_nodes_set(char *node_type, void *fn) {
-    any_map_set(parser_material_custom_nodes, node_type, fn);
-}
-
-extern any_map_t *parser_logic_custom_nodes;
-void              plugin_brush_custom_nodes_set(char *node_type, void *fn) {
-    any_map_set(parser_logic_custom_nodes, node_type, fn);
-}
-
-void plugin_material_custom_nodes_remove(char *node_type) {
-	map_delete(parser_material_custom_nodes, node_type);
-}
-
-void plugin_brush_custom_nodes_remove(char *node_type) {
-	map_delete(parser_logic_custom_nodes, node_type);
-}
-
-extern void *parser_material_kong;
-void        *plugin_material_kong_get() {
-    return parser_material_kong;
-}
 
 // All array types share the buffer/length/capacity layout
 static void minic_register_array_struct(const char *name, int size, minic_type_t buffer_deref) {
@@ -1368,6 +1210,7 @@ void minic_register_builtins() {
 	R(script_get_object, "p(p)");
 	R(script_set_stage, "v(p)");
 	R(script_fade_to_stage, "v(p)");
+	R(script_timer, "v(f,p)");
 	R(script_get_stage, "p()");
 	R(script_set_tilesheet_anim, "v(p,p)");
 	R(context_set_viewport_shader, "v(p)");
