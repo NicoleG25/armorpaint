@@ -2359,6 +2359,7 @@ minic_val_t minic_dispatch(minic_ext_func_t *ef, minic_val_t *args, int argc) {
 	D1(VOID, f);
 	D1(VOID, i);
 	D1(VOID, p);
+	D2(VOID, f, p);
 	D2(VOID, i, i);
 	D2(VOID, p, f);
 	D2(VOID, p, i);
