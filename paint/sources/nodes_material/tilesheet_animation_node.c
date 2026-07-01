@@ -1,27 +1,39 @@
 
 #include "../global.h"
 
-static i32 _ts_anim_node_id = -1;
+static i32  _ts_anim_node_id    = -1;
+static i32  _ts_anim_modify_idx = -1; // -1: add a new animation, >= 0: modify existing at this index
+static bool _ts_anim_prefill    = false;
 
-static void tilesheet_animation_node_add_box() {
-	if (ui_tab(ui_handle(__ID__), tr("Add Animation"), g_config->touch_ui, -1, false)) {
-		ui_handle_t *hname = ui_handle(__ID__);
-		if (hname->init) {
-			hname->text = tr("Animation");
-		}
-		char *name = ui_text_input(hname, tr("Name"), UI_ALIGN_LEFT, true, false);
-
+static void tilesheet_animation_node_edit_box() {
+	bool  modify = _ts_anim_modify_idx >= 0;
+	char *title  = modify ? tr("Modify Animation") : tr("Add Animation");
+	if (ui_tab(ui_handle(__ID__), title, g_config->touch_ui, -1, false)) {
+		ui_handle_t *hname  = ui_handle(__ID__);
 		ui_handle_t *hstart = ui_handle(__ID__);
-		if (hstart->init) {
-			hstart->f = 0.0;
-		}
-		i32 start_frame = (i32)ui_slider(hstart, tr("Start Frame"), 0.0, 4095.0, true, 1.0, true, UI_ALIGN_LEFT, true);
+		ui_handle_t *hend   = ui_handle(__ID__);
 
-		ui_handle_t *hend = ui_handle(__ID__);
-		if (hend->init) {
-			hend->f = 1.0;
+		if (_ts_anim_prefill) {
+			ui_node_t *node = ui_get_node(ui_nodes_get_canvas(true)->nodes, _ts_anim_node_id);
+			if (modify && node != NULL) {
+				ui_node_button_t *data_but = node->buttons->buffer[3];
+				ui_node_button_t *enum_but = node->buttons->buffer[4];
+				string_array_t   *parts    = string_split(u8_array_to_string(enum_but->data), "\n");
+				hname->text                = _ts_anim_modify_idx < (i32)parts->length ? parts->buffer[_ts_anim_modify_idx] : tr("Animation");
+				hstart->f                  = data_but->default_value->buffer[_ts_anim_modify_idx * 2];
+				hend->f                    = data_but->default_value->buffer[_ts_anim_modify_idx * 2 + 1];
+			}
+			else {
+				hname->text = tr("Animation");
+				hstart->f   = 0.0;
+				hend->f     = 1.0;
+			}
+			_ts_anim_prefill = false;
 		}
-		i32 end_frame = (i32)ui_slider(hend, tr("End Frame"), 0.0, 4095.0, true, 1.0, true, UI_ALIGN_LEFT, true);
+
+		char *name        = ui_text_input(hname, tr("Name"), UI_ALIGN_LEFT, true, false);
+		i32   start_frame = (i32)ui_slider(hstart, tr("Start Frame"), 0.0, 4095.0, true, 1.0, true, UI_ALIGN_LEFT, true);
+		i32   end_frame   = (i32)ui_slider(hend, tr("End Frame"), 0.0, 4095.0, true, 1.0, true, UI_ALIGN_LEFT, true);
 
 		ui_row2();
 		if (ui_icon_button(tr("Cancel"), ICON_CLOSE, UI_ALIGN_CENTER)) {
@@ -30,40 +42,61 @@ static void tilesheet_animation_node_add_box() {
 		if (ui_icon_button(tr("OK"), ICON_CHECK, UI_ALIGN_CENTER) || g_ui->is_return_down) {
 			ui_node_t *node = ui_get_node(ui_nodes_get_canvas(true)->nodes, _ts_anim_node_id);
 			if (node != NULL) {
-				ui_node_button_t *data_but   = node->buttons->buffer[3];
-				ui_node_button_t *enum_but   = node->buttons->buffer[4];
-				i32               prev_count = data_but->default_value->length / 2;
+				ui_node_button_t *data_but = node->buttons->buffer[3];
+				ui_node_button_t *enum_but = node->buttons->buffer[4];
+				i32               count    = data_but->default_value->length / 2;
 
-				f32_array_push(data_but->default_value, (f32)start_frame);
-				f32_array_push(data_but->default_value, (f32)end_frame);
+				if (modify && _ts_anim_modify_idx < count) {
+					data_but->default_value->buffer[_ts_anim_modify_idx * 2]     = (f32)start_frame;
+					data_but->default_value->buffer[_ts_anim_modify_idx * 2 + 1] = (f32)end_frame;
 
-				char *new_names;
-				if (prev_count > 0) {
-					char *prev = u8_array_to_string(enum_but->data);
-					new_names  = string("%s\n%s", prev, name);
+					string_array_t *parts     = string_split(u8_array_to_string(enum_but->data), "\n");
+					char           *new_names = "";
+					for (i32 i = 0; i < (i32)parts->length; i++) {
+						char *part = i == _ts_anim_modify_idx ? name : parts->buffer[i];
+						new_names  = i == 0 ? part : string("%s\n%s", new_names, part);
+					}
+					gc_unroot(enum_but->data);
+					enum_but->data = u8_array_create_from_string(new_names);
+					gc_root(enum_but->data);
+
+					make_material_parse_paint_material(true);
 				}
-				else {
-					new_names = name;
+				else if (!modify) {
+					f32_array_push(data_but->default_value, (f32)start_frame);
+					f32_array_push(data_but->default_value, (f32)end_frame);
+
+					char *new_names;
+					if (count > 0) {
+						char *prev = u8_array_to_string(enum_but->data);
+						new_names  = string("%s\n%s", prev, name);
+					}
+					else {
+						new_names = name;
+					}
+					gc_unroot(enum_but->data);
+					enum_but->data = u8_array_create_from_string(new_names);
+					gc_root(enum_but->data);
+
+					enum_but->default_value->buffer[0] = (f32)count;
+
+					make_material_parse_paint_material(true);
 				}
-				gc_unroot(enum_but->data);
-				enum_but->data = u8_array_create_from_string(new_names);
-				gc_root(enum_but->data);
-
-				enum_but->default_value->buffer[0] = (f32)prev_count;
-
-				make_material_parse_paint_material(true);
 			}
 			ui_box_hide();
 		}
 	}
 }
 
-static void tilesheet_animation_node_button(i32 node_id) {
-	if (ui_button(tr("Add"), UI_ALIGN_CENTER, "")) {
-		_ts_anim_node_id = node_id;
-		ui_box_show_custom(&tilesheet_animation_node_add_box, 400, 240, NULL, true, tr("Add Animation"));
-	}
+static void tilesheet_animation_node_show_box(i32 node_id, i32 modify_idx) {
+	_ts_anim_node_id    = node_id;
+	_ts_anim_modify_idx = modify_idx;
+	_ts_anim_prefill    = true;
+	char *title         = modify_idx >= 0 ? tr("Modify Animation") : tr("Add Animation");
+	ui_box_show_custom(&tilesheet_animation_node_edit_box, 400, 240, NULL, true, title);
+}
 
+static void tilesheet_animation_node_remove(i32 node_id) {
 	ui_node_t *node = ui_get_node(ui_nodes_get_canvas(true)->nodes, node_id);
 	if (node == NULL) {
 		return;
@@ -71,46 +104,70 @@ static void tilesheet_animation_node_button(i32 node_id) {
 	ui_node_button_t *data_but = node->buttons->buffer[3];
 	ui_node_button_t *enum_but = node->buttons->buffer[4];
 	i32               count    = data_but->default_value->length / 2;
+	i32               idx      = (i32)enum_but->default_value->buffer[0];
+	if (idx >= count) {
+		return;
+	}
 
-	if (count > 0 && ui_button(tr("Remove"), UI_ALIGN_CENTER, "")) {
-		i32 idx = (i32)enum_but->default_value->buffer[0];
-		if (idx < count) {
-			f32_array_t *a   = data_but->default_value;
-			i32          pos = idx * 2;
-			for (i32 i = pos; i < (i32)a->length - 2; i++) {
-				a->buffer[i] = a->buffer[i + 2];
-			}
-			a->length -= 2;
+	f32_array_t *a   = data_but->default_value;
+	i32          pos = idx * 2;
+	for (i32 i = pos; i < (i32)a->length - 2; i++) {
+		a->buffer[i] = a->buffer[i + 2];
+	}
+	a->length -= 2;
 
-			char           *old_names = u8_array_to_string(enum_but->data);
-			string_array_t *parts     = string_split(old_names, "\n");
-			char           *new_names = "";
-			for (i32 i = 0; i < (i32)parts->length; i++) {
-				if (i == idx)
-					continue;
-				if (string_length(new_names) > 0) {
-					new_names = string("%s\n%s", new_names, parts->buffer[i]);
-				}
-				else {
-					new_names = parts->buffer[i];
-				}
-			}
-			gc_unroot(enum_but->data);
-			if (string_length(new_names) == 0) {
-				enum_but->data = u8_array_create_from_string("none");
-			}
-			else {
-				enum_but->data = u8_array_create_from_string(new_names);
-			}
-			gc_root(enum_but->data);
-
-			i32 new_count = (i32)(a->length / 2);
-			if (enum_but->default_value->buffer[0] >= new_count) {
-				enum_but->default_value->buffer[0] = new_count > 0 ? (f32)(new_count - 1) : 0.0;
-			}
-
-			make_material_parse_paint_material(true);
+	char           *old_names = u8_array_to_string(enum_but->data);
+	string_array_t *parts     = string_split(old_names, "\n");
+	char           *new_names = "";
+	for (i32 i = 0; i < (i32)parts->length; i++) {
+		if (i == idx)
+			continue;
+		if (string_length(new_names) > 0) {
+			new_names = string("%s\n%s", new_names, parts->buffer[i]);
 		}
+		else {
+			new_names = parts->buffer[i];
+		}
+	}
+	gc_unroot(enum_but->data);
+	if (string_length(new_names) == 0) {
+		enum_but->data = u8_array_create_from_string("none");
+	}
+	else {
+		enum_but->data = u8_array_create_from_string(new_names);
+	}
+	gc_root(enum_but->data);
+
+	i32 new_count = (i32)(a->length / 2);
+	if (enum_but->default_value->buffer[0] >= new_count) {
+		enum_but->default_value->buffer[0] = new_count > 0 ? (f32)(new_count - 1) : 0.0;
+	}
+
+	make_material_parse_paint_material(true);
+}
+
+static void tilesheet_animation_node_edit_menu() {
+	ui_node_t *node  = ui_get_node(ui_nodes_get_canvas(true)->nodes, _ts_anim_node_id);
+	i32        count = node != NULL ? (i32)(((ui_node_button_t *)node->buttons->buffer[3])->default_value->length / 2) : 0;
+
+	if (ui_menu_button(tr("Add"), "", ICON_PLUS)) {
+		tilesheet_animation_node_show_box(_ts_anim_node_id, -1);
+	}
+	g_ui->enabled = count > 0;
+	if (ui_menu_button(tr("Modify"), "", ICON_EDIT)) {
+		i32 idx = (i32)((ui_node_button_t *)node->buttons->buffer[4])->default_value->buffer[0];
+		tilesheet_animation_node_show_box(_ts_anim_node_id, idx);
+	}
+	if (ui_menu_button(tr("Remove"), "", ICON_DELETE)) {
+		tilesheet_animation_node_remove(_ts_anim_node_id);
+	}
+	g_ui->enabled = true;
+}
+
+static void tilesheet_animation_node_button(i32 node_id) {
+	if (ui_button(tr("Edit"), UI_ALIGN_CENTER, "")) {
+		_ts_anim_node_id = node_id;
+		ui_menu_draw(&tilesheet_animation_node_edit_menu, -1, -1);
 	}
 }
 
@@ -214,7 +271,7 @@ void tilesheet_animation_node_init() {
 	                                                                                         .min           = 0.0,
 	                                                                                         .max           = 0.0,
 	                                                                                         .precision     = 1,
-	                                                                                         .height        = 2}),
+	                                                                                         .height        = 1}),
 	                                                        GC_ALLOC_INIT(ui_node_button_t, {.name          = _tr("Animation"),
 	                                                                                         .type          = "ENUM",
 	                                                                                         .output        = -1,
