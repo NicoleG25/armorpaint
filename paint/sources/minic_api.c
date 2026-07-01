@@ -191,95 +191,95 @@ static void minic_set_mat4(minic_val_t *o, mat4_t m) { minic_box(o, m.m, 16); }
 
 // One X(return-kind, name, call) line per math function; expanded twice:
 // once to define the mn_* wrappers, once to register them
-#define MINIC_MATH_API                                                       \
-	X(F, vec2_len, vec2_len(V2(0)))                                          \
-	X(V2, vec2_set_len, vec2_set_len(V2(0), AF(1)))                          \
-	X(V2, vec2_mult, vec2_mult(V2(0), AF(1)))                                \
-	X(V2, vec2_add, vec2_add(V2(0), V2(1)))                                  \
-	X(V2, vec2_sub, vec2_sub(V2(0), V2(1)))                                  \
-	X(F, vec2_cross, vec2_cross(V2(0), V2(1)))                               \
-	X(V2, vec2_norm, vec2_norm(V2(0)))                                       \
-	X(F, vec2_dot, vec2_dot(V2(0), V2(1)))                                   \
-	X(V2, vec2_nan, vec2_nan())                                              \
-	X(I, vec2_isnan, vec2_isnan(V2(0)))                                      \
-	X(V4, vec4_cross, vec4_cross(V4(0), V4(1)))                              \
-	X(V4, vec4_add, vec4_add(V4(0), V4(1)))                                  \
-	X(V4, vec4_fadd, vec4_fadd(V4(0), AF(1), AF(2), AF(3), AF(4)))           \
-	X(V4, vec4_norm, vec4_norm(V4(0)))                                       \
-	X(V4, vec4_mult, vec4_mult(V4(0), AF(1)))                                \
-	X(F, vec4_dot, vec4_dot(V4(0), V4(1)))                                   \
-	X(V4, vec4_apply_proj, vec4_apply_proj(V4(0), M4(1)))                    \
-	X(V4, vec4_apply_mat4, vec4_apply_mat4(V4(0), M4(1)))                    \
-	X(V4, vec4_apply_axis_angle, vec4_apply_axis_angle(V4(0), V4(1), AF(2))) \
-	X(V4, vec4_apply_quat, vec4_apply_quat(V4(0), QT(1)))                    \
-	X(I, vec4_equals, vec4_equals(V4(0), V4(1)))                             \
-	X(I, vec4_almost_equals, vec4_almost_equals(V4(0), V4(1), AF(2)))        \
-	X(F, vec4_len, vec4_len(V4(0)))                                          \
-	X(V4, vec4_sub, vec4_sub(V4(0), V4(1)))                                  \
-	X(F, vec4_dist, vec4_dist(V4(0), V4(1)))                                 \
-	X(V4, vec4_reflect, vec4_reflect(V4(0), V4(1)))                          \
-	X(V4, vec4_clamp, vec4_clamp(V4(0), AF(1), AF(2)))                       \
-	X(V4, vec4_x_axis, vec4_x_axis())                                        \
-	X(V4, vec4_y_axis, vec4_y_axis())                                        \
-	X(V4, vec4_z_axis, vec4_z_axis())                                        \
-	X(V4, vec4_nan, vec4_nan())                                              \
-	X(I, vec4_isnan, vec4_isnan(V4(0)))                                      \
-	X(Q, quat_from_axis_angle, quat_from_axis_angle(V4(0), AF(1)))           \
-	X(Q, quat_from_mat, quat_from_mat(M4(0)))                                \
-	X(Q, quat_from_rot_mat, quat_from_rot_mat(M4(0)))                        \
-	X(Q, quat_mult, quat_mult(QT(0), QT(1)))                                 \
-	X(Q, quat_norm, quat_norm(QT(0)))                                        \
-	X(V4, quat_get_euler, quat_get_euler(QT(0)))                             \
-	X(Q, quat_from_euler, quat_from_euler(AF(0), AF(1), AF(2)))              \
-	X(F, quat_dot, quat_dot(QT(0), QT(1)))                                   \
-	X(Q, quat_from_to, quat_from_to(V4(0), V4(1)))                           \
-	X(Q, quat_inv, quat_inv(QT(0)))                                          \
-	X(M3, mat3_identity, mat3_identity())                                    \
-	X(M3, mat3_translation, mat3_translation(AF(0), AF(1)))                  \
-	X(M3, mat3_rotation, mat3_rotation(AF(0)))                               \
-	X(M3, mat3_scale, mat3_scale(M3(0), V4(1)))                              \
-	X(M3, mat3_set_from4, mat3_set_from4(M4(0)))                             \
-	X(M3, mat3_multmat, mat3_multmat(M3(0), M3(1)))                          \
-	X(M3, mat3_transpose, mat3_transpose(M3(0)))                             \
-	X(M3, mat3_nan, mat3_nan())                                              \
-	X(I, mat3_isnan, mat3_isnan(M3(0)))                                      \
-	X(M4, mat4_identity, mat4_identity())                                    \
-	X(M4, mat4_persp, mat4_persp(AF(0), AF(1), AF(2), AF(3)))                \
-	X(M4, mat4_ortho, mat4_ortho(AF(0), AF(1), AF(2), AF(3), AF(4), AF(5)))  \
-	X(M4, mat4_rot_z, mat4_rot_z(AF(0)))                                     \
-	X(M4, mat4_compose, mat4_compose(V4(0), QT(1), V4(2)))                   \
-	X(M4, mat4_set_loc, mat4_set_loc(M4(0), V4(1)))                          \
-	X(M4, mat4_from_quat, mat4_from_quat(QT(0)))                             \
-	X(M4, mat4_translate, mat4_translate(M4(0), AF(1), AF(2), AF(3)))        \
-	X(M4, mat4_scale, mat4_scale(M4(0), V4(1)))                              \
-	X(M4, mat4_mult_mat3x4, mat4_mult_mat3x4(M4(0), M4(1)))                  \
-	X(M4, mat4_mult_mat, mat4_mult_mat(M4(0), M4(1)))                        \
-	X(M4, mat4_inv, mat4_inv(M4(0)))                                         \
-	X(M4, mat4_transpose, mat4_transpose(M4(0)))                             \
-	X(M4, mat4_transpose3, mat4_transpose3(M4(0)))                           \
-	X(V4, mat4_get_loc, mat4_get_loc(M4(0)))                                 \
-	X(V4, mat4_get_scale, mat4_get_scale(M4(0)))                             \
-	X(M4, mat4_mult, mat4_mult(M4(0), AF(1)))                                \
-	X(M4, mat4_to_rot, mat4_to_rot(M4(0)))                                   \
-	X(V4, mat4_right, mat4_right(M4(0)))                                     \
-	X(V4, mat4_look, mat4_look(M4(0)))                                       \
-	X(V4, mat4_up, mat4_up(M4(0)))                                           \
-	X(P, mat4_to_f32_array, mat4_to_f32_array(M4(0)))                        \
-	X(F, mat4_determinant, mat4_determinant(M4(0)))                          \
-	X(M4, mat4_nan, mat4_nan())                                              \
-	X(I, mat4_isnan, mat4_isnan(M4(0)))                                      \
-	X(VOID, transform_set_matrix, transform_set_matrix(AP(0), M4(1)))        \
-	X(VOID, transform_rotate, transform_rotate(AP(0), V4(1), AF(2)))         \
-	X(VOID, transform_move, transform_move(AP(0), V4(1), AF(2)))             \
-	X(V4, transform_look, transform_look(AP(0)))                             \
-	X(V4, transform_right, transform_right(AP(0)))                           \
-	X(V4, transform_up, transform_up(AP(0)))                                 \
-	X(V4, raycast_aabb_mouse, raycast_aabb_mouse((object_t *)AP(0)))         \
-	X(I, point_in_aabb, point_in_aabb((object_t *)AP(0), V4(1)))             \
-	X(VOID, script_tween_to, script_tween_to((object_t *)AP(0), V4(1), AF(2)))      \
-	X(VOID, line_draw_render, line_draw_render(M4(0)))                       \
-	X(VOID, line_draw_bounds, line_draw_bounds(M4(0), V4(1)))                \
-	X(VOID, shape_draw_sphere, shape_draw_sphere(M4(0)))                     \
+#define MINIC_MATH_API                                                         \
+	X(F, vec2_len, vec2_len(V2(0)))                                            \
+	X(V2, vec2_set_len, vec2_set_len(V2(0), AF(1)))                            \
+	X(V2, vec2_mult, vec2_mult(V2(0), AF(1)))                                  \
+	X(V2, vec2_add, vec2_add(V2(0), V2(1)))                                    \
+	X(V2, vec2_sub, vec2_sub(V2(0), V2(1)))                                    \
+	X(F, vec2_cross, vec2_cross(V2(0), V2(1)))                                 \
+	X(V2, vec2_norm, vec2_norm(V2(0)))                                         \
+	X(F, vec2_dot, vec2_dot(V2(0), V2(1)))                                     \
+	X(V2, vec2_nan, vec2_nan())                                                \
+	X(I, vec2_isnan, vec2_isnan(V2(0)))                                        \
+	X(V4, vec4_cross, vec4_cross(V4(0), V4(1)))                                \
+	X(V4, vec4_add, vec4_add(V4(0), V4(1)))                                    \
+	X(V4, vec4_fadd, vec4_fadd(V4(0), AF(1), AF(2), AF(3), AF(4)))             \
+	X(V4, vec4_norm, vec4_norm(V4(0)))                                         \
+	X(V4, vec4_mult, vec4_mult(V4(0), AF(1)))                                  \
+	X(F, vec4_dot, vec4_dot(V4(0), V4(1)))                                     \
+	X(V4, vec4_apply_proj, vec4_apply_proj(V4(0), M4(1)))                      \
+	X(V4, vec4_apply_mat4, vec4_apply_mat4(V4(0), M4(1)))                      \
+	X(V4, vec4_apply_axis_angle, vec4_apply_axis_angle(V4(0), V4(1), AF(2)))   \
+	X(V4, vec4_apply_quat, vec4_apply_quat(V4(0), QT(1)))                      \
+	X(I, vec4_equals, vec4_equals(V4(0), V4(1)))                               \
+	X(I, vec4_almost_equals, vec4_almost_equals(V4(0), V4(1), AF(2)))          \
+	X(F, vec4_len, vec4_len(V4(0)))                                            \
+	X(V4, vec4_sub, vec4_sub(V4(0), V4(1)))                                    \
+	X(F, vec4_dist, vec4_dist(V4(0), V4(1)))                                   \
+	X(V4, vec4_reflect, vec4_reflect(V4(0), V4(1)))                            \
+	X(V4, vec4_clamp, vec4_clamp(V4(0), AF(1), AF(2)))                         \
+	X(V4, vec4_x_axis, vec4_x_axis())                                          \
+	X(V4, vec4_y_axis, vec4_y_axis())                                          \
+	X(V4, vec4_z_axis, vec4_z_axis())                                          \
+	X(V4, vec4_nan, vec4_nan())                                                \
+	X(I, vec4_isnan, vec4_isnan(V4(0)))                                        \
+	X(Q, quat_from_axis_angle, quat_from_axis_angle(V4(0), AF(1)))             \
+	X(Q, quat_from_mat, quat_from_mat(M4(0)))                                  \
+	X(Q, quat_from_rot_mat, quat_from_rot_mat(M4(0)))                          \
+	X(Q, quat_mult, quat_mult(QT(0), QT(1)))                                   \
+	X(Q, quat_norm, quat_norm(QT(0)))                                          \
+	X(V4, quat_get_euler, quat_get_euler(QT(0)))                               \
+	X(Q, quat_from_euler, quat_from_euler(AF(0), AF(1), AF(2)))                \
+	X(F, quat_dot, quat_dot(QT(0), QT(1)))                                     \
+	X(Q, quat_from_to, quat_from_to(V4(0), V4(1)))                             \
+	X(Q, quat_inv, quat_inv(QT(0)))                                            \
+	X(M3, mat3_identity, mat3_identity())                                      \
+	X(M3, mat3_translation, mat3_translation(AF(0), AF(1)))                    \
+	X(M3, mat3_rotation, mat3_rotation(AF(0)))                                 \
+	X(M3, mat3_scale, mat3_scale(M3(0), V4(1)))                                \
+	X(M3, mat3_set_from4, mat3_set_from4(M4(0)))                               \
+	X(M3, mat3_multmat, mat3_multmat(M3(0), M3(1)))                            \
+	X(M3, mat3_transpose, mat3_transpose(M3(0)))                               \
+	X(M3, mat3_nan, mat3_nan())                                                \
+	X(I, mat3_isnan, mat3_isnan(M3(0)))                                        \
+	X(M4, mat4_identity, mat4_identity())                                      \
+	X(M4, mat4_persp, mat4_persp(AF(0), AF(1), AF(2), AF(3)))                  \
+	X(M4, mat4_ortho, mat4_ortho(AF(0), AF(1), AF(2), AF(3), AF(4), AF(5)))    \
+	X(M4, mat4_rot_z, mat4_rot_z(AF(0)))                                       \
+	X(M4, mat4_compose, mat4_compose(V4(0), QT(1), V4(2)))                     \
+	X(M4, mat4_set_loc, mat4_set_loc(M4(0), V4(1)))                            \
+	X(M4, mat4_from_quat, mat4_from_quat(QT(0)))                               \
+	X(M4, mat4_translate, mat4_translate(M4(0), AF(1), AF(2), AF(3)))          \
+	X(M4, mat4_scale, mat4_scale(M4(0), V4(1)))                                \
+	X(M4, mat4_mult_mat3x4, mat4_mult_mat3x4(M4(0), M4(1)))                    \
+	X(M4, mat4_mult_mat, mat4_mult_mat(M4(0), M4(1)))                          \
+	X(M4, mat4_inv, mat4_inv(M4(0)))                                           \
+	X(M4, mat4_transpose, mat4_transpose(M4(0)))                               \
+	X(M4, mat4_transpose3, mat4_transpose3(M4(0)))                             \
+	X(V4, mat4_get_loc, mat4_get_loc(M4(0)))                                   \
+	X(V4, mat4_get_scale, mat4_get_scale(M4(0)))                               \
+	X(M4, mat4_mult, mat4_mult(M4(0), AF(1)))                                  \
+	X(M4, mat4_to_rot, mat4_to_rot(M4(0)))                                     \
+	X(V4, mat4_right, mat4_right(M4(0)))                                       \
+	X(V4, mat4_look, mat4_look(M4(0)))                                         \
+	X(V4, mat4_up, mat4_up(M4(0)))                                             \
+	X(P, mat4_to_f32_array, mat4_to_f32_array(M4(0)))                          \
+	X(F, mat4_determinant, mat4_determinant(M4(0)))                            \
+	X(M4, mat4_nan, mat4_nan())                                                \
+	X(I, mat4_isnan, mat4_isnan(M4(0)))                                        \
+	X(VOID, transform_set_matrix, transform_set_matrix(AP(0), M4(1)))          \
+	X(VOID, transform_rotate, transform_rotate(AP(0), V4(1), AF(2)))           \
+	X(VOID, transform_move, transform_move(AP(0), V4(1), AF(2)))               \
+	X(V4, transform_look, transform_look(AP(0)))                               \
+	X(V4, transform_right, transform_right(AP(0)))                             \
+	X(V4, transform_up, transform_up(AP(0)))                                   \
+	X(V4, raycast_aabb_mouse, raycast_aabb_mouse((object_t *)AP(0)))           \
+	X(I, point_in_aabb, point_in_aabb((object_t *)AP(0), V4(1)))               \
+	X(VOID, script_tween_to, script_tween_to((object_t *)AP(0), V4(1), AF(2))) \
+	X(VOID, line_draw_render, line_draw_render(M4(0)))                         \
+	X(VOID, line_draw_bounds, line_draw_bounds(M4(0), V4(1)))                  \
+	X(VOID, shape_draw_sphere, shape_draw_sphere(M4(0)))                       \
 	X(VOID, draw_set_transform, draw_set_transform(M3(0)))
 
 // Wrapper generators per return kind
@@ -384,10 +384,10 @@ project_t *script_get_project() {
 	return g_project;
 }
 
-void script_set_stage(char *name);
-void script_fade_to_stage(char *stage);
+void  script_set_stage(char *name);
+void  script_fade_to_stage(char *stage);
 char *script_get_stage();
-void script_set_tilesheet_anim(object_t *o, char *anim);
+void  script_set_tilesheet_anim(object_t *o, char *anim);
 
 object_t *script_get_object(char *s) {
 	for (int i = 0; i < g_project->_->paint_objects->length; ++i) {
