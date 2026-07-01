@@ -562,14 +562,36 @@ void ui_header_draw_tool_properties() {
 	}
 
 	if (g_context->tool == TOOL_TYPE_CURSOR) {
-		// if (!sim_running && ui_button("Play")) {
-		// 	sim_play();
-		// 	g_context.selected_object = scene_camera.base;
-		// }
-		// if (sim_running && ui_button("Stop")) {
-		// 	sim_stop();
-		// }
-		// let h_record: ui_handle_t = ui_handle(__ID__);
-		// sim_record = ui_check(h_record, tr("Record"));
+		string_array_t *cursor_mode_combo = any_array_create_from_raw(
+		    (void *[]){
+		        tr("Object"),
+		    },
+		    1);
+		ui_handle_t *cursor_mode_handle = ui_handle(__ID__);
+		cursor_mode_handle->i           = 0;
+		ui_combo(cursor_mode_handle, cursor_mode_combo, tr("Mode"), false, UI_ALIGN_LEFT, true);
+
+		mesh_object_t *o = context_main_object();
+		if (o != NULL && o->base != NULL && o->base->transform != NULL) {
+			i32 _w = g_ui->_w;
+			f32 sc = UI_SCALE();
+
+			g_ui->_w = math_floor(34 * sc);
+			ui_text("Loc", UI_ALIGN_LEFT, 0x00000000);
+			g_ui->_w = math_floor(48 * sc);
+			tab_meshes_draw_transform_loc(o);
+
+			g_ui->_w = math_floor(34 * sc);
+			ui_text("Rot", UI_ALIGN_LEFT, 0x00000000);
+			g_ui->_w = math_floor(48 * sc);
+			tab_meshes_draw_transform_rot(o);
+
+			g_ui->_w = math_floor(40 * sc);
+			ui_text("Scale", UI_ALIGN_LEFT, 0x00000000);
+			g_ui->_w = math_floor(48 * sc);
+			tab_meshes_draw_transform_scale(o);
+
+			g_ui->_w = _w;
+		}
 	}
 }

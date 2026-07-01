@@ -673,6 +673,9 @@ void                         tab_meshes_set_override(mesh_object_t *o, i32 mat_i
 i32                          tab_meshes_get_override(mesh_object_t *o);
 void                         tab_meshes_on_material_deleted(i32 deleted_index);
 void                         tab_meshes_on_material_reordered(i32 old_index, i32 new_index);
+void                         tab_meshes_draw_transform_loc(mesh_object_t *o);
+void                         tab_meshes_draw_transform_rot(mesh_object_t *o);
+void                         tab_meshes_draw_transform_scale(mesh_object_t *o);
 void                         util_particle_init_physics();
 void                         util_particle_update();
 void                         tab_layers_apply_filter(i32 filter);

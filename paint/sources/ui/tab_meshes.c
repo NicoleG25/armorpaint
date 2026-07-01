@@ -149,49 +149,21 @@ void tab_meshes_duplicate_next_frame(void *_) {
 	sim_duplicate();
 }
 
-void tab_meshes_draw_context_menu() {
-	i32            i = _tab_meshes_draw_i;
-	mesh_object_t *o = g_project->_->paint_objects->buffer[i];
-
-	if (ui_menu_button(tr("Export"), "", ICON_EXPORT)) {
-		g_context->export_mesh_index = i + 1;
-		box_export_show_mesh();
-	}
-	if (g_project->_->paint_objects->length > 1 && ui_menu_button(tr("Delete"), "delete", ICON_DELETE)) {
-		sys_notify_on_next_frame(tab_meshes_draw_context_menu_delete, o);
-	}
-	if (ui_menu_button(tr("Duplicate"), "ctrl+d", ICON_DUPLICATE)) {
-		sim_duplicate();
-	}
-
-#ifdef WITH_PLUGINS
-	if (ui_menu_button(tr("UV Unwrap"), "", ICON_NONE)) {
-		plugin_uv_unwrap_per_object_button(o);
-	}
-#endif
+void tab_meshes_draw_transform_loc(mesh_object_t *o) {
+	transform_t *t       = o->base->transform;
+	bool         changed = false;
+	f32          f       = 0.0;
 
 	ui_handle_t *h = ui_handle(__ID__);
-
-	transform_t *t   = o->base->transform;
-	vec4_t       rot = quat_get_euler(t->rot);
-	rot              = vec4_mult(rot, 180 / 3.141592);
-	f32  f           = 0.0;
-	bool changed     = false;
-	g_ui->changed    = false;
-
-	ui_row4();
-	ui_text("Loc", UI_ALIGN_LEFT, 0x00000000);
-
-	h       = ui_handle(__ID__);
-	h->text = string_copy(f32_to_string(t->loc.x));
-	f       = parse_float(ui_text_input(h, "X", UI_ALIGN_LEFT, true, false));
+	h->text        = string_copy(f32_to_string2(t->loc.x));
+	f              = parse_float(ui_text_input(h, "X", UI_ALIGN_LEFT, true, false));
 	if (h->changed) {
 		changed  = true;
 		t->loc.x = f;
 	}
 
 	h       = ui_handle(__ID__);
-	h->text = string_copy(f32_to_string(t->loc.y));
+	h->text = string_copy(f32_to_string2(t->loc.y));
 	f       = parse_float(ui_text_input(h, "Y", UI_ALIGN_LEFT, true, false));
 	if (h->changed) {
 		changed  = true;
@@ -199,19 +171,29 @@ void tab_meshes_draw_context_menu() {
 	}
 
 	h       = ui_handle(__ID__);
-	h->text = string_copy(f32_to_string(t->loc.z));
+	h->text = string_copy(f32_to_string2(t->loc.z));
 	f       = parse_float(ui_text_input(h, "Z", UI_ALIGN_LEFT, true, false));
 	if (h->changed) {
 		changed  = true;
 		t->loc.z = f;
 	}
 
-	ui_row4();
-	ui_text("Rot", UI_ALIGN_LEFT, 0x00000000);
+	if (changed) {
+		transform_build_matrix(t);
+		transform_compute_dim(t);
+	}
+}
 
-	h       = ui_handle(__ID__);
-	h->text = string_copy(f32_to_string2(rot.x));
-	f       = parse_float(ui_text_input(h, "X", UI_ALIGN_LEFT, true, false));
+void tab_meshes_draw_transform_rot(mesh_object_t *o) {
+	transform_t *t   = o->base->transform;
+	vec4_t       rot = quat_get_euler(t->rot);
+	rot              = vec4_mult(rot, 180 / 3.141592);
+	bool changed     = false;
+	f32  f           = 0.0;
+
+	ui_handle_t *h = ui_handle(__ID__);
+	h->text        = string_copy(f32_to_string2(rot.x));
+	f              = parse_float(ui_text_input(h, "X", UI_ALIGN_LEFT, true, false));
 	if (h->changed) {
 		changed = true;
 		rot.x   = f;
@@ -233,12 +215,22 @@ void tab_meshes_draw_context_menu() {
 		rot.z   = f;
 	}
 
-	ui_row4();
-	ui_text("Scale", UI_ALIGN_LEFT, 0x00000000);
+	if (changed) {
+		rot    = vec4_mult(rot, 3.141592 / 180.0);
+		t->rot = quat_from_euler(rot.x, rot.y, rot.z);
+		transform_build_matrix(t);
+		transform_compute_dim(t);
+	}
+}
 
-	h       = ui_handle(__ID__);
-	h->text = string_copy(f32_to_string2(t->scale.x));
-	f       = parse_float(ui_text_input(h, "X", UI_ALIGN_LEFT, true, false));
+void tab_meshes_draw_transform_scale(mesh_object_t *o) {
+	transform_t *t       = o->base->transform;
+	bool         changed = false;
+	f32          f       = 0.0;
+
+	ui_handle_t *h = ui_handle(__ID__);
+	h->text        = string_copy(f32_to_string2(t->scale.x));
+	f              = parse_float(ui_text_input(h, "X", UI_ALIGN_LEFT, true, false));
 	if (h->changed) {
 		changed    = true;
 		t->scale.x = f;
@@ -260,8 +252,53 @@ void tab_meshes_draw_context_menu() {
 		t->scale.z = f;
 	}
 
+	if (changed) {
+		transform_build_matrix(t);
+		transform_compute_dim(t);
+	}
+}
+
+void tab_meshes_draw_context_menu() {
+	i32            i = _tab_meshes_draw_i;
+	mesh_object_t *o = g_project->_->paint_objects->buffer[i];
+
+	if (ui_menu_button(tr("Export"), "", ICON_EXPORT)) {
+		g_context->export_mesh_index = i + 1;
+		box_export_show_mesh();
+	}
+	if (g_project->_->paint_objects->length > 1 && ui_menu_button(tr("Delete"), "delete", ICON_DELETE)) {
+		sys_notify_on_next_frame(tab_meshes_draw_context_menu_delete, o);
+	}
+	if (ui_menu_button(tr("Duplicate"), "ctrl+d", ICON_DUPLICATE)) {
+		sim_duplicate();
+	}
+
+#ifdef WITH_PLUGINS
+	if (ui_menu_button(tr("UV Unwrap"), "", ICON_NONE)) {
+		plugin_uv_unwrap_per_object_button(o);
+	}
+#endif
+
+	transform_t *t = o->base->transform;
+
+	ui_row4();
+	ui_text("Loc", UI_ALIGN_LEFT, 0x00000000);
+	tab_meshes_draw_transform_loc(o);
+
+	ui_row4();
+	ui_text("Rot", UI_ALIGN_LEFT, 0x00000000);
+	tab_meshes_draw_transform_rot(o);
+
+	ui_row4();
+	ui_text("Scale", UI_ALIGN_LEFT, 0x00000000);
+	tab_meshes_draw_transform_scale(o);
+
 	ui_row4();
 	ui_text("Dim", UI_ALIGN_LEFT, 0x00000000);
+
+	bool         changed = false;
+	f32          f       = 0.0;
+	ui_handle_t *h;
 
 	h       = ui_handle(__ID__);
 	h->text = string_copy(f32_to_string2(t->dim.x));
@@ -288,15 +325,8 @@ void tab_meshes_draw_context_menu() {
 	}
 
 	if (changed) {
-		rot    = vec4_mult(rot, 3.141592 / 180.0);
-		t->rot = quat_from_euler(rot.x, rot.y, rot.z);
 		transform_build_matrix(t);
 		transform_compute_dim(t);
-
-		// physics_body_t *pb = any_imap_get(physics_body_object_map, g_context->selected_object->uid);
-		// if (pb != NULL) {
-		// 	physics_body_sync_transform(pb);
-		// }
 	}
 
 	// physics_body_t *pb          = any_imap_get(physics_body_object_map, g_context->selected_object->uid);
