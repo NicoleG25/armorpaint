@@ -17,8 +17,8 @@ static ui_theme_t  *theme;
 static bool         ui_key_repeat         = true; // Emulate key repeat for non-character keys
 static bool         ui_dynamic_glyph_load = true; // Allow text input fields to push new glyphs into the font atlas
 static float        ui_key_repeat_time    = 0.0;
-char                ui_text_to_paste[1024];
-char                ui_text_to_copy[1024];
+char                ui_text_to_paste[8192];
+char                ui_text_to_copy[8192];
 static bool         ui_combo_first         = true;
 static ui_handle_t *ui_combo_search_handle = NULL;
 static int          touch_hold_x           = -1;
@@ -1172,6 +1172,9 @@ void ui_update_text_edit(int align, bool editable, bool live_update) {
 					i--;
 				current->cursor_x = i;
 			}
+			else if (!current->is_shift_down && current->highlight_anchor != current->cursor_x) { // Collapse selection to start
+				current->cursor_x = current->highlight_anchor < current->cursor_x ? current->highlight_anchor : current->cursor_x;
+			}
 			else if (current->cursor_x > 0) {
 				int n = current->tab_switch_enabled ? 0 : ui_tab_dedent_count(text, current->cursor_x);
 				if (n > 0) {
@@ -1191,6 +1194,9 @@ void ui_update_text_edit(int align, bool editable, bool live_update) {
 				while (i < len && text[i] == ' ')
 					i++;
 				current->cursor_x = i;
+			}
+			else if (!current->is_shift_down && current->highlight_anchor != current->cursor_x) { // Collapse selection to end
+				current->cursor_x = current->highlight_anchor > current->cursor_x ? current->highlight_anchor : current->cursor_x;
 			}
 			else if (current->cursor_x < strlen(text)) {
 				int n = current->tab_switch_enabled ? 0 : ui_tab_indent_count(text, current->cursor_x, strlen(text));
@@ -1318,19 +1324,28 @@ void ui_update_text_edit(int align, bool editable, bool live_update) {
 		ui_text_to_paste[0]       = 0;
 		ui_is_paste               = false;
 	}
-	if (current->highlight_anchor == current->cursor_x) {
-		strcpy(ui_text_to_copy, text); // Copy
+
+	if (ui_is_copy) {
+		if (current->highlight_anchor == current->cursor_x) {
+			strncpy(ui_text_to_copy, text, 8191); // Copy
+			ui_text_to_copy[8191] = '\0';
+		}
+		else if (current->highlight_anchor < current->cursor_x) {
+			int len = current->cursor_x - current->highlight_anchor;
+			if (len > 8191)
+				len = 8191;
+			strncpy(ui_text_to_copy, text + current->highlight_anchor, len);
+			ui_text_to_copy[len] = '\0';
+		}
+		else {
+			int len = current->highlight_anchor - current->cursor_x;
+			if (len > 8191)
+				len = 8191;
+			strncpy(ui_text_to_copy, text + current->cursor_x, len);
+			ui_text_to_copy[len] = '\0';
+		}
 	}
-	else if (current->highlight_anchor < current->cursor_x) {
-		int len = current->cursor_x - current->highlight_anchor;
-		strncpy(ui_text_to_copy, text + current->highlight_anchor, len);
-		ui_text_to_copy[len] = '\0';
-	}
-	else {
-		int len = current->highlight_anchor - current->cursor_x;
-		strncpy(ui_text_to_copy, text + current->cursor_x, len);
-		ui_text_to_copy[len] = '\0';
-	}
+
 	if (editable && ui_is_cut) { // Cut
 		if (current->highlight_anchor == current->cursor_x) {
 			// No selection - nothing to cut
@@ -2719,8 +2734,8 @@ char *ui_cut() {
 
 void ui_paste(char *s) {
 	ui_is_paste = true;
-	strncpy(ui_text_to_paste, s, 1024);
-	ui_text_to_paste[1023] = 0;
+	strncpy(ui_text_to_paste, s, 8192);
+	ui_text_to_paste[8191] = 0;
 }
 
 void ui_theme_default(ui_theme_t *t) {
