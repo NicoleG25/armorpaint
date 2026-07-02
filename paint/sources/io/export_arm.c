@@ -98,6 +98,7 @@ string_array_t *export_arm_fonts_to_files(char *project_path, slot_font_t_array_
 void export_arm_run_project() {
 
 	tab_timeline_prepare_save();
+	tab_scripts_strip_trailing_whitespace();
 
 	workflow_t _workflow = g_config->workflow;
 	g_config->workflow   = WORKFLOW_PBR;

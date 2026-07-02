@@ -34,6 +34,42 @@ void tab_scripts_set(char *s) {
 	tab_scripts_minimap_dirty                             = true;
 }
 
+static void tab_scripts_strip_line_whitespace(char *s) {
+	int len   = string_length(s);
+	int write = 0;
+	int read  = 0;
+	while (read < len) {
+		// Find end of the current line
+		int line_end = read;
+		while (line_end < len && s[line_end] != '\n') {
+			++line_end;
+		}
+		// Trim trailing spaces/tabs
+		int trimmed_end = line_end;
+		while (trimmed_end > read && (s[trimmed_end - 1] == ' ' || s[trimmed_end - 1] == '\t')) {
+			--trimmed_end;
+		}
+		for (int i = read; i < trimmed_end; ++i) {
+			s[write++] = s[i];
+		}
+		if (line_end < len) { // Keep the newline
+			s[write++] = '\n';
+		}
+		read = line_end + 1;
+	}
+	s[write] = '\0';
+}
+
+void tab_scripts_strip_trailing_whitespace() {
+	if (g_project->script_datas == NULL) {
+		return;
+	}
+	for (i32 i = 0; i < g_project->script_datas->length; ++i) {
+		g_project->script_datas->buffer[i] = string_copy(g_project->script_datas->buffer[i]);
+		tab_scripts_strip_line_whitespace(g_project->script_datas->buffer[i]);
+	}
+}
+
 void tab_scripts_create(char *name) {
 	tab_scripts_prepare();
 	i32 i = string_array_index_of(g_project->script_names, name);

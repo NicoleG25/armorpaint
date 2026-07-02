@@ -325,6 +325,7 @@ void                      history_delete_material_group(node_group_t *group);
 void                      tab_scripts_set(char *s);
 char                     *tab_scripts_get();
 void                      tab_scripts_create(char *name);
+void                      tab_scripts_strip_trailing_whitespace();
 void                      tab_scripts_draw(ui_handle_t *htab);
 ui_text_coloring_t       *tab_scripts_get_text_coloring();
 void                      tab_debug_draw(ui_handle_t *htab);
