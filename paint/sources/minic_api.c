@@ -1001,7 +1001,9 @@ void minic_register_builtins() {
 	R(draw_cubic_bezier, "v(p,p,i,f)");
 
 	// iron_audio
+#ifdef IRON_AUDIO
 	R(audio_play, "v(p,i)");
+#endif
 
 	// iron_string
 	R(string_alloc, "p(i)");
