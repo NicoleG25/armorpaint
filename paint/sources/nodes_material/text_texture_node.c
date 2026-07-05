@@ -9,13 +9,13 @@ void _parser_material_cache_tex_text_node_on_next_frame(char *text) {
 	util_render_make_text_preview();
 	char *file = string("tex_text_%s", text);
 	// TODO: remove old cache
-	any_map_set(data_cached_images, file, g_context->text_tool_image);
+	any_map_set(data_cached_textures, file, g_context->text_tool_image);
 	g_context->text_tool_text  = string_copy(_text_tool_text);
 	g_context->text_tool_image = _text_tool_image;
 }
 
 void _parser_material_cache_tex_text_node(char *file, char *text) {
-	if (any_map_get(data_cached_images, file) == NULL) {
+	if (any_map_get(data_cached_textures, file) == NULL) {
 		sys_notify_on_next_frame(&_parser_material_cache_tex_text_node_on_next_frame, text);
 	}
 }

@@ -109,7 +109,7 @@ void ui_menubar_draw_tab_header() {
 }
 
 void ui_menubar_draw_category_items_about_box() {
-	gpu_texture_t *img = data_get_image("badge.k");
+	gpu_texture_t *img = data_get_texture("badge.k");
 	ui_image(img, 0xffffffff, -1.0);
 	ui_end_element();
 

@@ -29,7 +29,7 @@ extern any_map_t      *import_texture_importers;
 extern string_array_t *_path_texture_formats;
 string_array_t        *path_texture_formats(void);
 extern any_map_t      *util_mesh_unwrappers;
-extern any_map_t      *data_cached_images;
+extern any_map_t      *data_cached_textures;
 void                   import_texture_run(char *path, bool hdr_as_envmap);
 any_array_t           *project_get_assets(void);
 void                   tab_textures_delete_texture(asset_t *asset);
@@ -39,7 +39,7 @@ int plugins_split_by       = 0;
 
 void io_psd_import_layer(char *file_name, char *layer_name, void *tex) {
 	char *path = string("%s.%s.png", file_name, layer_name);
-	any_map_set(data_cached_images, path, tex);
+	any_map_set(data_cached_textures, path, tex);
 	import_texture_run(path, false);
 }
 

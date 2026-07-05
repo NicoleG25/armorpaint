@@ -102,7 +102,7 @@ void ui_files_file_browser_on_cache_cloud_done_on_next_frame(draw_cloud_icon_dat
 
 void ui_files_file_browser_on_cache_cloud_done(char *abs) {
 	if (abs != NULL) {
-		gpu_texture_t *image = data_get_image(string_copy(abs));
+		gpu_texture_t *image = data_get_texture(string_copy(abs));
 		if (image != NULL) {
 #ifdef IRON_WINDOWS
 			abs = string_copy(string_replace_all(abs, "\\", "/"));
@@ -155,7 +155,7 @@ static void ui_files_clear_icon_map(void) {
 			char *icon_file = ui_files_icon_file_map->keys->buffer[i];
 			if (icon_file != NULL) {
 				char *path = string("%s%s%s%s", dest, ui_files_last_path, PATH_SEP, icon_file);
-				data_delete_image(path);
+				data_delete_texture(path);
 			}
 		}
 	}
@@ -187,7 +187,7 @@ void ui_files_make_icon(ui_files_make_icon_t *args) {
 	}
 
 	if (!found) {
-		data_delete_image(args->shandle); // The big image is not needed anymore
+		data_delete_texture(args->shandle); // The big image is not needed anymore
 	}
 }
 
@@ -463,7 +463,7 @@ char *ui_files_file_browser(ui_handle_t *handle, bool drag_files, char *search, 
 					render_target_t *rt    = any_map_get(render_path_render_targets, "empty_black");
 					gpu_texture_t   *empty = rt->_image;
 					any_map_set(ui_files_icon_map, shandle, empty);
-					gpu_texture_t *image = data_get_image(shandle);
+					gpu_texture_t *image = data_get_texture(shandle);
 
 					if (image != NULL) {
 						ui_files_make_icon_t *args = GC_ALLOC_INIT(ui_files_make_icon_t, {.image = image, .shandle = shandle, .w = w});

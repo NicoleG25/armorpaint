@@ -175,7 +175,7 @@ void                      base_update_workspace();
 void                      base_update_workflow();
 void                      base_run_in_player();
 string_array_t           *base_combo_enum_texts(char *node_type);
-any_array_t              *base_combo_enum_images(char *node_type);
+any_array_t              *base_combo_enum_textures(char *node_type);
 i32                       base_get_asset_index(char *file_name);
 void                      base_toggle_fullscreen();
 bool                      base_is_decal_layer();

@@ -29,7 +29,7 @@ void import_envmap_get_radiance_mip(gpu_texture_t *mip, i32 level, gpu_texture_t
 		import_envmap_params.w = i;
 		gpu_set_float4(import_envmap_params_loc, import_envmap_params.x, import_envmap_params.y, import_envmap_params.z, import_envmap_params.w);
 		gpu_set_texture(import_envmap_radiance_loc, radiance);
-		gpu_texture_t *noise = data_get_image("bnoise256.k");
+		gpu_texture_t *noise = data_get_texture("bnoise256.k");
 		gpu_set_texture(import_envmap_noise_loc, noise);
 		gpu_draw();
 		gpu_end();

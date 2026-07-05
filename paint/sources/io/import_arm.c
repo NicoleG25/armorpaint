@@ -96,7 +96,7 @@ void import_arm_make_pink(char *abs) {
 	b->buffer[2]        = 255;
 	b->buffer[3]        = 255;
 	gpu_texture_t *pink = gpu_create_texture_from_bytes(b, 1, 1, GPU_TEXTURE_FORMAT_RGBA32);
-	any_map_set(data_cached_images, abs, pink);
+	any_map_set(data_cached_textures, abs, pink);
 }
 
 void import_arm_init_nodes(ui_node_t_array_t *nodes) {
@@ -136,7 +136,7 @@ void import_arm_unpack_asset(project_t *project, char *abs, char *file, bool gc_
 				any_array_push(g_project->packed_assets, pa);
 			}
 			gpu_texture_t *image = gpu_create_texture_from_encoded_bytes(pa->bytes, ends_with(pa->name, ".jpg") ? ".jpg" : ".png");
-			any_map_set(data_cached_images, abs, image);
+			any_map_set(data_cached_textures, abs, image);
 			break;
 		}
 	}
@@ -157,7 +157,7 @@ void import_arm_run_material_from_project(project_t *project, char *path) {
 			abs = string_copy(path_normalize(abs));
 			import_arm_unpack_asset(project, abs, file, true);
 		}
-		if (any_map_get(data_cached_images, abs) == NULL && !iron_file_exists(abs)) {
+		if (any_map_get(data_cached_textures, abs) == NULL && !iron_file_exists(abs)) {
 			import_arm_make_pink(abs);
 		}
 		import_texture_run(abs, true);
@@ -336,7 +336,7 @@ void import_arm_run_project(char *path) {
 			abs = string_copy(path_normalize(abs));
 			import_arm_unpack_asset(g_project, abs, file, false);
 		}
-		if (any_map_get(data_cached_images, abs) == NULL && !iron_file_exists(abs)) {
+		if (any_map_get(data_cached_textures, abs) == NULL && !iron_file_exists(abs)) {
 			import_arm_make_pink(abs);
 		}
 		bool hdr_as_envmap = ends_with(abs, ".hdr") && string_equals(g_project->envmap, abs);
@@ -694,7 +694,7 @@ void import_arm_run_brush_from_project(project_t *project, char *path) {
 			abs = string_copy(path_normalize(abs));
 			import_arm_unpack_asset(project, abs, file, true);
 		}
-		if (any_map_get(data_cached_images, abs) == NULL && !iron_file_exists(abs)) {
+		if (any_map_get(data_cached_textures, abs) == NULL && !iron_file_exists(abs)) {
 			import_arm_make_pink(abs);
 		}
 		import_texture_run(abs, true);

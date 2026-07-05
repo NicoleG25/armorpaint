@@ -270,7 +270,7 @@ static void texture_mesh_node_project(ui_node_t *node) {
 
 		gpu_texture_t *sd_tex = iron_load_texture(output);
 		any_imap_set(neural_node_results, node->outputs->buffer[0]->id, sd_tex);
-		any_map_set(data_cached_images, node_name, sd_tex);
+		any_map_set(data_cached_textures, node_name, sd_tex);
 
 		texture_mesh_node_set_view(v);
 		camera_object_build_mat(scene_camera);

@@ -32,7 +32,7 @@ static void export_texture_write_texture(char *file, buffer_t *pixels, i32 type,
 		}
 #endif
 		gpu_texture_t *image = gpu_create_texture_from_bytes(pixels, res_x, res_y, GPU_TEXTURE_FORMAT_RGBA32);
-		any_map_set(data_cached_images, file, image);
+		any_map_set(data_cached_textures, file, image);
 		string_array_t *ar    = string_split(file, PATH_SEP);
 		char           *name  = ar->buffer[ar->length - 1];
 		asset_t        *asset = GC_ALLOC_INIT(asset_t, {.name = name, .file = file, .id = g_project->_->next_asset_id++});

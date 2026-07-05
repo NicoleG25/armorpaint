@@ -4,7 +4,7 @@
 void resource_load(string_array_t *names) {
 	for (i32 i = 0; i < names->length; ++i) {
 		char          *s     = names->buffer[i];
-		gpu_texture_t *image = data_get_image(s);
+		gpu_texture_t *image = data_get_texture(s);
 		any_map_set(resource_bundled, s, image);
 	}
 }

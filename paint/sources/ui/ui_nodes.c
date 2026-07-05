@@ -1220,8 +1220,8 @@ void ui_nodes_accept_swatch_drop(swatch_color_t *swatch) {
 }
 
 void ui_viewnodes_init() {
-	ui_nodes_preview_image = ui_nodes_get_node_preview_image;
-	gc_root(ui_nodes_preview_image);
+	ui_nodes_preview_texture = ui_nodes_get_node_preview_image;
+	gc_root(ui_nodes_preview_texture);
 
 	ui_nodes_on_link_drag = ui_viewnodes_on_link_drag;
 	gc_root(ui_nodes_on_link_drag);

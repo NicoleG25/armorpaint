@@ -86,7 +86,7 @@ void tab_textures_delete_texture(asset_t *asset) {
 		ui_toolbar_handle->redraws = 1;
 	}
 
-	if (data_get_image(asset->file) == scene_world->_->envmap) {
+	if (data_get_texture(asset->file) == scene_world->_->envmap) {
 		project_set_default_envmap();
 	}
 
@@ -100,7 +100,7 @@ void tab_textures_delete_texture(asset_t *asset) {
 		}
 	}
 
-	data_delete_image(asset->file);
+	data_delete_texture(asset->file);
 	array_splice(g_project->_->assets, index, 1);
 	sys_notify_on_next_frame(&tab_textures_delete_texture_on_next_frame, NULL);
 

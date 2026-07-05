@@ -21,7 +21,7 @@ char *image_to_pbr_node_vector(ui_node_t *node, ui_node_socket_t *socket) {
 		return "float3(0.0, 0.0, 0.0)";
 	}
 	char *tex_name = string("%s%s", parser_material_node_name(node, NULL), i32_to_string(socket->id));
-	any_map_set(data_cached_images, tex_name, result);
+	any_map_set(data_cached_textures, tex_name, result);
 	bind_tex_t *tex      = parser_material_make_bind_tex(tex_name, tex_name);
 	char       *texstore = parser_material_texture_store(node, tex, tex_name, COLOR_SPACE_AUTO);
 	return string("%s.rgb", texstore);
@@ -44,7 +44,7 @@ char *image_to_pbr_node_value(ui_node_t *node, ui_node_socket_t *socket) {
 	}
 
 	char *tex_name = string("%s%s", parser_material_node_name(node, NULL), i32_to_string(socket->id));
-	any_map_set(data_cached_images, tex_name, result);
+	any_map_set(data_cached_textures, tex_name, result);
 	bind_tex_t *tex      = parser_material_make_bind_tex(tex_name, tex_name);
 	char       *texstore = parser_material_texture_store(node, tex, tex_name, COLOR_SPACE_AUTO);
 	return string("%s.r", texstore);

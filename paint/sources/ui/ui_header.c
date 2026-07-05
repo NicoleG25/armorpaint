@@ -172,7 +172,7 @@ void ui_header_draw_tool_properties() {
 			colorid_handle->i           = g_context->colorid;
 			g_context->colorid          = ui_combo(colorid_handle, base_combo_enum_texts("TEX_IMAGE"), tr("Color ID"), false, UI_ALIGN_LEFT, true);
 			if (colorid_handle == g_ui->combo_selected_handle) {
-				g_ui->combo_selected_images = base_combo_enum_images("TEX_IMAGE");
+				g_ui->combo_selected_images = base_combo_enum_textures("TEX_IMAGE");
 			}
 			if (colorid_handle->changed) {
 				g_context->ddirty          = 2;

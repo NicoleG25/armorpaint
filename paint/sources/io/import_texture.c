@@ -7,7 +7,7 @@ typedef struct import_texture_data {
 } import_texture_data_t;
 
 gpu_texture_t *import_texture_default_importer(char *path) {
-	return data_get_image(path);
+	return data_get_texture(path);
 }
 
 void import_texture_run_on_next_frame(import_texture_data_t *itd) {
@@ -28,7 +28,7 @@ void import_texture_run(char *path, bool hdr_as_envmap) {
 		if (string_equals(a->file, path)) {
 			// Set as envmap
 			if (hdr_as_envmap && ends_with(to_lower_case(path), ".hdr")) {
-				gpu_texture_t         *image = data_get_image(path);
+				gpu_texture_t         *image = data_get_texture(path);
 				import_texture_data_t *itd   = GC_ALLOC_INIT(import_texture_data_t, {.path = path, .image = image});
 				sys_notify_on_next_frame(&import_texture_run_on_next_frame, itd); // Make sure file browser process did finish
 			}
@@ -40,7 +40,7 @@ void import_texture_run(char *path, bool hdr_as_envmap) {
 	char *ext                              = substring(path, string_last_index_of(path, ".") + 1, string_length(path));
 	gpu_texture_t *(*importer)(char *path) = any_map_get(import_texture_importers, ext);
 
-	bool           cached = any_map_get(data_cached_images, path) != NULL; // Already loaded or pink texture for missing file
+	bool           cached = any_map_get(data_cached_textures, path) != NULL; // Already loaded or pink texture for missing file
 	gpu_texture_t *image;
 	if (importer == NULL || cached) {
 		image = import_texture_default_importer(path);
@@ -53,7 +53,7 @@ void import_texture_run(char *path, bool hdr_as_envmap) {
 		return;
 	}
 
-	any_map_set(data_cached_images, path, image);
+	any_map_set(data_cached_textures, path, image);
 	string_array_t *ar    = string_split(path, PATH_SEP);
 	char           *name  = ar->buffer[ar->length - 1];
 	asset_t        *asset = GC_ALLOC_INIT(asset_t, {.name = name, .file = path, .id = g_project->_->next_asset_id++});

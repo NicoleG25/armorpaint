@@ -497,10 +497,10 @@ void base_init() {
 	g_font = data_get_font("font.ttf");
 	gc_root(g_font);
 
-	base_color_wheel = data_get_image("color_wheel.k");
+	base_color_wheel = data_get_texture("color_wheel.k");
 	gc_root(base_color_wheel);
 
-	base_color_wheel_gradient = data_get_image("color_wheel_gradient.k");
+	base_color_wheel_gradient = data_get_texture("color_wheel_gradient.k");
 	gc_root(base_color_wheel_gradient);
 	config_load_theme(g_config->theme, false);
 	base_default_element_w = g_theme->ELEMENT_W;
@@ -523,7 +523,7 @@ void base_init() {
 	}
 
 	ui_nodes_enum_texts  = base_combo_enum_texts;
-	ui_nodes_enum_images = base_combo_enum_images;
+	ui_nodes_enum_textures = base_combo_enum_textures;
 	gc_root(ui_nodes_enum_texts);
 
 	// Init plugins
@@ -791,7 +791,7 @@ string_array_t *base_combo_enum_texts(char *node_type) {
 	return NULL;
 }
 
-any_array_t *base_combo_enum_images(char *node_type) {
+any_array_t *base_combo_enum_textures(char *node_type) {
 	if (string_equals(node_type, "TEX_IMAGE")) {
 		any_array_t *ar = any_array_create(0);
 		for (i32 i = 0; i < g_project->_->assets->length; ++i) {

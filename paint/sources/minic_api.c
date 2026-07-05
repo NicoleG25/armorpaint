@@ -812,13 +812,13 @@ void minic_register_builtins() {
 	R(data_get_world, "p(p,p)");
 	R(data_get_shader, "p(p,p)");
 	R(data_get_scene_raw, "p(p)");
-	R(data_get_image, "p(p)");
+	R(data_get_texture, "p(p)");
 	R(data_get_blob, "p(p)");
 	R(data_get_video, "p(p)");
 	R(data_get_font, "p(p)");
 	R(data_delete_mesh, "v(p)");
 	R(data_delete_blob, "v(p)");
-	R(data_delete_image, "v(p)");
+	R(data_delete_texture, "v(p)");
 	R(data_delete_video, "v(p)");
 	R(data_delete_font, "v(p)");
 	R(data_is_abs, "b(p)");

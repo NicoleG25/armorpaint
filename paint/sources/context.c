@@ -461,7 +461,7 @@ void context_load_envmap() {
 	if (!g_context->envmap_loaded) {
 		// TODO: Unable to share texture for both radiance and envmap - reload image
 		g_context->envmap_loaded = true;
-		map_delete(data_cached_images, "World_radiance.k");
+		map_delete(data_cached_textures, "World_radiance.k");
 	}
 	world_data_load_envmap(scene_world);
 	if (g_context->saved_envmap == NULL) {

@@ -281,7 +281,7 @@ void ui_base_update(void *_) {
 	// Nothing to display in the main area
 	if (!base_view3d_show && !ui_nodes_show && !ui_view2d_show) {
 		draw_begin(NULL, true, g_theme->SEPARATOR_COL);
-		gpu_texture_t *img = data_get_image("badge_bw.k");
+		gpu_texture_t *img = data_get_texture("badge_bw.k");
 		draw_set_color(0x22ffffff);
 		draw_image(img, base_view3d_w() / 2.0 - img->width / 2.0, base_h() / 2.0 - img->height / 2.0);
 		draw_end();

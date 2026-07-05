@@ -28,7 +28,7 @@ void box_projects_tab_on_next_frame(char *path) {
 }
 
 void box_projects_draw_badge() {
-	gpu_texture_t *img = data_get_image("badge.k");
+	gpu_texture_t *img = data_get_texture("badge.k");
 	ui_image(img, 0xffffffff, -1.0);
 	ui_end_element();
 }
@@ -112,7 +112,7 @@ void box_projects_tab() {
 				}
 				gpu_texture_t *icon = any_map_get(box_projects_icon_map, icon_path);
 				if (icon == NULL) {
-					gpu_texture_t *image = data_get_image(icon_path);
+					gpu_texture_t *image = data_get_texture(icon_path);
 					icon                 = image;
 					any_map_set(box_projects_icon_map, icon_path, icon);
 				}
@@ -218,7 +218,7 @@ void box_projects_show() {
 		string_array_t *keys = map_keys(box_projects_icon_map);
 		for (i32 i = 0; i < keys->length; ++i) {
 			char *handle = keys->buffer[i];
-			data_delete_image(handle);
+			data_delete_texture(handle);
 		}
 		gc_unroot(box_projects_icon_map);
 		box_projects_icon_map = NULL;
