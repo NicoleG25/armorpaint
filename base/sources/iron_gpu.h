@@ -43,12 +43,6 @@ typedef enum {
 } gpu_texture_state_t;
 
 typedef enum {
-	GPU_TEXTURE_COMPRESSION_NONE,
-	GPU_TEXTURE_COMPRESSION_DXT5,
-	GPU_TEXTURE_COMPRESSION_ASTC
-} gpu_texture_compression_t;
-
-typedef enum {
 	GPU_TEXTURE_FORMAT_RGBA32,
 	GPU_TEXTURE_FORMAT_RGBA64,
 	GPU_TEXTURE_FORMAT_RGBA128,
@@ -100,7 +94,6 @@ typedef struct gpu_texture {
 	uint32_t                  width;
 	uint32_t                  height;
 	gpu_texture_format_t      format;
-	gpu_texture_compression_t compression;
 	gpu_texture_state_t       state;
 	buffer_t                 *buffer;
 	bool                      gpu_write;
