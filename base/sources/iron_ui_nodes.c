@@ -27,8 +27,8 @@ char           *ui_clipboard                             = "";
 string_array_t *ui_nodes_exclude_remove                  = NULL; // No removal for listed node types
 bool            ui_nodes_socket_released                 = false;
 string_array_t *(*ui_nodes_enum_texts)(char *)           = NULL; // Retrieve combo items for buttons of type ENUM
-any_array_t *(*ui_nodes_enum_images)(char *)             = NULL;
-gpu_texture_t *(*ui_nodes_preview_image)(ui_node_t *)    = NULL; // Retrieve preview image
+any_array_t *(*ui_nodes_enum_textures)(char *)           = NULL;
+gpu_texture_t *(*ui_nodes_preview_texture)(ui_node_t *)    = NULL; // Retrieve preview image
 void (*ui_nodes_on_custom_button)(int, char *)           = NULL; // Call external function
 ui_canvas_control_t *(*ui_nodes_on_canvas_control)(void) = NULL;
 void (*ui_nodes_on_canvas_released)(void)                = NULL;
@@ -569,8 +569,8 @@ void ui_node_draw_body(ui_node_t *node, ui_node_canvas_t *canvas, float nx, floa
 			strcpy(label, ui_tr(but->name));
 
 			((float *)but->default_value->buffer)[0] = ui_combo(but_handle, ar, label, false, UI_ALIGN_LEFT, true);
-			if (current->combo_selected_handle == but_handle && !has_but_data && ui_nodes_enum_images != NULL) {
-				current->combo_selected_images = (*ui_nodes_enum_images)(node->type);
+			if (current->combo_selected_handle == but_handle && !has_but_data && ui_nodes_enum_textures != NULL) {
+				current->combo_selected_images = (*ui_nodes_enum_textures)(node->type);
 			}
 		}
 		else if (strcmp(but->type, "BOOL") == 0) {
@@ -744,9 +744,9 @@ void ui_node_draw(ui_node_t *node, ui_node_canvas_t *canvas) {
 	}
 
 	// Node preview
-	if ((node->flags & UI_NODE_FLAG_PREVIEW) && ui_nodes_preview_image != NULL) {
+	if ((node->flags & UI_NODE_FLAG_PREVIEW) && ui_nodes_preview_texture != NULL) {
 		// ui_draw_shadow(nx, ny - w, w * 0.98, w * 0.98);
-		gpu_texture_t *image = ui_nodes_preview_image(node);
+		gpu_texture_t *image = ui_nodes_preview_texture(node);
 		if (image != NULL) {
 			draw_set_color(0xffffffff);
 			float ph = w * (image->height / (float)image->width);

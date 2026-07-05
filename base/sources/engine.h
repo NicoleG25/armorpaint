@@ -547,7 +547,7 @@ extern any_map_t *data_cached_materials;
 extern any_map_t *data_cached_worlds;
 extern any_map_t *data_cached_shaders;
 extern any_map_t *data_cached_blobs;
-extern any_map_t *data_cached_images;
+extern any_map_t *data_cached_textures;
 extern any_map_t *data_cached_videos;
 extern any_map_t *data_cached_fonts;
 #ifdef IRON_AUDIO
@@ -561,7 +561,7 @@ material_data_t *data_get_material(char *file, char *name);
 world_data_t    *data_get_world(char *file, char *name);
 shader_data_t   *data_get_shader(char *file, char *name);
 scene_t         *data_get_scene_raw(char *file);
-gpu_texture_t   *data_get_image(char *file);
+gpu_texture_t   *data_get_texture(char *file);
 buffer_t        *data_get_blob(char *file);
 video_t         *data_get_video(char *file);
 draw_font_t     *data_get_font(char *file);
@@ -570,7 +570,7 @@ sound_t *data_get_sound(char *file);
 #endif
 void data_delete_mesh(char *handle);
 void data_delete_blob(char *handle);
-void data_delete_image(char *handle);
+void data_delete_texture(char *handle);
 void data_delete_video(char *handle);
 void data_delete_font(char *handle);
 #ifdef IRON_AUDIO

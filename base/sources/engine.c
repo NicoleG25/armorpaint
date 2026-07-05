@@ -307,7 +307,7 @@ world_data_t *world_data_parse(char *name, char *id) {
 
 	raw->_->irradiance = world_data_set_irradiance(raw);
 	if (raw->radiance != NULL) {
-		raw->_->radiance = data_get_image(raw->radiance);
+		raw->_->radiance = data_get_texture(raw->radiance);
 		while (raw->_->radiance_mipmaps->length < raw->radiance_mipmaps) {
 			any_array_push(raw->_->radiance_mipmaps, NULL);
 		}
@@ -317,7 +317,7 @@ world_data_t *world_data_parse(char *name, char *id) {
 
 		for (i32 i = 0; i < raw->radiance_mipmaps; ++i) {
 			char          *mip_name             = string("%s_%s%s", base, i32_to_string(i), ext);
-			gpu_texture_t *mipimg               = data_get_image(mip_name);
+			gpu_texture_t *mipimg               = data_get_texture(mip_name);
 			raw->_->radiance_mipmaps->buffer[i] = mipimg;
 		}
 	}
@@ -364,7 +364,7 @@ f32_array_t *world_data_set_irradiance(world_data_t *raw) {
 
 void world_data_load_envmap(world_data_t *raw) {
 	if (raw->envmap != NULL) {
-		raw->_->envmap = data_get_image(raw->envmap);
+		raw->_->envmap = data_get_texture(raw->envmap);
 	}
 }
 
@@ -443,7 +443,7 @@ void material_context_load(material_context_t *raw) {
 			if (strcmp(tex->file, "") == 0) { // Empty texture
 				continue;
 			}
-			gpu_texture_t *image = data_get_image(tex->file);
+			gpu_texture_t *image = data_get_texture(tex->file);
 			any_array_push(raw->_->textures, image);
 		}
 	}
@@ -1815,7 +1815,7 @@ any_map_t *data_cached_materials  = NULL;
 any_map_t *data_cached_worlds     = NULL;
 any_map_t *data_cached_shaders    = NULL;
 any_map_t *data_cached_blobs      = NULL;
-any_map_t *data_cached_images     = NULL;
+any_map_t *data_cached_textures     = NULL;
 any_map_t *data_cached_videos     = NULL;
 any_map_t *data_cached_fonts      = NULL;
 any_map_t *data_cached_sounds     = NULL;
@@ -1958,12 +1958,12 @@ buffer_t *data_get_blob(char *file) {
 	return b;
 }
 
-gpu_texture_t *data_get_image(char *file) {
-	if (data_cached_images == NULL) {
-		data_cached_images = any_map_create();
-		gc_root(data_cached_images);
+gpu_texture_t *data_get_texture(char *file) {
+	if (data_cached_textures == NULL) {
+		data_cached_textures = any_map_create();
+		gc_root(data_cached_textures);
 	}
-	gpu_texture_t *cached = (gpu_texture_t *)any_map_get(data_cached_images, file);
+	gpu_texture_t *cached = (gpu_texture_t *)any_map_get(data_cached_textures, file);
 	if (cached != NULL) {
 		return cached;
 	}
@@ -1971,7 +1971,7 @@ gpu_texture_t *data_get_image(char *file) {
 	if (b == NULL) {
 		return NULL;
 	}
-	any_map_set(data_cached_images, file, b);
+	any_map_set(data_cached_textures, file, b);
 	data_assets_loaded++;
 	return b;
 }
@@ -2066,16 +2066,16 @@ void data_delete_blob(char *handle) {
 	map_delete(data_cached_blobs, handle);
 }
 
-void data_delete_image(char *handle) {
-	if (data_cached_images == NULL) {
+void data_delete_texture(char *handle) {
+	if (data_cached_textures == NULL) {
 		return;
 	}
-	gpu_texture_t *image = (gpu_texture_t *)any_map_get(data_cached_images, handle);
+	gpu_texture_t *image = (gpu_texture_t *)any_map_get(data_cached_textures, handle);
 	if (image == NULL) {
 		return;
 	}
 	gpu_delete_texture(image);
-	map_delete(data_cached_images, handle);
+	map_delete(data_cached_textures, handle);
 }
 
 void data_delete_video(char *handle) {
@@ -2412,7 +2412,7 @@ void scene_load_embedded_data(string_array_t *datas) {
 }
 
 void scene_embed_data(char *file) {
-	gpu_texture_t *image = data_get_image(file);
+	gpu_texture_t *image = data_get_texture(file);
 	any_map_set(scene_embedded, file, image);
 }
 
