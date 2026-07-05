@@ -206,7 +206,7 @@ buffer_t *util_encode_project(project_t *raw) {
 	buffer_t *encoded = buffer_create(size);
 
 	armpack_encode_start(encoded->buffer);
-	armpack_encode_map(35);
+	armpack_encode_map(36);
 
 	armpack_encode_string("version");
 	armpack_encode_string(raw->version);
@@ -359,6 +359,8 @@ buffer_t *util_encode_project(project_t *raw) {
 
 	armpack_encode_string("font_assets");
 	armpack_encode_array_string(raw->font_assets);
+	armpack_encode_string("sound_assets");
+	armpack_encode_array_string(raw->sound_assets);
 
 	armpack_encode_string("layer_datas");
 	if (raw->layer_datas != NULL) {

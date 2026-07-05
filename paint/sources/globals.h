@@ -7,7 +7,7 @@
 
 char *manifest_title           = "ArmorPaint";
 char *manifest_version         = "1.0 alpha";
-char *manifest_version_project = "10";
+char *manifest_version_project = "11";
 char *manifest_version_config  = "1";
 char *manifest_url             = "https://armorpaint.org";
 char *manifest_url_android     = "https://play.google.com/store/apps/details?id=org.armorpaint";
@@ -135,6 +135,7 @@ slot_material_t *base_drag_material = NULL;
 slot_layer_t    *base_drag_layer    = NULL;
 slot_brush_t    *base_drag_brush    = NULL;
 slot_font_t     *base_drag_font     = NULL;
+slot_sound_t    *base_drag_sound    = NULL;
 mesh_object_t   *base_drag_mesh     = NULL;
 bool             base_player_lock   = false;
 
@@ -196,7 +197,7 @@ f32                       ui_view2d_pan_scale   = 1.0;
 bool                      ui_view2d_tiled_show  = false;
 bool                      ui_view2d_grid_redraw = true;
 ui_handle_t              *ui_view2d_htab;
-bool                      sim_running = false;
+bool                      sim_running                = false;
 bool                      sim_record                 = false;
 bool                      viewport_recording         = false;
 bool                      node_shader_dump_to_script = false;

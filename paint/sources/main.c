@@ -9,7 +9,6 @@
 #include "io/export_texture.c"
 #include "io/import_arm.c"
 #include "io/import_asset.c"
-#include "io/import_audio.c"
 #include "io/import_blend_material.c"
 #include "io/import_blend_mesh.c"
 #include "io/import_envmap.c"
@@ -21,6 +20,7 @@
 #include "io/import_mesh.c"
 #include "io/import_obj.c"
 #include "io/import_plugin.c"
+#include "io/import_sound.c"
 #include "io/import_texture.c"
 #include "io/import_theme.c"
 
@@ -156,6 +156,7 @@
 #include "ui/tab_meshes.c"
 #include "ui/tab_plugins.c"
 #include "ui/tab_scripts.c"
+#include "ui/tab_sounds.c"
 #include "ui/tab_swatches.c"
 #include "ui/tab_textures.c"
 #include "ui/tab_timeline.c"
@@ -223,6 +224,7 @@
 #include "slot_font.c"
 #include "slot_layer.c"
 #include "slot_material.c"
+#include "slot_sound.c"
 #include "strings.c"
 #include "translator.c"
 #include "uniforms.c"
@@ -388,6 +390,7 @@ void _kickstart() {
 	g_project->_->brushes   = any_array_create_from_raw((void *[]){}, 0);
 	g_project->_->layers    = any_array_create_from_raw((void *[]){}, 0);
 	g_project->_->fonts     = any_array_create_from_raw((void *[]){}, 0);
+	g_project->_->sounds    = any_array_create_from_raw((void *[]){}, 0);
 
 	ui_view2d_hwnd = ui_handle_create();
 	gc_root(ui_view2d_hwnd);

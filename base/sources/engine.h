@@ -536,9 +536,7 @@ void             uniforms_set_material_const(i32 location, shader_const_t *shade
 // ██████╔╝██║  ██║   ██║   ██║  ██║
 // ╚═════╝ ╚═╝  ╚═╝   ╚═╝   ╚═╝  ╚═╝
 
-typedef struct sound {
-	void *sound_;
-} sound_t;
+typedef void sound_t;
 
 extern any_map_t *data_cached_scene_raws;
 extern any_map_t *data_cached_meshes;
@@ -550,10 +548,8 @@ extern any_map_t *data_cached_blobs;
 extern any_map_t *data_cached_textures;
 extern any_map_t *data_cached_videos;
 extern any_map_t *data_cached_fonts;
-#ifdef IRON_AUDIO
 extern any_map_t *data_cached_sounds;
-#endif
-extern i32 data_assets_loaded;
+extern i32        data_assets_loaded;
 
 mesh_data_t     *data_get_mesh(char *file, char *name);
 camera_data_t   *data_get_camera(char *file, char *name);
@@ -565,21 +561,17 @@ gpu_texture_t   *data_get_texture(char *file);
 buffer_t        *data_get_blob(char *file);
 video_t         *data_get_video(char *file);
 draw_font_t     *data_get_font(char *file);
-#ifdef IRON_AUDIO
-sound_t *data_get_sound(char *file);
-#endif
-void data_delete_mesh(char *handle);
-void data_delete_blob(char *handle);
-void data_delete_texture(char *handle);
-void data_delete_video(char *handle);
-void data_delete_font(char *handle);
-#ifdef IRON_AUDIO
-void data_delete_sound(char *handle);
-#endif
-bool  data_is_abs(char *file);
-bool  data_is_up(char *file);
-char *data_resolve_path(char *file);
-char *data_path(void);
+sound_t         *data_get_sound(char *file);
+void             data_delete_mesh(char *handle);
+void             data_delete_blob(char *handle);
+void             data_delete_texture(char *handle);
+void             data_delete_video(char *handle);
+void             data_delete_font(char *handle);
+void             data_delete_sound(char *handle);
+bool             data_is_abs(char *file);
+bool             data_is_up(char *file);
+char            *data_resolve_path(char *file);
+char            *data_path(void);
 
 // ███████╗ ██████╗███████╗███╗   ██╗███████╗
 // ██╔════╝██╔════╝██╔════╝████╗  ██║██╔════╝

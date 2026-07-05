@@ -25,7 +25,7 @@ char *path_base_dir(char *path);
 char *path_base_name(char *path);
 bool  path_is_mesh(char *path);
 bool  path_is_texture(char *path);
-bool  path_is_audio(char *path);
+bool  path_is_sound(char *path);
 bool  path_is_font(char *path);
 bool  path_is_project(char *path);
 bool  path_is_plugin(char *path);

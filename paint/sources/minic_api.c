@@ -816,6 +816,7 @@ void minic_register_builtins() {
 	R(data_get_blob, "p(p)");
 	R(data_get_video, "p(p)");
 	R(data_get_font, "p(p)");
+	R(data_get_sound, "p(p)");
 	R(data_delete_mesh, "v(p)");
 	R(data_delete_blob, "v(p)");
 	R(data_delete_texture, "v(p)");
@@ -998,6 +999,9 @@ void minic_register_builtins() {
 	R(draw_filled_circle, "v(f,f,f,i)");
 	R(draw_circle, "v(f,f,f,i,f)");
 	R(draw_cubic_bezier, "v(p,p,i,f)");
+
+	// iron_audio
+	R(audio_play, "v(p,i)");
 
 	// iron_string
 	R(string_alloc, "p(i)");

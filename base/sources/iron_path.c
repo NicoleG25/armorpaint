@@ -14,7 +14,7 @@ bool path_is_protected_linux = false;
 
 string_array_t        *_path_mesh_formats     = NULL;
 string_array_t        *_path_texture_formats  = NULL;
-string_array_t        *_path_audio_formats    = NULL;
+string_array_t        *_path_sound_formats    = NULL;
 static string_array_t *_path_base_color_ext   = NULL;
 static string_array_t *_path_opacity_ext      = NULL;
 static string_array_t *_path_normal_map_ext   = NULL;
@@ -50,14 +50,14 @@ string_array_t *path_texture_formats(void) {
 	return _path_texture_formats;
 }
 
-string_array_t *path_audio_formats(void) {
-	if (_path_audio_formats == NULL) {
-		_path_audio_formats = string_array_create(0);
-		gc_root(_path_audio_formats);
-		string_array_push(_path_audio_formats, "wav");
-		string_array_push(_path_audio_formats, "ogg");
+string_array_t *path_sound_formats(void) {
+	if (_path_sound_formats == NULL) {
+		_path_sound_formats = string_array_create(0);
+		gc_root(_path_sound_formats);
+		string_array_push(_path_sound_formats, "wav");
+		string_array_push(_path_sound_formats, "ogg");
 	}
-	return _path_audio_formats;
+	return _path_sound_formats;
 }
 
 string_array_t *path_base_color_ext(void) {
@@ -251,9 +251,9 @@ bool path_is_texture(char *path) {
 	return false;
 }
 
-bool path_is_audio(char *path) {
+bool path_is_sound(char *path) {
 	char           *p       = to_lower_case(path);
-	string_array_t *formats = path_audio_formats();
+	string_array_t *formats = path_sound_formats();
 	for (uint32_t i = 0; i < formats->length; ++i) {
 		char *s   = formats->buffer[i];
 		char *ext = string(".%s", s);
@@ -300,7 +300,7 @@ bool path_is_lut(char *path) {
 }
 
 bool path_is_known(char *path) {
-	return path_is_mesh(path) || path_is_texture(path) || path_is_audio(path) || path_is_font(path) || path_is_project(path) || path_is_plugin(path) ||
+	return path_is_mesh(path) || path_is_texture(path) || path_is_sound(path) || path_is_font(path) || path_is_project(path) || path_is_plugin(path) ||
 	       path_is_text(path) || path_is_ext_format(path) || path_is_lut(path);
 }
 

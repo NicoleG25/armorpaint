@@ -243,6 +243,22 @@ void context_select_font(i32 i) {
 	context_set_font(g_project->_->fonts->buffer[i]);
 }
 
+void context_set_sound(slot_sound_t *s) {
+	if (array_index_of(g_project->_->sounds, s) == -1) {
+		return;
+	}
+	g_context->sound                                = s;
+	ui_base_hwnds->buffer[TAB_AREA_STATUS]->redraws = 2;
+	ui_view2d_hwnd->redraws                         = 2;
+}
+
+void context_select_sound(i32 i) {
+	if (g_project->_->sounds->length <= i) {
+		return;
+	}
+	context_set_sound(g_project->_->sounds->buffer[i]);
+}
+
 void context_select_layer(i32 i) {
 	if (g_project->_->layers->length <= i) {
 		return;

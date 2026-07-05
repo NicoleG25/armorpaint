@@ -867,13 +867,14 @@ gpu_texture_t *iron_load_texture(char *file) {
 	return gpu_create_texture_from_encoded_bytes(&buf, file);
 }
 
-#ifdef IRON_AUDIO
 void *iron_load_sound(char *file) {
+#ifdef IRON_AUDIO
 	iron_a1_init();
 	iron_a1_sound_t *sound = iron_a1_sound_create(file);
 	return sound;
-}
 #endif
+	return NULL;
+}
 
 buffer_t *iron_load_blob(char *file) {
 #ifdef WITH_EMBED

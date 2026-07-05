@@ -1815,7 +1815,7 @@ any_map_t *data_cached_materials  = NULL;
 any_map_t *data_cached_worlds     = NULL;
 any_map_t *data_cached_shaders    = NULL;
 any_map_t *data_cached_blobs      = NULL;
-any_map_t *data_cached_textures     = NULL;
+any_map_t *data_cached_textures   = NULL;
 any_map_t *data_cached_videos     = NULL;
 any_map_t *data_cached_fonts      = NULL;
 any_map_t *data_cached_sounds     = NULL;
@@ -2013,7 +2013,6 @@ draw_font_t *data_get_font(char *file) {
 	return b;
 }
 
-#ifdef IRON_AUDIO
 sound_t *data_get_sound(char *file) {
 	if (data_cached_sounds == NULL) {
 		data_cached_sounds = any_map_create();
@@ -2023,8 +2022,7 @@ sound_t *data_get_sound(char *file) {
 	if (cached != NULL) {
 		return cached;
 	}
-	sound_t *b = gc_alloc(sizeof(sound_t));
-	b->sound_  = iron_load_sound(data_resolve_path(file));
+	sound_t *b = iron_load_sound(data_resolve_path(file));
 	any_map_set(data_cached_sounds, file, b);
 	data_assets_loaded++;
 	return b;
@@ -2038,10 +2036,11 @@ void data_delete_sound(char *handle) {
 	if (sound == NULL) {
 		return;
 	}
-	iron_a1_sound_destroy(sound->sound_);
+#ifdef IRON_AUDIO
+	iron_a1_sound_destroy(sound);
+#endif
 	map_delete(data_cached_sounds, handle);
 }
-#endif
 
 void data_delete_mesh(char *handle) {
 	if (data_cached_meshes == NULL) {

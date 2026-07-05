@@ -63,8 +63,8 @@ void import_asset_run(char *path, f32 drop_x, f32 drop_y, bool show_box, bool hd
 			g_context->ddirty         = 2;
 		}
 	}
-	else if (path_is_audio(path)) {
-		import_audio_run(path);
+	else if (path_is_sound(path)) {
+		import_sound_run(path);
 	}
 	else if (path_is_lut(path)) {
 		box_preferences_lut_picked(path);

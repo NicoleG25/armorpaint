@@ -344,23 +344,26 @@ tab_draw_array_t_array_t *ui_base_init_hwnd_tabs() {
 	        _draw_callback_create(tab_browser_draw),
 	        _draw_callback_create(tab_textures_draw),
 	        _draw_callback_create(tab_fonts_draw),
+	        _draw_callback_create(tab_sounds_draw),
 	        _draw_callback_create(tab_swatches_draw),
 	        _draw_callback_create(tab_timeline_draw),
 	        _draw_callback_create(tab_console_draw),
 	        _draw_callback_create(ui_statusbar_draw_version_tab),
 	    },
-	    7);
+	    8);
 
 #ifdef IRON_IOS
 	if (config_is_iphone()) {
 		array_splice(a2, 5, 1); // Timeline
 		array_splice(a2, 4, 1); // Swatches
+		array_splice(a2, 3, 1); // Sounds
 	}
 #endif
 
 #ifdef IRON_ANDROID
 	if (iron_window_width() <= 1080) {
 		array_splice(a2, 5, 1); // Timeline
+		array_splice(a2, 3, 1); // Sounds
 	}
 #endif
 

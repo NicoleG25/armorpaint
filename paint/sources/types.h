@@ -63,6 +63,14 @@ typedef struct slot_font {
 	char               *file;
 } slot_font_t;
 
+typedef struct slot_sound {
+	struct gpu_texture *image; // 200px
+	i32                 id;
+	sound_t            *sound;
+	char               *name;
+	char               *file;
+} slot_sound_t;
+
 typedef struct config {
 	char *version;
 	char *sha; // Commit id
@@ -250,6 +258,7 @@ typedef struct context {
 	struct slot_layer          *layer;
 	struct slot_brush          *brush;
 	struct slot_font           *font;
+	struct slot_sound          *sound;
 	tool_type_t                 tool;
 	bool                        layer_preview_dirty;
 	bool                        layers_preview_dirty;
@@ -532,6 +541,7 @@ typedef struct {
 	struct slot_brush_t_array    *brushes;
 	struct slot_layer_t_array    *layers;
 	struct slot_font_t_array     *fonts;
+	struct slot_sound_t_array    *sounds;
 	struct node_group_t_array    *material_groups;
 	char                         *filepath;
 	i32                           next_asset_id;
@@ -558,6 +568,7 @@ typedef struct project {
 	struct buffer_t_array                       *material_icons;
 	struct material_data2_t_array               *material_datas;
 	struct string_array                         *font_assets;
+	struct string_array                         *sound_assets;
 	struct layer_data_t_array                   *layer_datas;
 	struct mesh_data_t_array                    *mesh_datas;
 	struct string_array                         *mesh_assets;
@@ -792,6 +803,12 @@ typedef struct slot_font_t_array {
 	int           length;
 	int           capacity;
 } slot_font_t_array_t;
+
+typedef struct slot_sound_t_array {
+	slot_sound_t **buffer;
+	int            length;
+	int            capacity;
+} slot_sound_t_array_t;
 
 typedef struct slot_layer_t_array {
 	slot_layer_t **buffer;

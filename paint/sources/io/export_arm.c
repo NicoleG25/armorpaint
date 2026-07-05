@@ -95,6 +95,26 @@ string_array_t *export_arm_fonts_to_files(char *project_path, slot_font_t_array_
 	return font_files;
 }
 
+string_array_t *export_arm_sounds_to_files(char *project_path, slot_sound_t_array_t *sounds) {
+	string_array_t *sound_files = any_array_create_from_raw((void *[]){}, 0);
+	for (i32 i = 0; i < sounds->length; ++i) {
+		slot_sound_t *f = sounds->buffer[i];
+#ifdef IRON_IOS
+		bool same_drive = false;
+#else
+		bool same_drive = char_at(project_path, 0) == char_at(f->file, 0);
+#endif
+		// Convert sound path from absolute to relative
+		if (same_drive) {
+			any_array_push(sound_files, path_to_relative(project_path, f->file));
+		}
+		else {
+			any_array_push(sound_files, f->file);
+		}
+	}
+	return sound_files;
+}
+
 void export_arm_run_project() {
 
 	tab_timeline_prepare_save();
@@ -172,8 +192,9 @@ void export_arm_run_project() {
 
 	string_array_t *texture_files = export_arm_assets_to_files(g_project->_->filepath, g_project->_->assets);
 
-	string_array_t *font_files = export_arm_fonts_to_files(g_project->_->filepath, g_project->_->fonts);
-	string_array_t *mesh_files = export_arm_meshes_to_files(g_project->_->filepath);
+	string_array_t *font_files  = export_arm_fonts_to_files(g_project->_->filepath, g_project->_->fonts);
+	string_array_t *sound_files = export_arm_sounds_to_files(g_project->_->filepath, g_project->_->sounds);
+	string_array_t *mesh_files  = export_arm_meshes_to_files(g_project->_->filepath);
 
 	i32 bits_pos = base_bits_handle->i;
 	i32 bpp      = bits_pos == TEXTURE_BITS_BITS8 ? 8 : bits_pos == TEXTURE_BITS_BITS16 ? 16 : 32;
@@ -288,6 +309,7 @@ void export_arm_run_project() {
 	g_project->brush_nodes    = bnodes;
 	g_project->layer_datas    = ld;
 	g_project->font_assets    = font_files;
+	g_project->sound_assets   = sound_files;
 	g_project->mesh_assets    = mesh_files;
 
 	tab_timeline_export(g_project);

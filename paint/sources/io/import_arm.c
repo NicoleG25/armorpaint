@@ -359,6 +359,22 @@ void import_arm_run_project(char *path) {
 		}
 	}
 
+	if (g_project->sound_assets != NULL) {
+		for (i32 i = 0; i < g_project->sound_assets->length; ++i) {
+			char *file = g_project->sound_assets->buffer[i];
+#ifdef IRON_WINDOWS
+			file = string_copy(string_replace_all(file, "/", "\\"));
+#else
+			file = string_copy(string_replace_all(file, "\\", "/"));
+#endif
+			// Convert sound path from relative to absolute
+			char *abs = data_is_abs(file) ? file : string("%s%s", base, file);
+			if (iron_file_exists(abs)) {
+				import_sound_run(abs);
+			}
+		}
+	}
+
 	mesh_data_t *md = mesh_data_create(g_project->mesh_datas->buffer[0]);
 
 	mesh_object_set_data(g_context->paint_object, md);

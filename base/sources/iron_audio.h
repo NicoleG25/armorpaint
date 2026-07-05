@@ -47,7 +47,7 @@ struct iron_a1_stream_channel;
 typedef struct iron_a1_stream_channel iron_a1_stream_channel_t;
 
 void                    iron_a1_init(void);
-iron_a1_channel_t      *iron_a1_play_sound(iron_a1_sound_t *sound, bool loop, float pitch, bool unique);
+iron_a1_channel_t      *audio_play(iron_a1_sound_t *sound, bool loop);
 void                    iron_a1_stop_sound(iron_a1_sound_t *sound);
 void                    iron_a1_play_sound_stream(iron_a1_sound_stream_t *stream);
 void                    iron_a1_stop_sound_stream(iron_a1_sound_stream_t *stream);
@@ -71,15 +71,9 @@ float                   iron_a1_sound_stream_position(iron_a1_sound_stream_t *st
 void                    iron_a1_sound_stream_reset(iron_a1_sound_stream_t *stream);
 float                   iron_a1_sound_stream_volume(iron_a1_sound_stream_t *stream);
 void                    iron_a1_sound_stream_set_volume(iron_a1_sound_stream_t *stream, float value);
-
-void     iron_a2_init(void);
-void     iron_a2_set_callback(void (*iron_a2_audio_callback)(iron_a2_buffer_t *buffer, uint32_t samples, void *userdata), void *userdata);
-uint32_t iron_a2_samples_per_second(void);
-void     iron_a2_set_sample_rate_callback(void (*iron_a2_sample_rate_callback)(void *userdata), void *userdata);
-void     iron_a2_shutdown(void);
-void     iron_a2_internal_init(void);
-bool     iron_a2_internal_callback(iron_a2_buffer_t *buffer, int samples);
-void     iron_a2_internal_sample_rate_callback(void);
+void                    iron_a2_internal_init(void);
+void                    iron_a2_shutdown(void);
+bool                    iron_a2_internal_callback(iron_a2_buffer_t *buffer, int samples);
 
 // struct iron_internal_video_channel;
 // typedef struct iron_internal_video_channel iron_internal_video_channel_t;
