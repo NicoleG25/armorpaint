@@ -113,16 +113,16 @@ node_shader_context_t *sculpt_make_sculpt_run(material_t *data, material_context
 	                                                                     .compare_mode    = "always",
 	                                                                     .cull_mode       = "none",
 	                                                                     .vertex_elements = any_array_create_from_raw(
-                                                                   (void *[]){
-                                                                       GC_ALLOC_INIT(vertex_element_t, {.name = "pos", .data = "float2"}),
-                                                                   },
-                                                                   1),
+	                                                                         (void *[]){
+	                                                                             GC_ALLOC_INIT(vertex_element_t, {.name = "pos", .data = "float2"}),
+	                                                                         },
+	                                                                         1),
 	                                                                     .color_attachments = any_array_create_from_raw(
-                                                                   (void *[]){
-                                                                       "RGBA128",
-                                                                       "R8",
-                                                                   },
-                                                                   2)});
+	                                                                         (void *[]){
+	                                                                             "RGBA128",
+	                                                                             "R8",
+	                                                                         },
+	                                                                         2)});
 	node_shader_context_t *con_paint  = node_shader_context_create(data, props);
 	con_paint->data->color_writes_red = u8_array_create_from_raw(
 	    (u8[]){
@@ -162,7 +162,7 @@ node_shader_context_t *sculpt_make_sculpt_run(material_t *data, material_context
 	bool           particle = g_context->tool == TOOL_TYPE_PARTICLE;
 	// Decal fill layer: displacement must be confined to the decal box projection
 	bool decal_layer      = g_context->layer->fill_material != NULL && g_context->layer->uv_type == UV_TYPE_PROJECT && g_context->tool == TOOL_TYPE_FILL;
-	bool sculpt_triplanar = !decal && !decal_layer && (g_context->tool == TOOL_TYPE_FILL || g_context->layer->fill_material != NULL);
+	bool sculpt_triplanar = !decal && !decal_layer && g_context->tool != TOOL_TYPE_BLUR;
 	node_shader_add_out(kong, "tex_coord: float2");
 	node_shader_write_vert(kong, "var madd: float2 = float2(0.5, 0.5);");
 	node_shader_write_vert(kong, "output.tex_coord = input.pos.xy * madd + madd;");
@@ -220,12 +220,28 @@ node_shader_context_t *sculpt_make_sculpt_run(material_t *data, material_context
 			node_shader_write_frag(kong, "if (dist > 1.0) { discard; }");
 		}
 		else if (!decal) {
+			if (g_context->xray) {
+				node_shader_write_frag(kong, "var xray_ndc: float2 = float2(constants.inp.x, 1.0 - constants.inp.y) * 2.0 - 1.0;");
+				node_shader_write_frag(kong, "var xray_near: float4 = constants.invVP * float4(xray_ndc, 0.0, 1.0);");
+				node_shader_write_frag(kong, "var xray_far: float4 = constants.invVP * float4(xray_ndc, 1.0, 1.0);");
+				node_shader_write_frag(kong, "var xray_axis: float3 = normalize(xray_far.xyz / xray_far.w - xray_near.xyz / xray_near.w);");
+			}
 			if (g_context->brush_lazy_radius > 0 && g_context->brush_lazy_step > 0) { // Sphere
-				node_shader_write_frag(kong, "dist = distance(wposition.xyz, winp.xyz);");
+				if (g_context->xray) {
+					node_shader_write_frag(kong, "var pa: float3 = wposition.xyz - winp.xyz;");
+					node_shader_write_frag(kong, "dist = length(pa - xray_axis * dot(xray_axis, pa));");
+				}
+				else {
+					node_shader_write_frag(kong, "dist = distance(wposition.xyz, winp.xyz);");
+				}
 			}
 			else { // Capsule
 				node_shader_write_frag(kong, "var pa: float3 = wposition.xyz - winp.xyz;");
 				node_shader_write_frag(kong, "var ba: float3 = winplast.xyz - winp.xyz;");
+				if (g_context->xray) {
+					node_shader_write_frag(kong, "pa = pa - xray_axis * dot(xray_axis, pa);");
+					node_shader_write_frag(kong, "ba = ba - xray_axis * dot(xray_axis, ba);");
+				}
 				node_shader_write_frag(kong, "var h: float = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0);");
 				node_shader_write_frag(kong, "dist = length(pa - ba * h);");
 			}
@@ -581,6 +597,16 @@ node_shader_context_t *sculpt_make_sculpt_run(material_t *data, material_context
 		node_shader_write_frag(kong, "wn.z = 1.0 - abs(g0_undo.x) - abs(g0_undo.y);");
 		node_shader_write_frag(kong, "if (wn.z >= 0.0) { wn.xy = g0_undo.xy; } else { wn.xy = octahedron_wrap(g0_undo.xy); }");
 		node_shader_write_frag(kong, "var n: float3 = normalize(wn);");
+		node_shader_add_constant(kong, "sculpt_symmetry_reflect: float4x4", "_sculpt_symmetry_reflect");
+		node_shader_write_frag(kong, "n = normalize((constants.sculpt_symmetry_reflect * float4(n, 0.0)).xyz);");
+		if (g_context->xray) {
+			node_shader_write_frag(kong, "var xray_nnv: float = floor(raw_undo.a) / 255.0;");
+			node_shader_write_frag(kong, "var xray_noct: float2 = float2(raw_undo.a - floor(raw_undo.a), xray_nnv) * 2.0 - 1.0;");
+			node_shader_write_frag(kong, "var xray_nnz: float = 1.0 - abs(xray_noct.x) - abs(xray_noct.y);");
+			node_shader_write_frag(kong, "var xray_fnor: float3 = float3(xray_noct.xy, xray_nnz);");
+			node_shader_write_frag(kong, "if (xray_nnz < 0.0) { xray_fnor.xy = octahedron_wrap(xray_noct.xy); }");
+			node_shader_write_frag(kong, "n = normalize((constants.W * float4(normalize(xray_fnor), 0.0)).xyz);");
+		}
 	}
 	if (g_context->tool == TOOL_TYPE_BLUR) {
 		// Even out the surface by relaxing each vertex toward the cursors tangent plane

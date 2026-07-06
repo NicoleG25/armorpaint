@@ -202,10 +202,10 @@ vec4_t uniforms_ext_vec3_link(object_t *object, material_data_t *mat, char *link
 		// Discard first paint for directional brush (no prev position yet)
 		bool allow_paint = g_context->prev_paint_vec_x > 0 && g_context->prev_paint_vec_y > 0 &&
 		                   (g_context->prev_paint_vec_x != g_context->paint_vec.x || g_context->prev_paint_vec_y != g_context->paint_vec.y);
-		f32 x     = g_context->paint_vec.x;
-		f32 y     = g_context->paint_vec.y;
-		f32 lastx = g_context->prev_paint_vec_x;
-		f32 lasty = g_context->prev_paint_vec_y;
+		f32  x           = g_context->paint_vec.x;
+		f32  y           = g_context->paint_vec.y;
+		f32  lastx       = g_context->prev_paint_vec_x;
+		f32  lasty       = g_context->prev_paint_vec_y;
 		if (g_context->paint2d) {
 			x     = uniforms_ext_vec2d(x);
 			lastx = uniforms_ext_vec2d(lastx);
@@ -307,6 +307,32 @@ vec4_t uniforms_ext_vec4_link(object_t *object, material_data_t *mat, char *link
 }
 
 mat4_t uniforms_ext_mat4_link(object_t *object, material_data_t *mat, char *link) {
+	if (string_equals(link, "_sculpt_symmetry_reflect")) {
+		transform_t *t       = object->transform;
+		mat4_t       W       = t->world;
+		vec4_t       axes[3] = {
+		    vec4_norm((vec4_t){W.m00, W.m10, W.m20, 0.0}),
+		    vec4_norm((vec4_t){W.m01, W.m11, W.m21, 0.0}),
+		    vec4_norm((vec4_t){W.m02, W.m12, W.m22, 0.0}),
+		};
+		f32    scale[3] = {t->scale.x, t->scale.y, t->scale.z};
+		mat4_t F        = mat4_identity();
+		for (i32 i = 0; i < 3; ++i) {
+			if (scale[i] < 0.0f) {
+				vec4_t a = axes[i];
+				F.m00 -= 2.0f * a.x * a.x;
+				F.m01 -= 2.0f * a.x * a.y;
+				F.m02 -= 2.0f * a.x * a.z;
+				F.m10 -= 2.0f * a.y * a.x;
+				F.m11 -= 2.0f * a.y * a.y;
+				F.m12 -= 2.0f * a.y * a.z;
+				F.m20 -= 2.0f * a.z * a.x;
+				F.m21 -= 2.0f * a.z * a.y;
+				F.m22 -= 2.0f * a.z * a.z;
+			}
+		}
+		return F;
+	}
 	if (string_equals(link, "_decal_layer_matrix")) { // Decal layer
 		mat4_t m            = mat4_inv(g_context->layer->decal_mat);
 		f32    parent_scale = object->parent != NULL ? object->parent->transform->scale.x : 1.0;
