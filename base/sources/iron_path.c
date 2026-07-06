@@ -169,6 +169,9 @@ char *path_data(void) {
 char *path_to_relative(char *from, char *to) {
 	any_array_t *a = string_split(from, PATH_SEP);
 	any_array_t *b = string_split(to, PATH_SEP);
+	if (a->length > 0 && !path_is_folder(from)) {
+		array_pop(a);
+	}
 	while (a->length > 0 && b->length > 0) {
 		char *a0 = a->buffer[0];
 		char *b0 = b->buffer[0];
