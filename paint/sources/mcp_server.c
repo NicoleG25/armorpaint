@@ -131,17 +131,48 @@ static void mcp_apply_texture_format(const char *type) {
 	}
 }
 
+// Load a named export preset (export_presets/<name>.json) into box_export_preset.
+// Mirrors the preset lookup in args.c: scans the preset dir, matches by name, and
+// falls back to the first preset if the name is unknown, so we never blob a
+// nonexistent file.
+static void mcp_load_export_preset(const char *preset) {
+	gc_unroot(box_export_files);
+	box_export_files = file_read_directory(string("%s%sexport_presets", path_data(), PATH_SEP));
+	gc_root(box_export_files);
+	for (i32 i = 0; i < box_export_files->length; ++i) {
+		char *s                     = box_export_files->buffer[i];
+		box_export_files->buffer[i] = substring(s, 0, string_length(s) - 5); // strip .json
+	}
+	if (box_export_files->length == 0) {
+		return;
+	}
+	char *file = string("export_presets/%s.json", box_export_files->buffer[0]);
+	for (i32 i = 0; i < box_export_files->length; ++i) {
+		if (string_equals(box_export_files->buffer[i], (char *)preset)) {
+			file = string("export_presets/%s.json", box_export_files->buffer[i]);
+		}
+	}
+	buffer_t *blob = data_get_blob(file);
+	gc_unroot(box_export_preset);
+	box_export_preset = json_parse(sys_buffer_to_string(blob));
+	gc_root(box_export_preset);
+	data_delete_blob(string("export_presets/%s", file));
+}
+
 static void mcp_cmd_export_textures(int argc, char **argv) {
 	// export_textures <type> <preset> <dir>
 	if (argc < 4) {
 		mcp_reply("ERR\tusage: export_textures <type> <preset> <dir>\n");
 		return;
 	}
-	const char *type = argv[1];
-	const char *dir  = argv[3];
+	const char *type   = argv[1];
+	const char *preset = argv[2];
+	char       *dir    = string_copy(argv[3]);
+	iron_create_directory(dir); // export writes into an existing folder
 	mcp_apply_texture_format(type);
+	mcp_load_export_preset(preset);
 	g_context->layers_export = EXPORT_MODE_VISIBLE;
-	export_texture_run(string_copy((char *)dir), false);
+	export_texture_run(dir, false);
 	mcp_reply("OK\t{\"exported\":true}\n");
 }
 

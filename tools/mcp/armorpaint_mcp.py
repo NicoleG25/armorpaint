@@ -128,9 +128,11 @@ def ap_list_layers() -> str:
 
 
 @mcp.tool()
-def ap_export_textures(directory: str, texture_type: str = "png", preset: str = "default") -> str:
-    """Export the visible layers as texture maps into directory.
-    texture_type: png | jpg | exr16 | exr32. preset names an export_presets/*.json."""
+def ap_export_textures(directory: str, texture_type: str = "png", preset: str = "generic") -> str:
+    """Export the visible layers as texture maps into directory (created if missing).
+    texture_type: png | jpg | exr16 | exr32.
+    preset names an export_presets/*.json: generic (base/nor/occ/rough/metal),
+    unity (base/nor/mos/height), unreal, base_color, specular, etc."""
     return _send(
         f"export_textures\t{texture_type}\t{preset}\t{directory}", read_timeout=60
     )
