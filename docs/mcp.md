@@ -46,6 +46,27 @@ Tab-delimited fields, newline-terminated. Reply is one line: `OK\t<json>` or `ER
 | `export_textures\t<type>\t<preset>\t<dir>` | Export maps (`type`: png/jpg/exr16/exr32) |
 | `export_mesh\t<dir>` | Export current mesh |
 | `export_material\t<path>` | Export current material `.arm` |
+| `get_material_json` | Dump the default material node graph as JSON (a template) |
+| `set_material_json\t<json>` | Replace the active material's node graph and rebake |
+| `material_fill_layer` | Bake the active material's node graph into a new fill layer |
+
+### Material node graphs
+
+A material is a node canvas (`{name, nodes, links}`). `set_material_json` runs the
+same `json -> json_encode_to_armpack -> armpack_decode` path the app uses to load
+`default_material.arm`, then reparses the paint shader and rebakes fill layers.
+`get_material_json` returns the default graph as a starting template.
+
+Array-typed socket values use **typed keys**, e.g. `"default_value[f32]"` — the
+encoder requires these exact keys, so edit the template in place rather than adding
+plain keys. Base color comes from the `RGB` node's output; roughness/metallic/etc.
+are inputs on the `OUTPUT_MATERIAL_PBR` node. After `set_material_json`, call
+`material_fill_layer` so the graph shows up in exports.
+
+The bridge wraps these as `ap_get_material_json`, `ap_set_material_json`,
+`ap_material_fill_layer`, plus a high-level `ap_material_solid(color, roughness,
+metallic, occlusion)` recipe. Procedural recipes (noise/voronoi/color-ramp driven)
+are the next additions.
 
 ## MCP bridge
 

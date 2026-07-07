@@ -150,6 +150,114 @@ def ap_export_material(path: str) -> str:
     return _send(f"export_material\t{path}", read_timeout=60)
 
 
+# --- material node graphs ---------------------------------------------------
+
+import json  # noqa: E402
+
+
+@mcp.tool()
+def ap_get_material_json() -> str:
+    """Return the default material node graph as JSON (a template to edit and send
+    back with ap_set_material_json). Note the typed keys, e.g. 'default_value[f32]'
+    for float arrays — the encoder requires those exact keys."""
+    return _send("get_material_json", read_timeout=30)
+
+
+@mcp.tool()
+def ap_set_material_json(graph_json: str) -> str:
+    """Replace the active material's node graph with graph_json (a full canvas:
+    {name, nodes, links}) and rebake. graph_json must be compact (no raw newlines)
+    and use the typed keys from ap_get_material_json. Returns the node count."""
+    compact = json.dumps(json.loads(graph_json), separators=(",", ":"))
+    return _send("set_material_json\t" + compact, read_timeout=60)
+
+
+@mcp.tool()
+def ap_material_fill_layer() -> str:
+    """Bake the active material's node graph into a new fill layer (so it shows up
+    in exports). Call after ap_set_material_json / a recipe."""
+    return _send("material_fill_layer", read_timeout=30)
+
+
+# Minimal RGB -> Material Output canvas. Recipes edit this and apply it.
+def _solid_canvas(base_rgba, roughness, metallic, occlusion):
+    return {
+        "name": "Material",
+        "nodes": [
+            {
+                "id": 1, "name": "Color", "type": "RGB", "x": 122.0, "y": 100.0,
+                "color": -5025958, "inputs": [],
+                "outputs": [{
+                    "id": 0, "node_id": 1, "name": "Color", "type": "RGBA",
+                    "color": -3684567, "default_value[f32]": list(base_rgba),
+                    "min": 0.0, "max": 1.0, "precision": 100.0, "display": 0,
+                }],
+                "buttons": [{
+                    "name": "default_value", "type": "RGBA", "output": 0,
+                    "default_value[f32]": [0.0], "data": None,
+                    "min": 0.0, "max": 1.0, "precision": 100.0, "height": 0.0,
+                }],
+                "width": 0.0, "flags": 0,
+            },
+            {
+                "id": 0, "name": "Material Output", "type": "OUTPUT_MATERIAL_PBR",
+                "x": 386.0, "y": 100.0, "color": -5025958,
+                "inputs": [
+                    _sock(0, 0, "Base Color", "RGBA", list(base_rgba)),
+                    _sock(1, 0, "Opacity", "VALUE", [1.0]),
+                    _sock(2, 0, "Occlusion", "VALUE", [occlusion]),
+                    _sock(3, 0, "Roughness", "VALUE", [roughness]),
+                    _sock(4, 0, "Metallic", "VALUE", [metallic]),
+                    _sock(5, 0, "Normal Map", "VECTOR", [0.5, 0.5, 1.0]),
+                    _sock(6, 0, "Emission", "VALUE", [0.0]),
+                    _sock(7, 0, "Height", "VALUE", [0.0]),
+                    _sock(8, 0, "Subsurface", "VALUE", [0.0]),
+                ],
+                "outputs": [], "buttons": [], "width": 0.0, "flags": 0,
+            },
+        ],
+        "links": [{"id": 0, "from_id": 1, "from_socket": 0, "to_id": 0, "to_socket": 0}],
+    }
+
+
+def _sock(sid, node_id, name, typ, value):
+    return {
+        "id": sid, "node_id": node_id, "name": name, "type": typ,
+        "color": -3684567, "default_value[f32]": value,
+        "min": 0.0, "max": 1.0, "precision": 100.0, "display": 0,
+    }
+
+
+def _hex_to_rgba(color_hex):
+    h = color_hex.lstrip("#")
+    if len(h) == 8:  # AARRGGBB
+        a, r, g, b = (int(h[i:i + 2], 16) / 255 for i in (0, 2, 4, 6))
+    else:            # RRGGBB
+        r, g, b = (int(h[i:i + 2], 16) / 255 for i in (0, 2, 4))
+        a = 1.0
+    return [r, g, b, a]
+
+
+@mcp.tool()
+def ap_material_solid(
+    color_hex: str = "ffcccccc",
+    roughness: float = 0.5,
+    metallic: float = 0.0,
+    occlusion: float = 1.0,
+    bake: bool = True,
+) -> str:
+    """Author a solid PBR material via the node graph (base color + roughness +
+    metallic + occlusion) and apply it. color_hex is AARRGGBB or RRGGBB. If bake,
+    also creates a fill layer so it appears in exports. Unlike ap_fill_layer this
+    goes through the material graph, so it composes with future procedural nodes."""
+    canvas = _solid_canvas(_hex_to_rgba(color_hex), roughness, metallic, occlusion)
+    r = _send("set_material_json\t" + json.dumps(canvas, separators=(",", ":")),
+              read_timeout=60)
+    if bake:
+        r += " | " + _send("material_fill_layer", read_timeout=30)
+    return r
+
+
 def _selftest() -> int:
     print("port open:", _port_open())
     for line in ("ping", "new_project\t0", "list_layers"):
