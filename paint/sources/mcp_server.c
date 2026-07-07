@@ -176,6 +176,56 @@ static void mcp_cmd_export_textures(int argc, char **argv) {
 	mcp_reply("OK\t{\"exported\":true}\n");
 }
 
+// Dump the default material node graph as compact JSON, a template a client can
+// edit and send back via set_material_json. (default_material.arm is an armpack
+// encoding of a ui_node_canvas.)
+static void mcp_cmd_get_material_json(void) {
+	buffer_t *blob = data_get_blob("default_material.arm");
+	if (blob == NULL) {
+		mcp_reply("ERR\tdefault_material.arm not found\n");
+		return;
+	}
+	char *json = armpack_decode_to_json(blob);
+	data_delete_blob("default_material.arm");
+	// Strip raw newlines/CR so the reply stays a single protocol line. JSON string
+	// contents escape control chars, so no real payload is altered.
+	for (char *p = json; *p; ++p) {
+		if (*p == '\n' || *p == '\r') {
+			*p = ' ';
+		}
+	}
+	mcp_reply(string("OK\t%s\n", json));
+}
+
+// Replace the active material's node graph from a JSON canvas and rebake.
+// Uses the same json -> armpack -> armpack_decode path the app uses to load
+// default_material.arm, so the decoded struct matches the engine's expectations.
+static void mcp_cmd_set_material_json(int argc, char **argv) {
+	if (argc < 2) {
+		mcp_reply("ERR\tusage: set_material_json <json>\n");
+		return;
+	}
+	if (g_context->material == NULL) {
+		mcp_reply("ERR\tno active material (create a project first)\n");
+		return;
+	}
+	buffer_t *b = json_encode_to_armpack(argv[1]);
+	if (b == NULL) {
+		mcp_reply("ERR\tjson_encode_to_armpack failed\n");
+		return;
+	}
+	ui_node_canvas_t *canvas = armpack_decode(b);
+	if (canvas == NULL || canvas->nodes == NULL) {
+		mcp_reply("ERR\tcanvas decode failed\n");
+		return;
+	}
+	g_context->material->canvas = canvas;
+	make_material_parse_paint_material(true); // rebuild the paint shader from nodes
+	util_render_make_material_preview();      // refresh material thumbnail
+	layers_update_fill_layers();              // rebake fill layers using this material
+	mcp_reply(string("OK\t{\"nodes\":%d}\n", canvas->nodes->length));
+}
+
 static void mcp_dispatch(char *line) {
 	// strip trailing CR/LF
 	size_t len = strlen(line);
@@ -214,6 +264,17 @@ static void mcp_dispatch(char *line) {
 	else if (strcmp(cmd, "list_layers") == 0) {
 		mcp_cmd_list_layers();
 	}
+	else if (strcmp(cmd, "get_material_json") == 0) {
+		mcp_cmd_get_material_json();
+	}
+	else if (strcmp(cmd, "set_material_json") == 0) {
+		mcp_cmd_set_material_json(argc, argv);
+	}
+	else if (strcmp(cmd, "material_fill_layer") == 0) {
+		// Bake the active material's node graph into a new fill layer.
+		layers_create_fill_layer(UV_TYPE_UVMAP, mat4_nan(), -1);
+		mcp_reply("OK\t{\"fill_layer\":true}\n");
+	}
 	else if (strcmp(cmd, "export_textures") == 0) {
 		mcp_cmd_export_textures(argc, argv);
 	}
@@ -243,9 +304,13 @@ static void mcp_server_update(void *data) {
 
 static void mcp_handle_client(int fd) {
 	mcp_client_fd = fd;
-	char   acc[MCP_LINE_MAX];
+
+	// Growable line accumulator: a single request line (e.g. a material node graph
+	// as JSON) can be far larger than any fixed buffer.
+	size_t cap     = 8192;
+	char  *acc     = malloc(cap);
 	size_t acc_len = 0;
-	char   rbuf[2048];
+	char   rbuf[4096];
 
 	for (;;) {
 		ssize_t n = recv(fd, rbuf, sizeof(rbuf), 0);
@@ -259,12 +324,17 @@ static void mcp_handle_client(int fd) {
 				mcp_inbox_push(acc);
 				acc_len = 0;
 			}
-			else if (acc_len < sizeof(acc) - 1) {
+			else {
+				if (acc_len + 1 >= cap) {
+					cap *= 2;
+					acc = realloc(acc, cap);
+				}
 				acc[acc_len++] = c;
 			}
 		}
 	}
 
+	free(acc);
 	mcp_client_fd = -1;
 	close(fd);
 }
