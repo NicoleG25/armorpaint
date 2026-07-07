@@ -1539,7 +1539,7 @@ class XCodeExporter extends Exporter {
 			this.p('IPHONEOS_DEPLOYMENT_TARGET = 18.0;', 4);
 		}
 		else {
-			this.p('MACOSX_DEPLOYMENT_TARGET = 14.0;', 4);
+			this.p('MACOSX_DEPLOYMENT_TARGET = 13.0;', 4);
 		}
 		this.p('MTL_ENABLE_DEBUG_INFO = YES;', 4);
 		this.p('ONLY_ACTIVE_ARCH = YES;', 4);
@@ -1618,7 +1618,7 @@ class XCodeExporter extends Exporter {
 			this.p('IPHONEOS_DEPLOYMENT_TARGET = 18.0;', 4);
 		}
 		else {
-			this.p('MACOSX_DEPLOYMENT_TARGET = 14.0;', 4);
+			this.p('MACOSX_DEPLOYMENT_TARGET = 13.0;', 4);
 		}
 		this.p('MTL_ENABLE_DEBUG_INFO = NO;', 4);
 		this.p('ONLY_ACTIVE_ARCH = YES;', 4);
@@ -1636,7 +1636,8 @@ class XCodeExporter extends Exporter {
 		this.p(nativeDebugId + ' /* Debug */ = {', 2);
 		this.p('isa = XCBuildConfiguration;', 3);
 		this.p('buildSettings = {', 3);
-		this.p('ARCHS = arm64;', 4);
+		// Intel-only fork: upstream targets arm64; changed to x86_64 for this Intel Mac build.
+		this.p('ARCHS = x86_64;', 4);
 		this.p('ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;', 4);
 		this.p('CODE_SIGN_STYLE = Automatic;', 4);
 		if (target_options.developmentTeam) {
@@ -1714,7 +1715,8 @@ class XCodeExporter extends Exporter {
 		this.p(nativeReleaseId + ' /* Release */ = {', 2);
 		this.p('isa = XCBuildConfiguration;', 3);
 		this.p('buildSettings = {', 3);
-		this.p('ARCHS = arm64;', 4);
+		// Intel-only fork: upstream targets arm64; changed to x86_64 for this Intel Mac build.
+		this.p('ARCHS = x86_64;', 4);
 		this.p('ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;', 4);
 		this.p('CODE_SIGN_STYLE = Automatic;', 4);
 		if (target_options.developmentTeam) {
