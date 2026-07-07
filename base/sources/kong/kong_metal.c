@@ -842,6 +842,15 @@ char *metal_export(char *directory) {
 
 	memset(global_register_indices, 0, sizeof(global_register_indices));
 
+	// Function ids reset per shader file, but these classification arrays are
+	// file-scope statics; without clearing them, stale ids from a previous
+	// shader misflag this file's functions (e.g. a helper seen as a fragment).
+	vertex_inputs_size     = 0;
+	fragment_inputs_size   = 0;
+	vertex_functions_size  = 0;
+	fragment_functions_size = 0;
+	compute_functions_size = 0;
+
 	for (global_id i = 0; get_global(i) != NULL && get_global(i)->type != NO_TYPE; ++i) {
 		global *g = get_global(i);
 		if (g->type == sampler_type_id) {
