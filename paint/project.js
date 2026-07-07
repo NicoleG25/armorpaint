@@ -15,7 +15,7 @@ flags.with_kong           = true;
 flags.with_raytrace       = true;
 flags.with_bc7            = true;
 flags.with_audio          = platform == "linux";
-flags.idle_sleep          = true;
+flags.idle_sleep          = false; // MCP server needs the main loop to keep ticking to drain commands
 flags.export_version_info = true;
 flags.export_data_list    = platform == "android"; // .apk contents
 

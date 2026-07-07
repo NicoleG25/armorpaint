@@ -199,6 +199,7 @@
 
 #include "args.c"
 #include "base.c"
+#include "mcp_server.c"
 #include "camera.c"
 #include "config.c"
 #include "console.c"
@@ -581,6 +582,8 @@ void _kickstart() {
 	}
 
 	base_init();
+
+	mcp_server_start(); // Localhost command server for the Claude MCP bridge
 
 #ifdef is_debug
 	iron_log("Started in %fs\n", iron_time() - t_start);
