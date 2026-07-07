@@ -49,6 +49,29 @@ Tab-delimited fields, newline-terminated. Reply is one line: `OK\t<json>` or `ER
 | `get_material_json` | Dump the default material node graph as JSON (a template) |
 | `set_material_json\t<json>` | Replace the active material's node graph and rebake |
 | `material_fill_layer` | Bake the active material's node graph into a new fill layer |
+| `clear_material` | Keep the Material Output node, drop the rest + all links; returns output id |
+| `add_node\t<TYPE>` | Add a node to the material graph; returns `{id,inputs,outputs}` |
+| `set_input\t<node_id>\t<index>\t<f..>` | Set an input socket's default value |
+| `set_output\t<node_id>\t<index>\t<f..>` | Set an output socket's default value (e.g. RGB color) |
+| `link\t<from_id>\t<from_socket>\t<to_id>\t<to_socket>` | Link output→input (sockets by **index**) |
+| `commit_material` | Reparse the shader + rebake fill layers after edits |
+
+### Building graphs incrementally
+
+`clear_material` → `add_node` / `set_input` / `set_output` / `link` → `commit_material`
+→ `material_fill_layer` → `export_textures`.
+
+Nodes are built directly onto `g_context->material->canvas` (not the node-editor
+view canvas) with deterministic ids. **Sockets are addressed by index** — the
+material parser reads `outputs->buffer[from_socket]`, so links use socket indices,
+not ids. `OUTPUT_MATERIAL_PBR` input indices: 0 Base Color, 1 Opacity, 2 Occlusion,
+3 Roughness, 4 Metallic, 5 Normal Map, 6 Emission, 7 Height, 8 Subsurface.
+
+Verified procedural: a `TEX_NOISE` node linked into Base Color and Roughness bakes a
+real noise pattern (exported map stddev ~28–30 vs 0 for a flat fill). The bridge
+wraps these as `ap_clear_material`, `ap_add_node`, `ap_set_node_input`,
+`ap_set_node_output`, `ap_link_nodes`, `ap_commit_material`, plus an example recipe
+`ap_material_brushed_metal(color, metallic, noise_scale)`.
 
 ### Material node graphs
 

@@ -258,6 +258,81 @@ def ap_material_solid(
     return r
 
 
+# --- incremental node-graph building ----------------------------------------
+
+
+def _floats(values):
+    return "\t".join(repr(float(v)) for v in values)
+
+
+@mcp.tool()
+def ap_clear_material() -> str:
+    """Reset the active material to just its Material Output node (keeps the output,
+    drops everything else and all links). Start procedural graphs from here.
+    Returns the output node's id."""
+    return _send("clear_material")
+
+
+@mcp.tool()
+def ap_add_node(node_type: str) -> str:
+    """Add a material node to the active material graph. Returns {id, inputs, outputs}
+    (socket counts). Common types: RGB, TEX_NOISE, TEX_VORONOI, VALTORGB (color ramp),
+    MIX_RGB, MAPPING, BUMP, NORMAL_MAP. Output PBR node is OUTPUT_MATERIAL_PBR (id 0)."""
+    return _send(f"add_node\t{node_type}")
+
+
+@mcp.tool()
+def ap_set_node_input(node_id: int, socket_index: int, values: list[float]) -> str:
+    """Set an input socket's default value (used when the socket has no link).
+    values is 1..4 floats (e.g. [r,g,b,a] for a color, [x] for a scalar)."""
+    return _send(f"set_input\t{node_id}\t{socket_index}\t{_floats(values)}")
+
+
+@mcp.tool()
+def ap_set_node_output(node_id: int, socket_index: int, values: list[float]) -> str:
+    """Set an output socket's default value (e.g. an RGB node's color)."""
+    return _send(f"set_output\t{node_id}\t{socket_index}\t{_floats(values)}")
+
+
+@mcp.tool()
+def ap_link_nodes(from_id: int, from_socket: int, to_id: int, to_socket: int) -> str:
+    """Link an output socket to an input socket. Sockets are addressed by INDEX.
+    On OUTPUT_MATERIAL_PBR the input indices are: 0 Base Color, 1 Opacity,
+    2 Occlusion, 3 Roughness, 4 Metallic, 5 Normal Map, 6 Emission, 7 Height,
+    8 Subsurface."""
+    return _send(f"link\t{from_id}\t{from_socket}\t{to_id}\t{to_socket}")
+
+
+@mcp.tool()
+def ap_commit_material() -> str:
+    """Reparse the material shader and rebake fill layers after graph edits.
+    Call once after building/editing a graph, before exporting."""
+    return _send("commit_material", read_timeout=60)
+
+
+@mcp.tool()
+def ap_material_brushed_metal(
+    color_hex: str = "ffb8b8c0",
+    metallic: float = 1.0,
+    noise_scale: float = 12.0,
+    bake: bool = True,
+) -> str:
+    """Procedural brushed/worn metal: solid base color + metallic, with a noise
+    texture driving roughness variation. Builds the graph from scratch and applies
+    it. A concrete example of composing ap_add_node/ap_link_nodes into a recipe."""
+    rgba = _hex_to_rgba(color_hex)
+    out = json.loads(_send("clear_material"))["output_id"]  # _send already strips OK\t
+    _send(f"set_input\t{out}\t0\t{_floats(rgba)}")       # base color
+    _send(f"set_input\t{out}\t4\t{_floats([metallic])}")  # metallic
+    noise = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+    _send(f"set_input\t{noise}\t1\t{_floats([noise_scale])}")  # noise scale
+    _send(f"link\t{noise}\t0\t{out}\t3")                  # noise -> roughness
+    r = _send("commit_material", read_timeout=60)
+    if bake:
+        r += " | " + _send("material_fill_layer", read_timeout=30)
+    return r
+
+
 def _selftest() -> int:
     print("port open:", _port_open())
     for line in ("ping", "new_project\t0", "list_layers"):
