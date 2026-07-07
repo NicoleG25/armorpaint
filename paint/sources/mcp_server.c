@@ -226,6 +226,174 @@ static void mcp_cmd_set_material_json(int argc, char **argv) {
 	mcp_reply(string("OK\t{\"nodes\":%d}\n", canvas->nodes->length));
 }
 
+// --- incremental material graph building ------------------------------------
+
+// Defined later in the unity build (nodes_material.c) and not in functions.h.
+ui_node_t *nodes_material_get_node_t(char *node_type);
+
+// Instantiate a material node template directly onto the active material's canvas.
+// nodes_material_create_node() targets ui_nodes_get_canvas() (the node-editor view,
+// which is a different/empty canvas here), so nodes never reached the material and
+// their ids collided. Building onto g_context->material->canvas fixes both.
+static ui_node_t *mcp_add_node_to_material(char *type) {
+	ui_node_t *tmpl = nodes_material_get_node_t(type);
+	if (tmpl == NULL) {
+		return NULL;
+	}
+	ui_node_canvas_t *canvas = g_context->material->canvas;
+	ui_node_t        *node   = ui_nodes_make_node(tmpl, g_context->material->nodes, canvas);
+
+	// Assign a deterministic id (max existing + 1) instead of trusting the static
+	// ui_node_id counter, which is not reliably synced to this canvas. Keep the
+	// node's socket node_id fields in agreement so links resolve.
+	int newid = 0;
+	for (int i = 0; i < canvas->nodes->length; ++i) {
+		if (canvas->nodes->buffer[i]->id >= newid) {
+			newid = canvas->nodes->buffer[i]->id + 1;
+		}
+	}
+	node->id = newid;
+	for (int i = 0; node->inputs != NULL && i < node->inputs->length; ++i) {
+		node->inputs->buffer[i]->node_id = newid;
+	}
+	for (int i = 0; node->outputs != NULL && i < node->outputs->length; ++i) {
+		node->outputs->buffer[i]->node_id = newid;
+	}
+	any_array_push((any_array_t *)canvas->nodes, node);
+	return node;
+}
+
+static ui_node_t *mcp_find_node(int id) {
+	if (g_context->material == NULL || g_context->material->canvas == NULL) {
+		return NULL;
+	}
+	ui_node_array_t *nodes = g_context->material->canvas->nodes;
+	for (int i = 0; i < nodes->length; ++i) {
+		if (nodes->buffer[i]->id == id) {
+			return nodes->buffer[i];
+		}
+	}
+	return NULL;
+}
+
+// Set a socket's default_value from tab args starting at argv[start].
+static void mcp_set_socket_values(ui_node_socket_t *sock, int argc, char **argv, int start) {
+	int          n   = argc - start;
+	f32_array_t *arr = f32_array_create(n > 0 ? n : 1);
+	for (int i = 0; i < n; ++i) {
+		arr->buffer[i] = (float)atof(argv[start + i]);
+	}
+	arr->length          = n > 0 ? n : 1;
+	sock->default_value  = arr;
+}
+
+static void mcp_cmd_add_node(int argc, char **argv) {
+	if (argc < 2) {
+		mcp_reply("ERR\tusage: add_node <TYPE>\n");
+		return;
+	}
+	if (g_context->material == NULL) {
+		mcp_reply("ERR\tno active material\n");
+		return;
+	}
+	ui_node_t *n = mcp_add_node_to_material(argv[1]);
+	if (n == NULL) {
+		mcp_reply("ERR\tunknown node type\n");
+		return;
+	}
+	mcp_reply(string("OK\t{\"id\":%d,\"inputs\":%d,\"outputs\":%d}\n", n->id,
+	                 n->inputs != NULL ? n->inputs->length : 0,
+	                 n->outputs != NULL ? n->outputs->length : 0));
+}
+
+static void mcp_cmd_set_socket(int argc, char **argv, bool is_input) {
+	// set_input/set_output <node_id> <socket_index> <f0> [f1 ..]
+	if (argc < 4) {
+		mcp_reply("ERR\tusage: set_input|set_output <node_id> <index> <f..>\n");
+		return;
+	}
+	ui_node_t *n = mcp_find_node(atoi(argv[1]));
+	if (n == NULL) {
+		mcp_reply("ERR\tnode not found\n");
+		return;
+	}
+	ui_node_socket_array_t *sockets = is_input ? n->inputs : n->outputs;
+	int                     idx     = atoi(argv[2]);
+	if (sockets == NULL || idx < 0 || idx >= sockets->length) {
+		mcp_reply("ERR\tsocket index out of range\n");
+		return;
+	}
+	mcp_set_socket_values(sockets->buffer[idx], argc, argv, 3);
+	mcp_reply("OK\t{\"set\":true}\n");
+}
+
+static void mcp_cmd_link(int argc, char **argv) {
+	// link <from_id> <from_socket> <to_id> <to_socket>
+	if (argc < 5) {
+		mcp_reply("ERR\tusage: link <from_id> <from_socket> <to_id> <to_socket>\n");
+		return;
+	}
+	if (g_context->material == NULL || g_context->material->canvas == NULL) {
+		mcp_reply("ERR\tno active material\n");
+		return;
+	}
+	// The material parser addresses sockets by INDEX into a node's inputs/outputs
+	// arrays (parser_material.c: node->outputs->buffer[l->from_socket]), not by
+	// socket id, so from_socket/to_socket are the socket indices the client passes.
+	ui_node_t *from = mcp_find_node(atoi(argv[1]));
+	ui_node_t *to   = mcp_find_node(atoi(argv[3]));
+	int        fi   = atoi(argv[2]);
+	int        ti   = atoi(argv[4]);
+	if (from == NULL || to == NULL || from->outputs == NULL || to->inputs == NULL ||
+	    fi < 0 || fi >= from->outputs->length || ti < 0 || ti >= to->inputs->length) {
+		mcp_reply("ERR\tbad link node/socket\n");
+		return;
+	}
+	ui_node_link_array_t *links = g_context->material->canvas->links;
+	ui_node_link_t       *l     = GC_ALLOC_INIT(ui_node_link_t, {0});
+	l->id          = ui_next_link_id(links);
+	l->from_id     = from->id;
+	l->from_socket = fi;
+	l->to_id       = to->id;
+	l->to_socket   = ti;
+	any_array_push((any_array_t *)links, l);
+	mcp_reply(string("OK\t{\"link\":%d}\n", l->id));
+}
+
+static void mcp_cmd_clear_material(void) {
+	if (g_context->material == NULL || g_context->material->canvas == NULL) {
+		mcp_reply("ERR\tno active material\n");
+		return;
+	}
+	// Keep the material output node (it is not an addable template), drop the rest,
+	// and clear all links. Caller rebuilds and links into the surviving output.
+	ui_node_canvas_t *c   = g_context->material->canvas;
+	ui_node_t        *out = NULL;
+	for (int i = 0; i < c->nodes->length; ++i) {
+		if (string_equals(c->nodes->buffer[i]->type, "OUTPUT_MATERIAL_PBR")) {
+			out = c->nodes->buffer[i];
+			break;
+		}
+	}
+	c->links->length = 0;
+	if (out != NULL) {
+		c->nodes->buffer[0] = out;
+		c->nodes->length    = 1;
+		mcp_reply(string("OK\t{\"cleared\":true,\"output_id\":%d}\n", out->id));
+	}
+	else {
+		c->nodes->length = 0;
+		mcp_reply("ERR\tno output node found in material\n");
+	}
+}
+
+static void mcp_cmd_commit_material(void) {
+	make_material_parse_paint_material(true);
+	util_render_make_material_preview();
+	layers_update_fill_layers();
+	mcp_reply("OK\t{\"committed\":true}\n");
+}
+
 static void mcp_dispatch(char *line) {
 	// strip trailing CR/LF
 	size_t len = strlen(line);
@@ -274,6 +442,24 @@ static void mcp_dispatch(char *line) {
 		// Bake the active material's node graph into a new fill layer.
 		layers_create_fill_layer(UV_TYPE_UVMAP, mat4_nan(), -1);
 		mcp_reply("OK\t{\"fill_layer\":true}\n");
+	}
+	else if (strcmp(cmd, "add_node") == 0) {
+		mcp_cmd_add_node(argc, argv);
+	}
+	else if (strcmp(cmd, "set_input") == 0) {
+		mcp_cmd_set_socket(argc, argv, true);
+	}
+	else if (strcmp(cmd, "set_output") == 0) {
+		mcp_cmd_set_socket(argc, argv, false);
+	}
+	else if (strcmp(cmd, "link") == 0) {
+		mcp_cmd_link(argc, argv);
+	}
+	else if (strcmp(cmd, "clear_material") == 0) {
+		mcp_cmd_clear_material();
+	}
+	else if (strcmp(cmd, "commit_material") == 0) {
+		mcp_cmd_commit_material();
 	}
 	else if (strcmp(cmd, "export_textures") == 0) {
 		mcp_cmd_export_textures(argc, argv);
