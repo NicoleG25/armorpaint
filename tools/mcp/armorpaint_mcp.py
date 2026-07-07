@@ -333,6 +333,34 @@ def ap_material_brushed_metal(
     return r
 
 
+# --- FAULTLINE Unity integration --------------------------------------------
+
+FAULTLINE_ART = os.environ.get(
+    "FAULTLINE_ART",
+    "/Users/nicole/Documents/FAULTLINE/My project/Assets/Art/Materials",
+)
+
+
+@mcp.tool()
+def ap_export_to_faultline(name: str, texture_type: str = "png") -> str:
+    """Export the current material's PBR maps straight into the FAULTLINE Unity
+    project at Assets/Art/Materials/<name>/, named <name>_base/_nor/_occ/_rough/
+    _metal. Uses the 'generic' preset. After this, build the URP material in Unity
+    with the ArmorPaint importer (Faultline menu) so import settings are correct.
+    Override the destination root with the FAULTLINE_ART env var."""
+    dest = os.path.join(FAULTLINE_ART, name)
+    r = _send(f"export_textures\t{texture_type}\tgeneric\t{dest}", read_timeout=60)
+    # ArmorPaint names maps from the (untitled) project file; rename to <name>_*.
+    renamed = []
+    if os.path.isdir(dest):
+        for f in os.listdir(dest):
+            if f.startswith("untitled_"):
+                new = name + "_" + f[len("untitled_"):]
+                os.replace(os.path.join(dest, f), os.path.join(dest, new))
+                renamed.append(new)
+    return f"{r} -> {dest} ({', '.join(sorted(renamed)) or 'no maps renamed'})"
+
+
 def _selftest() -> int:
     print("port open:", _port_open())
     for line in ("ping", "new_project\t0", "list_layers"):
