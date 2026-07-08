@@ -75,6 +75,24 @@ primitives `ap_add_node`/`ap_set_node_input`/`ap_set_node_output`/`ap_set_node_b
 The FAULTLINE importer (ArmorPaintMaterialImporter.Build(name, tiling, maxSize))
 takes a UV tiling and a max texture size for texel density / VRAM control.
 
+### Realistic materials (real scanned textures)
+
+Procedural noise tops out at stylized. Photoreal comes from real scanned PBR maps,
+loaded via `import_texture\t<path>` (adds to the project's texture assets, returns the
+asset index) + a `TEX_IMAGE` node whose button 0 is that index and button 1 the color
+space (0 Auto, 1 Linear for data maps, 2 sRGB, 3 DirectX normal). `TEX_IMAGE` output 0
+is Color, 1 is Alpha; a normal map routes through a `NORMAL_MAP` node
+(image Color -> NORMAL_MAP input 1 -> output normal 5).
+
+Bridge: `ap_import_texture`, `ap_add_image_texture`, and `ap_material_from_pbr_set(
+albedo, normal, rough, metal, ao)` — feed it a scanned/Poly Haven set for a photoreal
+material. Verified end to end: a metal-plate PBR set renders as photoreal worn metal in
+URP.
+
+Note on edge wear: the GEOMETRY node's Pointiness output is screen-space (ddx/ddy of
+the normal), so when baked in UV space it keys on UV seams rather than true 3D edges —
+not a reliable wear mask. Real edge wear needs a curvature/AO bake (future work).
+
 ### Building graphs incrementally
 
 `clear_material` → `add_node` / `set_input` / `set_output` / `link` → `commit_material`

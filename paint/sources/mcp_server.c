@@ -287,6 +287,29 @@ static void mcp_set_socket_values(ui_node_socket_t *sock, int argc, char **argv,
 	sock->default_value  = arr;
 }
 
+// Import an image file into the project's texture assets so a TEX_IMAGE node can
+// reference it (button[0] indexes g_project->_->assets). Returns the asset index —
+// the realism path: use real scanned PBR maps instead of only procedural noise.
+static void mcp_cmd_import_texture(int argc, char **argv) {
+	if (argc < 2) {
+		mcp_reply("ERR\tusage: import_texture <path>\n");
+		return;
+	}
+	import_texture_run(string_copy(argv[1]), false);
+	int idx = -1;
+	for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+		if (string_equals(g_project->_->assets->buffer[i]->file, argv[1])) {
+			idx = i;
+			break;
+		}
+	}
+	if (idx < 0) {
+		mcp_reply("ERR\timport failed or unsupported format\n");
+		return;
+	}
+	mcp_reply(string("OK\t{\"index\":%d,\"count\":%d}\n", idx, g_project->_->assets->length));
+}
+
 static void mcp_cmd_add_node(int argc, char **argv) {
 	if (argc < 2) {
 		mcp_reply("ERR\tusage: add_node <TYPE>\n");
@@ -471,6 +494,9 @@ static void mcp_dispatch(char *line) {
 		// Bake the active material's node graph into a new fill layer.
 		layers_create_fill_layer(UV_TYPE_UVMAP, mat4_nan(), -1);
 		mcp_reply("OK\t{\"fill_layer\":true}\n");
+	}
+	else if (strcmp(cmd, "import_texture") == 0) {
+		mcp_cmd_import_texture(argc, argv);
 	}
 	else if (strcmp(cmd, "add_node") == 0) {
 		mcp_cmd_add_node(argc, argv);

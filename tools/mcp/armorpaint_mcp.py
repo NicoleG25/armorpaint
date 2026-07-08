@@ -558,6 +558,70 @@ def ap_material_painted_scratched(
     return r
 
 
+# --- real scanned textures (the realism path) -------------------------------
+
+# TEX_IMAGE color spaces: 0 Auto, 1 Linear, 2 sRGB, 3 DirectX Normal.
+def _image_node(path, color_space=0):
+    idx = json.loads(_send(f"import_texture\t{path}", 15.0))["index"]
+    nid = json.loads(_send("add_node\tTEX_IMAGE"))["id"]
+    _send(f"set_button\t{nid}\t0\t{float(idx)}")     # asset index
+    _send(f"set_button\t{nid}\t1\t{float(color_space)}")
+    return nid
+
+
+@mcp.tool()
+def ap_import_texture(path: str) -> str:
+    """Import an image file into ArmorPaint's project textures so a TEX_IMAGE node can
+    reference it. Returns its asset index. Real scanned PBR maps are the path to
+    photoreal materials (procedural noise tops out at stylized)."""
+    return _send(f"import_texture\t{path}", read_timeout=20)
+
+
+@mcp.tool()
+def ap_add_image_texture(path: str, color_space: int = 0) -> str:
+    """Import an image and add a TEX_IMAGE node for it. Returns the node id. Output 0
+    is Color, 1 is Alpha. color_space: 0 Auto, 1 Linear (data maps), 2 sRGB, 3 DirectX
+    normal. Link its Color into the graph with ap_link_nodes."""
+    nid = _image_node(path, color_space)
+    return json.dumps({"id": nid})
+
+
+@mcp.tool()
+def ap_material_from_pbr_set(
+    albedo: str,
+    normal: str = "",
+    rough: str = "",
+    metal: str = "",
+    ao: str = "",
+    bake: bool = True,
+) -> str:
+    """Photoreal material from a set of real scanned PBR map files (absolute paths).
+    albedo is required; normal/rough/metal/ao optional. Wires each map to the right
+    OUTPUT_MATERIAL_PBR input (normal via a NORMAL_MAP node). This is the realistic
+    path — feed it a Poly Haven / scanned texture set."""
+    out = json.loads(_send("clear_material"))["output_id"]
+    a = _image_node(albedo, 0)          # albedo (auto/sRGB)
+    _send(f"link\t{a}\t0\t{out}\t0")
+    if rough:
+        r = _image_node(rough, 1)
+        _send(f"link\t{r}\t0\t{out}\t3")
+    if metal:
+        m = _image_node(metal, 1)
+        _send(f"link\t{m}\t0\t{out}\t4")
+    if ao:
+        o = _image_node(ao, 1)
+        _send(f"link\t{o}\t0\t{out}\t2")
+    if normal:
+        n = _image_node(normal, 1)
+        nm = json.loads(_send("add_node\tNORMAL_MAP"))["id"]
+        _send(f"link\t{n}\t0\t{nm}\t1")   # image color -> normal map input
+        _send(f"link\t{nm}\t0\t{out}\t5")  # -> output normal
+    r = _send("commit_material", read_timeout=60)
+    if bake:
+        r += " | " + _send("material_fill_layer", read_timeout=40)
+    return r
+
+
 # --- FAULTLINE Unity integration --------------------------------------------
 
 FAULTLINE_ART = os.environ.get(
