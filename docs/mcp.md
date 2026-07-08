@@ -53,8 +53,27 @@ Tab-delimited fields, newline-terminated. Reply is one line: `OK\t<json>` or `ER
 | `add_node\t<TYPE>` | Add a node to the material graph; returns `{id,inputs,outputs}` |
 | `set_input\t<node_id>\t<index>\t<f..>` | Set an input socket's default value |
 | `set_output\t<node_id>\t<index>\t<f..>` | Set an output socket's default value (e.g. RGB color) |
+| `set_button\t<node_id>\t<index>\t<f..>` | Set a node BUTTON (enum/bool, or a VALTORGB ramp) |
 | `link\t<from_id>\t<from_socket>\t<to_id>\t<to_socket>` | Link output→input (sockets by **index**) |
 | `commit_material` | Reparse the shader + rebake fill layers after edits |
+
+Buttons hold parameters that aren't sockets. A VALTORGB (color ramp) button is N
+stops of `[r,g,b,a,position]` (5 floats each) — set it to remap a 0..1 driver
+(noise/voronoi) into a target range. Node schemas mapped so far: TEX_NOISE,
+TEX_VORONOI (Distance/Color/Position out), TEX_WAVE (Color/Factor out), TEX_GRADIENT,
+MIX_RGB (0 fac/1 col1/2 col2), BUMP (2 height in / 0 normal out), VALTORGB (0 factor
+in / 0 color, 1 alpha out), MAPPING (0 vector/1 loc/2 rot/3 scale), TEX_COORD
+(0 Generated/2 UV out). Insert TEX_COORD→MAPPING before a texture's Vector input to
+scale/rotate the pattern (e.g. non-uniform scale = anisotropic brushed streaks).
+
+Bridge recipes: `ap_material_solid`, `ap_material_brushed_metal`,
+`ap_material_worn_metal`, `ap_material_brushed_steel` (anisotropic), `ap_material_concrete`,
+`ap_material_wood`, `ap_material_rubber`, `ap_material_painted_scratched`, plus
+primitives `ap_add_node`/`ap_set_node_input`/`ap_set_node_output`/`ap_set_node_button`/
+`ap_link_nodes`/`ap_clear_material`/`ap_commit_material`.
+
+The FAULTLINE importer (ArmorPaintMaterialImporter.Build(name, tiling, maxSize))
+takes a UV tiling and a max texture size for texel density / VRAM control.
 
 ### Building graphs incrementally
 

@@ -393,6 +393,48 @@ def ap_material_worn_metal(
     return r
 
 
+# Helper: a TEX_NOISE whose coordinates are transformed by a MAPPING node, so the
+# pattern can be scaled non-uniformly (anisotropic streaks) or rotated. Returns the
+# noise node id. coord_out: TEX_COORD output (0 Generated, 2 UV).
+def _mapped_noise(scale_xyz=(1.0, 1.0, 1.0), rotation_xyz=(0.0, 0.0, 0.0), coord_out=0):
+    coord = json.loads(_send("add_node\tTEX_COORD"))["id"]
+    mp = json.loads(_send("add_node\tMAPPING"))["id"]
+    _send(f"link\t{coord}\t{coord_out}\t{mp}\t0")          # coord -> mapping Vector
+    _send(f"set_input\t{mp}\t2\t{_floats(rotation_xyz)}")  # Rotation
+    _send(f"set_input\t{mp}\t3\t{_floats(scale_xyz)}")     # Scale
+    noise = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+    _send(f"link\t{mp}\t0\t{noise}\t0")                    # mapping -> noise Vector
+    return noise
+
+
+@mcp.tool()
+def ap_material_brushed_steel(
+    color_hex: str = "ffc2c4c8",
+    streak: float = 30.0,
+    metallic: float = 1.0,
+    rough_lo: float = 0.2,
+    rough_hi: float = 0.5,
+    bake: bool = True,
+) -> str:
+    """Anisotropic brushed steel: a MAPPING node stretches noise along one axis
+    (streak controls how much) so roughness and micro-relief read as directional
+    brushing. Showcases MAPPING + TEX_COORD. Higher streak = finer/longer streaks."""
+    rgba = _hex_to_rgba(color_hex)
+    out = json.loads(_send("clear_material"))["output_id"]
+    _send(f"set_input\t{out}\t0\t{_floats(rgba)}")
+    _send(f"set_input\t{out}\t4\t{_floats([metallic])}")
+    n = _mapped_noise(scale_xyz=(2.0, streak, 1.0))  # stretched along Y = brush lines
+    _ramp_scalar(out, n, 0, 3, rough_lo, rough_hi)   # roughness streaks
+    bump = json.loads(_send("add_node\tBUMP"))["id"]
+    _send(f"set_input\t{bump}\t0\t{_floats([0.3])}")
+    _send(f"link\t{n}\t0\t{bump}\t2")
+    _send(f"link\t{bump}\t0\t{out}\t5")
+    r = _send("commit_material", read_timeout=60)
+    if bake:
+        r += " | " + _send("material_fill_layer", read_timeout=30)
+    return r
+
+
 @mcp.tool()
 def ap_material_concrete(
     color_light: str = "ff9a9790",
