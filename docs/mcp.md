@@ -102,8 +102,13 @@ coords; the brush raycasts onto the mesh via the rendered gbuffer — works head
 mode 1 = 2D (UV space; needs the 2D view). Each dab consumes one rendered frame
 (`pdirty`), so space calls ~one frame apart. Implementation: a `down` flag OR'd into
 the brush uniform (uniforms.c) makes the brush paint when `pdirty>0` without a real
-mouse. Bridge: `ap_paint_dab`, `ap_paint_stroke([[u,v],...])`. Verified: dabs stamp
-as clean brush circles on the mesh.
+mouse. Continuous strokes: the paint shader fills the capsule between `last` and `current`,
+so `paint_move <u> <v>` (set start) then repeated `paint_to <u> <v>` (each paints a
+connected segment from the previous point) makes a real brush stroke — not isolated
+dots. Change `paint_color` between segments to blend color along the stroke (gradient).
+Bridge: `ap_paint_dab` (single stamp), `ap_paint_stroke([[u,v],...], colors=[...])`
+(continuous, optional per-point colors). Verified: a dense stroke paints a solid
+connected line with a red->yellow gradient.
 
 Brush color: the brush stamps the ACTIVE MATERIAL's output color (make_paint.c
 out_basecol), not a swatch. `paint_color <hex> [rough] [metal]` reduces the material to

@@ -398,18 +398,52 @@ static void mcp_cmd_paint_dab(int argc, char **argv) {
 	mcp_reply("OK\t{\"dab\":true}\n");
 }
 
-// Set the start point of a stroke without painting (so the next paint_dab draws a
-// segment from here to there instead of a lone dot).
+// Set the start point of a stroke without painting. The next paint_to draws a
+// connected segment from here to the new point (real brushing, not a lone dot).
 static void mcp_cmd_paint_move(int argc, char **argv) {
 	if (argc < 3) {
 		mcp_reply("ERR\tusage: paint_move <u> <v>\n");
 		return;
 	}
-	g_context->last_paint_vec_x = (f32)atof(argv[1]);
-	g_context->last_paint_vec_y = (f32)atof(argv[2]);
-	g_context->last_paint_x     = (f32)atof(argv[1]);
-	g_context->last_paint_y     = (f32)atof(argv[2]);
+	f32 u                       = (f32)atof(argv[1]);
+	f32 v                       = (f32)atof(argv[2]);
+	g_context->paint_vec.x      = u; // current pen position (stroke anchor)
+	g_context->paint_vec.y      = v;
+	g_context->last_paint_vec_x = u;
+	g_context->last_paint_vec_y = v;
+	g_context->last_paint_x     = u;
+	g_context->last_paint_y     = v;
 	mcp_reply("OK\t{\"moved\":true}\n");
+}
+
+// Continue a stroke: paint a connected segment from the previous pen position to
+// (u,v). The paint shader fills the capsule between last and current, so chaining
+// paint_to calls makes a continuous brush stroke (change paint_color between them to
+// blend colors along the stroke). Call paint_move first to set the start.
+static void mcp_cmd_paint_to(int argc, char **argv) {
+	// paint_to <u> <v> [radius] [opacity] [mode]
+	if (argc < 3) {
+		mcp_reply("ERR\tusage: paint_to <u> <v> [radius] [opacity] [mode]\n");
+		return;
+	}
+	if (argc > 3) {
+		g_context->brush_radius = (f32)atof(argv[3]);
+	}
+	if (argc > 4) {
+		g_context->brush_opacity = (f32)atof(argv[4]);
+	}
+	g_context->paint2d = (argc > 5) ? (atoi(argv[5]) == 1) : false;
+	g_context->tool    = TOOL_TYPE_BRUSH;
+	// previous pen position becomes the segment start
+	g_context->last_paint_vec_x = g_context->paint_vec.x;
+	g_context->last_paint_vec_y = g_context->paint_vec.y;
+	g_context->last_paint_x     = g_context->paint_vec.x;
+	g_context->last_paint_y     = g_context->paint_vec.y;
+	g_context->paint_vec.x      = (f32)atof(argv[1]); // new pen position
+	g_context->paint_vec.y      = (f32)atof(argv[2]);
+	g_context->pdirty           = 2;
+	mcp_paint_active            = true;
+	mcp_reply("OK\t{\"to\":true}\n");
 }
 
 static void mcp_cmd_import_texture(int argc, char **argv) {
@@ -631,6 +665,9 @@ static void mcp_dispatch(char *line) {
 	}
 	else if (strcmp(cmd, "paint_move") == 0) {
 		mcp_cmd_paint_move(argc, argv);
+	}
+	else if (strcmp(cmd, "paint_to") == 0) {
+		mcp_cmd_paint_to(argc, argv);
 	}
 	else if (strcmp(cmd, "add_node") == 0) {
 		mcp_cmd_add_node(argc, argv);
