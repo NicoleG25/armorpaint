@@ -287,6 +287,29 @@ static void mcp_set_socket_values(ui_node_socket_t *sock, int argc, char **argv,
 	sock->default_value  = arr;
 }
 
+// Import an image file into the project's texture assets so a TEX_IMAGE node can
+// reference it (button[0] indexes g_project->_->assets). Returns the asset index —
+// the realism path: use real scanned PBR maps instead of only procedural noise.
+static void mcp_cmd_import_texture(int argc, char **argv) {
+	if (argc < 2) {
+		mcp_reply("ERR\tusage: import_texture <path>\n");
+		return;
+	}
+	import_texture_run(string_copy(argv[1]), false);
+	int idx = -1;
+	for (i32 i = 0; i < g_project->_->assets->length; ++i) {
+		if (string_equals(g_project->_->assets->buffer[i]->file, argv[1])) {
+			idx = i;
+			break;
+		}
+	}
+	if (idx < 0) {
+		mcp_reply("ERR\timport failed or unsupported format\n");
+		return;
+	}
+	mcp_reply(string("OK\t{\"index\":%d,\"count\":%d}\n", idx, g_project->_->assets->length));
+}
+
 static void mcp_cmd_add_node(int argc, char **argv) {
 	if (argc < 2) {
 		mcp_reply("ERR\tusage: add_node <TYPE>\n");
@@ -324,6 +347,35 @@ static void mcp_cmd_set_socket(int argc, char **argv, bool is_input) {
 		return;
 	}
 	mcp_set_socket_values(sockets->buffer[idx], argc, argv, 3);
+	mcp_reply("OK\t{\"set\":true}\n");
+}
+
+static void mcp_cmd_set_button(int argc, char **argv) {
+	// set_button <node_id> <button_index> <f0> [f1 ..]
+	// Buttons hold node parameters that aren't sockets: enum selections (blend
+	// type), bools (invert), and CUSTOM data like a VALTORGB color ramp, whose
+	// default_value is N stops of [r,g,b,a,position] (5 floats each).
+	if (argc < 4) {
+		mcp_reply("ERR\tusage: set_button <node_id> <index> <f..>\n");
+		return;
+	}
+	ui_node_t *n = mcp_find_node(atoi(argv[1]));
+	if (n == NULL) {
+		mcp_reply("ERR\tnode not found\n");
+		return;
+	}
+	int idx = atoi(argv[2]);
+	if (n->buttons == NULL || idx < 0 || idx >= n->buttons->length) {
+		mcp_reply("ERR\tbutton index out of range\n");
+		return;
+	}
+	int          cnt = argc - 3;
+	f32_array_t *arr = f32_array_create(cnt);
+	for (int i = 0; i < cnt; ++i) {
+		arr->buffer[i] = (float)atof(argv[3 + i]);
+	}
+	arr->length                        = cnt;
+	n->buttons->buffer[idx]->default_value = arr;
 	mcp_reply("OK\t{\"set\":true}\n");
 }
 
@@ -443,6 +495,9 @@ static void mcp_dispatch(char *line) {
 		layers_create_fill_layer(UV_TYPE_UVMAP, mat4_nan(), -1);
 		mcp_reply("OK\t{\"fill_layer\":true}\n");
 	}
+	else if (strcmp(cmd, "import_texture") == 0) {
+		mcp_cmd_import_texture(argc, argv);
+	}
 	else if (strcmp(cmd, "add_node") == 0) {
 		mcp_cmd_add_node(argc, argv);
 	}
@@ -451,6 +506,9 @@ static void mcp_dispatch(char *line) {
 	}
 	else if (strcmp(cmd, "set_output") == 0) {
 		mcp_cmd_set_socket(argc, argv, false);
+	}
+	else if (strcmp(cmd, "set_button") == 0) {
+		mcp_cmd_set_button(argc, argv);
 	}
 	else if (strcmp(cmd, "link") == 0) {
 		mcp_cmd_link(argc, argv);

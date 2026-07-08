@@ -333,6 +333,295 @@ def ap_material_brushed_metal(
     return r
 
 
+@mcp.tool()
+def ap_set_node_button(node_id: int, button_index: int, values: list[float]) -> str:
+    """Set a node BUTTON value (parameters that aren't sockets). Notably a VALTORGB
+    color ramp: values is N stops of [r,g,b,a,position] (5 floats each), e.g.
+    [0.4,0.4,0.4,1, 0.0,  0.7,0.7,0.7,1, 1.0] for a 2-stop grey ramp. Also enum
+    selectors and bool toggles."""
+    return _send(f"set_button\t{node_id}\t{button_index}\t{_floats(values)}")
+
+
+# Helper: noise/value -> color ramp -> scalar, to remap 0..1 into a target range.
+def _ramp_scalar(out, driver_id, driver_socket, dst_index, lo, hi):
+    ramp = json.loads(_send("add_node\tVALTORGB"))["id"]
+    _send(f"link\t{driver_id}\t{driver_socket}\t{ramp}\t0")            # driver -> ramp factor
+    _send(f"set_button\t{ramp}\t0\t"
+          f"{_floats([lo, lo, lo, 1.0, 0.0,  hi, hi, hi, 1.0, 1.0])}")  # 2 grey stops
+    _send(f"link\t{ramp}\t0\t{out}\t{dst_index}")                      # ramp color -> dst
+    return ramp
+
+
+@mcp.tool()
+def ap_material_worn_metal(
+    color_light: str = "ffb8b098",
+    color_dark: str = "ff5a5048",
+    metallic: float = 1.0,
+    detail_scale: float = 7.0,
+    variation_scale: float = 2.5,
+    bump_strength: float = 0.4,
+    bake: bool = True,
+) -> str:
+    """Rich worn/oxidized metal built from a node graph: two noise textures drive
+    (a) base-color variation between color_light and color_dark via a MIX node,
+    (b) roughness variation, and (c) surface relief via a BUMP node into the normal.
+    Far better than a flat fill. Socket indices: OUTPUT_MATERIAL_PBR 0 base,
+    3 rough, 4 metal, 5 normal; MIX_RGB 0 fac/1 col1/2 col2; BUMP 2 height/out 0."""
+    light, dark = _hex_to_rgba(color_light), _hex_to_rgba(color_dark)
+    out = json.loads(_send("clear_material"))["output_id"]
+    n_detail = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+    _send(f"set_input\t{n_detail}\t1\t{_floats([detail_scale])}")
+    n_var = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+    _send(f"set_input\t{n_var}\t1\t{_floats([variation_scale])}")
+    # base color = mix(light, dark) by broad noise
+    mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
+    _send(f"set_input\t{mix}\t1\t{_floats(light)}")
+    _send(f"set_input\t{mix}\t2\t{_floats(dark)}")
+    _send(f"link\t{n_var}\t0\t{mix}\t0")      # noise -> mix factor
+    _send(f"link\t{mix}\t0\t{out}\t0")        # mix -> base color
+    # roughness variation
+    _send(f"link\t{n_var}\t0\t{out}\t3")      # noise -> roughness
+    _send(f"set_input\t{out}\t4\t{_floats([metallic])}")
+    # surface relief: fine noise -> bump height -> normal
+    bump = json.loads(_send("add_node\tBUMP"))["id"]
+    _send(f"set_input\t{bump}\t0\t{_floats([bump_strength])}")  # strength
+    _send(f"link\t{n_detail}\t0\t{bump}\t2")  # noise -> bump height
+    _send(f"link\t{bump}\t0\t{out}\t5")       # bump normal -> output normal
+    r = _send("commit_material", read_timeout=60)
+    if bake:
+        r += " | " + _send("material_fill_layer", read_timeout=30)
+    return r
+
+
+# Helper: a TEX_NOISE whose coordinates are transformed by a MAPPING node, so the
+# pattern can be scaled non-uniformly (anisotropic streaks) or rotated. Returns the
+# noise node id. coord_out: TEX_COORD output (0 Generated, 2 UV).
+def _mapped_noise(scale_xyz=(1.0, 1.0, 1.0), rotation_xyz=(0.0, 0.0, 0.0), coord_out=0):
+    coord = json.loads(_send("add_node\tTEX_COORD"))["id"]
+    mp = json.loads(_send("add_node\tMAPPING"))["id"]
+    _send(f"link\t{coord}\t{coord_out}\t{mp}\t0")          # coord -> mapping Vector
+    _send(f"set_input\t{mp}\t2\t{_floats(rotation_xyz)}")  # Rotation
+    _send(f"set_input\t{mp}\t3\t{_floats(scale_xyz)}")     # Scale
+    noise = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+    _send(f"link\t{mp}\t0\t{noise}\t0")                    # mapping -> noise Vector
+    return noise
+
+
+@mcp.tool()
+def ap_material_brushed_steel(
+    color_hex: str = "ffc2c4c8",
+    streak: float = 30.0,
+    metallic: float = 1.0,
+    rough_lo: float = 0.2,
+    rough_hi: float = 0.5,
+    bake: bool = True,
+) -> str:
+    """Anisotropic brushed steel: a MAPPING node stretches noise along one axis
+    (streak controls how much) so roughness and micro-relief read as directional
+    brushing. Showcases MAPPING + TEX_COORD. Higher streak = finer/longer streaks."""
+    rgba = _hex_to_rgba(color_hex)
+    out = json.loads(_send("clear_material"))["output_id"]
+    _send(f"set_input\t{out}\t0\t{_floats(rgba)}")
+    _send(f"set_input\t{out}\t4\t{_floats([metallic])}")
+    n = _mapped_noise(scale_xyz=(2.0, streak, 1.0))  # stretched along Y = brush lines
+    _ramp_scalar(out, n, 0, 3, rough_lo, rough_hi)   # roughness streaks
+    bump = json.loads(_send("add_node\tBUMP"))["id"]
+    _send(f"set_input\t{bump}\t0\t{_floats([0.3])}")
+    _send(f"link\t{n}\t0\t{bump}\t2")
+    _send(f"link\t{bump}\t0\t{out}\t5")
+    r = _send("commit_material", read_timeout=60)
+    if bake:
+        r += " | " + _send("material_fill_layer", read_timeout=30)
+    return r
+
+
+@mcp.tool()
+def ap_material_concrete(
+    color_light: str = "ff9a9790",
+    color_dark: str = "ff6d6a63",
+    rough_lo: float = 0.6,
+    rough_hi: float = 0.9,
+    bump_strength: float = 0.5,
+    bake: bool = True,
+) -> str:
+    """Rough concrete: blotchy grey base (noise-mixed), high roughness remapped via a
+    color ramp, non-metallic, with fine surface relief. Good for walls/floors."""
+    light, dark = _hex_to_rgba(color_light), _hex_to_rgba(color_dark)
+    out = json.loads(_send("clear_material"))["output_id"]
+    n_blotch = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+    _send(f"set_input\t{n_blotch}\t1\t{_floats([3.0])}")
+    n_fine = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+    _send(f"set_input\t{n_fine}\t1\t{_floats([12.0])}")
+    mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
+    _send(f"set_input\t{mix}\t1\t{_floats(light)}")
+    _send(f"set_input\t{mix}\t2\t{_floats(dark)}")
+    _send(f"link\t{n_blotch}\t0\t{mix}\t0")
+    _send(f"link\t{mix}\t0\t{out}\t0")
+    _ramp_scalar(out, n_blotch, 0, 3, rough_lo, rough_hi)  # roughness in [lo,hi]
+    _send(f"set_input\t{out}\t4\t{_floats([0.0])}")        # non-metal
+    bump = json.loads(_send("add_node\tBUMP"))["id"]
+    _send(f"set_input\t{bump}\t0\t{_floats([bump_strength])}")
+    _send(f"link\t{n_fine}\t0\t{bump}\t2")
+    _send(f"link\t{bump}\t0\t{out}\t5")
+    r = _send("commit_material", read_timeout=60)
+    if bake:
+        r += " | " + _send("material_fill_layer", read_timeout=30)
+    return r
+
+
+@mcp.tool()
+def ap_material_wood(
+    color_light: str = "ff8a5a30",
+    color_dark: str = "ff40260f",
+    grain_scale: float = 4.0,
+    distortion: float = 2.0,
+    bake: bool = True,
+) -> str:
+    """Wood: a TEX_WAVE grain mixes two wood tones for the base, drives roughness
+    variation, and adds grain relief via bump. Non-metallic."""
+    light, dark = _hex_to_rgba(color_light), _hex_to_rgba(color_dark)
+    out = json.loads(_send("clear_material"))["output_id"]
+    wave = json.loads(_send("add_node\tTEX_WAVE"))["id"]
+    _send(f"set_input\t{wave}\t1\t{_floats([grain_scale])}")    # scale
+    _send(f"set_input\t{wave}\t2\t{_floats([distortion])}")     # distortion
+    mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
+    _send(f"set_input\t{mix}\t1\t{_floats(light)}")
+    _send(f"set_input\t{mix}\t2\t{_floats(dark)}")
+    _send(f"link\t{wave}\t1\t{mix}\t0")     # wave Factor -> mix factor
+    _send(f"link\t{mix}\t0\t{out}\t0")      # -> base
+    _ramp_scalar(out, wave, 1, 3, 0.35, 0.65)  # roughness
+    _send(f"set_input\t{out}\t4\t{_floats([0.0])}")
+    bump = json.loads(_send("add_node\tBUMP"))["id"]
+    _send(f"set_input\t{bump}\t0\t{_floats([0.4])}")
+    _send(f"link\t{wave}\t1\t{bump}\t2")
+    _send(f"link\t{bump}\t0\t{out}\t5")
+    r = _send("commit_material", read_timeout=60)
+    if bake:
+        r += " | " + _send("material_fill_layer", read_timeout=30)
+    return r
+
+
+@mcp.tool()
+def ap_material_rubber(
+    color_hex: str = "ff181818",
+    roughness: float = 0.85,
+    bump_strength: float = 0.25,
+    bake: bool = True,
+) -> str:
+    """Matte rubber/plastic: dark solid base, high uniform-ish roughness with a touch
+    of noise, non-metallic, faint surface relief. Good for tires, grips, trims."""
+    rgba = _hex_to_rgba(color_hex)
+    out = json.loads(_send("clear_material"))["output_id"]
+    _send(f"set_input\t{out}\t0\t{_floats(rgba)}")
+    _send(f"set_input\t{out}\t4\t{_floats([0.0])}")
+    n = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+    _send(f"set_input\t{n}\t1\t{_floats([9.0])}")
+    _ramp_scalar(out, n, 0, 3, max(0.0, roughness - 0.08), min(1.0, roughness + 0.05))
+    bump = json.loads(_send("add_node\tBUMP"))["id"]
+    _send(f"set_input\t{bump}\t0\t{_floats([bump_strength])}")
+    _send(f"link\t{n}\t0\t{bump}\t2")
+    _send(f"link\t{bump}\t0\t{out}\t5")
+    r = _send("commit_material", read_timeout=60)
+    if bake:
+        r += " | " + _send("material_fill_layer", read_timeout=30)
+    return r
+
+
+@mcp.tool()
+def ap_material_painted_scratched(
+    paint_hex: str = "ff203a6a",
+    metal_hex: str = "ffb0b0b8",
+    scratch_scale: float = 18.0,
+    bake: bool = True,
+) -> str:
+    """Painted metal with scratches: a fine TEX_VORONOI reveals bare metal through the
+    paint. Voronoi distance mixes paint<->metal base color, and drives metallic and
+    roughness so scratches read as exposed metal. Great for crates/panels/props."""
+    paint, metal = _hex_to_rgba(paint_hex), _hex_to_rgba(metal_hex)
+    out = json.loads(_send("clear_material"))["output_id"]
+    voro = json.loads(_send("add_node\tTEX_VORONOI"))["id"]
+    _send(f"set_input\t{voro}\t1\t{_floats([scratch_scale])}")  # scale
+    mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
+    _send(f"set_input\t{mix}\t1\t{_floats(paint)}")   # color1 = paint
+    _send(f"set_input\t{mix}\t2\t{_floats(metal)}")   # color2 = metal
+    _send(f"link\t{voro}\t0\t{mix}\t0")               # voronoi distance -> factor
+    _send(f"link\t{mix}\t0\t{out}\t0")                # -> base color
+    _send(f"link\t{voro}\t0\t{out}\t4")               # distance -> metallic (scratches metal)
+    _ramp_scalar(out, voro, 0, 3, 0.25, 0.6)          # roughness: paint smooth, scratch rough
+    bump = json.loads(_send("add_node\tBUMP"))["id"]
+    _send(f"set_input\t{bump}\t0\t{_floats([0.6])}")
+    _send(f"link\t{voro}\t0\t{bump}\t2")
+    _send(f"link\t{bump}\t0\t{out}\t5")
+    r = _send("commit_material", read_timeout=60)
+    if bake:
+        r += " | " + _send("material_fill_layer", read_timeout=30)
+    return r
+
+
+# --- real scanned textures (the realism path) -------------------------------
+
+# TEX_IMAGE color spaces: 0 Auto, 1 Linear, 2 sRGB, 3 DirectX Normal.
+def _image_node(path, color_space=0):
+    idx = json.loads(_send(f"import_texture\t{path}", 15.0))["index"]
+    nid = json.loads(_send("add_node\tTEX_IMAGE"))["id"]
+    _send(f"set_button\t{nid}\t0\t{float(idx)}")     # asset index
+    _send(f"set_button\t{nid}\t1\t{float(color_space)}")
+    return nid
+
+
+@mcp.tool()
+def ap_import_texture(path: str) -> str:
+    """Import an image file into ArmorPaint's project textures so a TEX_IMAGE node can
+    reference it. Returns its asset index. Real scanned PBR maps are the path to
+    photoreal materials (procedural noise tops out at stylized)."""
+    return _send(f"import_texture\t{path}", read_timeout=20)
+
+
+@mcp.tool()
+def ap_add_image_texture(path: str, color_space: int = 0) -> str:
+    """Import an image and add a TEX_IMAGE node for it. Returns the node id. Output 0
+    is Color, 1 is Alpha. color_space: 0 Auto, 1 Linear (data maps), 2 sRGB, 3 DirectX
+    normal. Link its Color into the graph with ap_link_nodes."""
+    nid = _image_node(path, color_space)
+    return json.dumps({"id": nid})
+
+
+@mcp.tool()
+def ap_material_from_pbr_set(
+    albedo: str,
+    normal: str = "",
+    rough: str = "",
+    metal: str = "",
+    ao: str = "",
+    bake: bool = True,
+) -> str:
+    """Photoreal material from a set of real scanned PBR map files (absolute paths).
+    albedo is required; normal/rough/metal/ao optional. Wires each map to the right
+    OUTPUT_MATERIAL_PBR input (normal via a NORMAL_MAP node). This is the realistic
+    path — feed it a Poly Haven / scanned texture set."""
+    out = json.loads(_send("clear_material"))["output_id"]
+    a = _image_node(albedo, 0)          # albedo (auto/sRGB)
+    _send(f"link\t{a}\t0\t{out}\t0")
+    if rough:
+        r = _image_node(rough, 1)
+        _send(f"link\t{r}\t0\t{out}\t3")
+    if metal:
+        m = _image_node(metal, 1)
+        _send(f"link\t{m}\t0\t{out}\t4")
+    if ao:
+        o = _image_node(ao, 1)
+        _send(f"link\t{o}\t0\t{out}\t2")
+    if normal:
+        n = _image_node(normal, 1)
+        nm = json.loads(_send("add_node\tNORMAL_MAP"))["id"]
+        _send(f"link\t{n}\t0\t{nm}\t1")   # image color -> normal map input
+        _send(f"link\t{nm}\t0\t{out}\t5")  # -> output normal
+    r = _send("commit_material", read_timeout=60)
+    if bake:
+        r += " | " + _send("material_fill_layer", read_timeout=40)
+    return r
+
+
 # --- FAULTLINE Unity integration --------------------------------------------
 
 FAULTLINE_ART = os.environ.get(
