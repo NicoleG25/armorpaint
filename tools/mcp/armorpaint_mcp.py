@@ -333,6 +333,47 @@ def ap_material_brushed_metal(
     return r
 
 
+@mcp.tool()
+def ap_material_worn_metal(
+    color_light: str = "ffb8b098",
+    color_dark: str = "ff5a5048",
+    metallic: float = 1.0,
+    detail_scale: float = 7.0,
+    variation_scale: float = 2.5,
+    bump_strength: float = 0.4,
+    bake: bool = True,
+) -> str:
+    """Rich worn/oxidized metal built from a node graph: two noise textures drive
+    (a) base-color variation between color_light and color_dark via a MIX node,
+    (b) roughness variation, and (c) surface relief via a BUMP node into the normal.
+    Far better than a flat fill. Socket indices: OUTPUT_MATERIAL_PBR 0 base,
+    3 rough, 4 metal, 5 normal; MIX_RGB 0 fac/1 col1/2 col2; BUMP 2 height/out 0."""
+    light, dark = _hex_to_rgba(color_light), _hex_to_rgba(color_dark)
+    out = json.loads(_send("clear_material"))["output_id"]
+    n_detail = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+    _send(f"set_input\t{n_detail}\t1\t{_floats([detail_scale])}")
+    n_var = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+    _send(f"set_input\t{n_var}\t1\t{_floats([variation_scale])}")
+    # base color = mix(light, dark) by broad noise
+    mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
+    _send(f"set_input\t{mix}\t1\t{_floats(light)}")
+    _send(f"set_input\t{mix}\t2\t{_floats(dark)}")
+    _send(f"link\t{n_var}\t0\t{mix}\t0")      # noise -> mix factor
+    _send(f"link\t{mix}\t0\t{out}\t0")        # mix -> base color
+    # roughness variation
+    _send(f"link\t{n_var}\t0\t{out}\t3")      # noise -> roughness
+    _send(f"set_input\t{out}\t4\t{_floats([metallic])}")
+    # surface relief: fine noise -> bump height -> normal
+    bump = json.loads(_send("add_node\tBUMP"))["id"]
+    _send(f"set_input\t{bump}\t0\t{_floats([bump_strength])}")  # strength
+    _send(f"link\t{n_detail}\t0\t{bump}\t2")  # noise -> bump height
+    _send(f"link\t{bump}\t0\t{out}\t5")       # bump normal -> output normal
+    r = _send("commit_material", read_timeout=60)
+    if bake:
+        r += " | " + _send("material_fill_layer", read_timeout=30)
+    return r
+
+
 # --- FAULTLINE Unity integration --------------------------------------------
 
 FAULTLINE_ART = os.environ.get(
