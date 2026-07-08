@@ -346,8 +346,78 @@ def ap_clear_material() -> str:
 def ap_add_node(node_type: str) -> str:
     """Add a material node to the active material graph. Returns {id, inputs, outputs}
     (socket counts). Common types: RGB, TEX_NOISE, TEX_VORONOI, VALTORGB (color ramp),
-    MIX_RGB, MAPPING, BUMP, NORMAL_MAP. Output PBR node is OUTPUT_MATERIAL_PBR (id 0)."""
+    MIX_RGB, MAPPING, BUMP, NORMAL_MAP. Output PBR node is OUTPUT_MATERIAL_PBR (id 0).
+    Call ap_describe_node(type) first to get socket indices + button enums."""
     return _send(f"add_node\t{node_type}")
+
+
+# Node schema: socket names by INDEX + button enums, so a graph can be wired without
+# guess-and-render. Socket COUNTS were probed live against this ArmorPaint build; names
+# follow Blender convention; the indices the recipes rely on (Scale, Fac, blend mode,
+# band direction, ramp stops, PBR inputs) are empirically confirmed. Types absent here
+# (TEX_MUSGRAVE, SEPARATE_XYZ, INVERT, MAP_RANGE, VECTOR_MATH...) do NOT exist in this
+# build — add_node rejects them.
+NODE_SCHEMA = {
+    "OUTPUT_MATERIAL_PBR": {
+        "inputs": ["Base Color", "Opacity", "Occlusion", "Roughness", "Metallic",
+                   "Normal", "Emission", "Height", "Subsurface"],
+        "outputs": [], "note": "The fixed output node, id 0 (returned by clear_material). Cannot be added."},
+    "RGB": {"inputs": [], "outputs": ["Color"],
+            "note": "Set color via ap_set_node_output(id,0,[r,g,b,a])."},
+    "VALUE": {"inputs": [], "outputs": ["Value"]},
+    "TEX_NOISE": {"inputs": ["Vector", "Scale", "Detail", "Roughness", "Lacunarity", "Distortion"],
+                  "outputs": ["Fac", "Color"],
+                  "note": "Recipes drive from output 0 (grayscale). Input 1 Scale = frequency."},
+    "TEX_VORONOI": {"inputs": ["Vector", "Scale", "Smoothness", "Exponent", "Randomness", "W"],
+                    "outputs": ["Distance", "Color", "Position"],
+                    "note": "Output 0 Distance is dark at cell borders (cracks/scratches)."},
+    "TEX_WAVE": {"inputs": ["Vector", "Scale", "Distortion", "Detail", "Detail Scale", "Detail Roughness"],
+                 "outputs": ["Color", "Fac"],
+                 "buttons": [{"index": 0, "name": "wave_type", "enum": {"0": "bands", "1": "rings"}},
+                             {"index": 1, "name": "bands_direction", "enum": {"0": "X/horizontal", "1": "Y/vertical", "2": "Z", "3": "diagonal"}},
+                             {"index": 2, "name": "wave_profile", "enum": {"0": "sine (rounded)", "1": "saw", "2": "triangle"}}],
+                 "note": "Drive from output 1 Fac. button 1 flips flute direction (confirmed). Distortion 0 = straight."},
+    "TEX_GRADIENT": {"inputs": ["Vector"], "outputs": ["Color", "Fac"]},
+    "TEX_IMAGE": {"inputs": ["Vector"], "outputs": ["Color", "Alpha"],
+                  "buttons": [{"index": 0, "name": "asset_index", "note": "float index from import_texture"},
+                              {"index": 1, "name": "color_space", "enum": {"0": "auto", "1": "linear (data maps)", "2": "sRGB", "3": "DirectX normal"}}]},
+    "MIX_RGB": {"inputs": ["Fac", "Color1", "Color2"], "outputs": ["Color"],
+                "buttons": [{"index": 0, "name": "blend", "enum": {"0": "mix", "1": "darken", "2": "multiply", "4": "lighten", "5": "screen", "6": "dodge", "7": "add", "8": "overlay", "9": "soft-light", "10": "linear-light", "12": "subtract"}}]},
+    "VALTORGB": {"inputs": ["Fac"], "outputs": ["Color", "Alpha"],
+                 "buttons": [{"index": 0, "name": "color_ramp", "note": "N stops, each [r,g,b,a,position] (5 floats). Remaps 0..1 -> gradient."}],
+                 "note": "Use to remap a scalar into a target range; feed a value into Fac."},
+    "BUMP": {"inputs": ["Strength", "Distance", "Height", "Normal"], "outputs": ["Normal"],
+             "note": "Link a grayscale height into input 2; output 0 -> PBR Normal (index 5)."},
+    "NORMAL_MAP": {"inputs": ["Strength", "Color"], "outputs": ["Normal"],
+                   "note": "Link a normal-map image Color into input 1; output 0 -> PBR Normal."},
+    "MAPPING": {"inputs": ["Vector", "Location", "Rotation", "Scale"], "outputs": ["Vector"],
+                "note": "Feed TEX_COORD into 0; Scale (3) tiles/stretches (anisotropy). Rotation is radians. NOTE: rotating coords does NOT reorient TEX_WAVE bands — use its bands_direction button."},
+    "TEX_COORD": {"inputs": [], "outputs": ["Generated", "Normal", "UV", "Object", "Camera", "Window"],
+                  "note": "Output 2 UV or 0 Generated feed a MAPPING/texture Vector."},
+    "NEW_GEOMETRY": {"inputs": [], "outputs": ["Position", "Normal", "Tangent", "True Normal", "Incoming", "Pointiness"],
+                     "note": "Pointiness is SCREEN-SPACE (keys on UV seams when baked) — for real edge wear use ap_bake curvature/occlusion, not this."},
+    "MATH": {"inputs": ["A", "B"], "outputs": ["Value"],
+             "buttons": [{"index": 0, "name": "operation", "enum": {"0": "add", "1": "subtract", "2": "multiply", "3": "divide", "10": "min", "11": "max", "13": "power"}, "note": "enum order may vary; verify"}]},
+    "HUE_SAT": {"inputs": ["Hue", "Saturation", "Value", "Fac", "Color"], "outputs": ["Color"]},
+    "GAMMA": {"inputs": ["Color", "Gamma"], "outputs": ["Color"]},
+    "BRIGHTCONTRAST": {"inputs": ["Color", "Bright", "Contrast"], "outputs": ["Color"]},
+    "CLAMP": {"inputs": ["Value", "Min", "Max"], "outputs": ["Result"]},
+}
+
+
+@mcp.tool()
+def ap_describe_node(node_type: str = "") -> str:
+    """Schema for a material node type: input names by INDEX, output names by index, and
+    button names + enum values. Query this BEFORE wiring a node so you use the right
+    socket/button indices instead of guess-and-render. Pass "" to list all known types.
+    Socket counts are verified against this build; the indices the recipes rely on
+    (Scale, Fac, blend, band direction, ramp stops, PBR inputs) are confirmed."""
+    if not node_type:
+        return json.dumps(sorted(NODE_SCHEMA.keys()))
+    t = node_type.upper()
+    if t not in NODE_SCHEMA:
+        return json.dumps({"error": f"no schema for '{t}'", "known": sorted(NODE_SCHEMA.keys())})
+    return json.dumps(NODE_SCHEMA[t], separators=(",", ":"))
 
 
 @mcp.tool()
@@ -605,6 +675,48 @@ def ap_material_rubber(
     _send(f"set_input\t{bump}\t0\t{_floats([bump_strength])}")
     _send(f"link\t{n}\t0\t{bump}\t2")
     _send(f"link\t{bump}\t0\t{out}\t5")
+    r = _send("commit_material", read_timeout=60)
+    if bake:
+        r += " | " + _send("material_fill_layer", read_timeout=30)
+    return r
+
+
+@mcp.tool()
+def ap_material_knurled_metal(
+    color_hex: str = "ff0e0e11",
+    ribs: float = 42.0,
+    metallic: float = 1.0,
+    bump_strength: float = 0.8,
+    rough_valley: float = 0.50,
+    rough_crest: float = 0.24,
+    horizontal: bool = False,
+    bake: bool = True,
+) -> str:
+    """Knurled / fluted machined metal (e.g. an anodized black loupe or knob cap):
+    fine parallel ribs from a TEX_WAVE bands pattern driving a rounded BUMP, dark
+    metallic base, satin roughness keyed so rib crests catch light (smoother) and
+    valleys stay matte, plus faint machining grain. `ribs` = flute count (wave scale).
+    Flutes are vertical by default (wave band-direction button 1 = axis); set
+    horizontal=True for the other axis. On the real cap mesh the direction ultimately
+    follows the UVs. Great for grips, knobs, lens rings, machined hardware."""
+    rgba = _hex_to_rgba(color_hex)
+    out = json.loads(_send("clear_material"))["output_id"]
+    _send(f"set_input\t{out}\t0\t{_floats(rgba)}")
+    _send(f"set_input\t{out}\t4\t{_floats([metallic])}")
+    wave = json.loads(_send("add_node\tTEX_WAVE"))["id"]
+    _send(f"set_input\t{wave}\t1\t{_floats([ribs])}")   # scale = flute count
+    _send(f"set_input\t{wave}\t2\t{_floats([0.0])}")    # no distortion: straight flutes
+    # wave BUTTON 1 = bands direction enum; flips flutes between axes (default horizontal)
+    _send(f"set_button\t{wave}\t1\t{_floats([0.0 if horizontal else 1.0])}")
+    # rounded ribs (raw sine wave Fac) + faint machining grain, into one bump/normal
+    fine = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+    _send(f"set_input\t{fine}\t1\t{_floats([85.0])}")
+    height = _mix(wave, 1, fine, 0, blend=7, factor=0.04)  # add faint grain to ribs
+    bump = json.loads(_send("add_node\tBUMP"))["id"]
+    _send(f"set_input\t{bump}\t0\t{_floats([bump_strength])}")
+    _send(f"link\t{height}\t0\t{bump}\t2"); _send(f"link\t{bump}\t0\t{out}\t5")
+    # roughness keyed to the ribs: valleys matte, crests satin-smooth (descending ramp)
+    _ramp_scalar(out, wave, 1, 3, rough_valley, rough_crest)
     r = _send("commit_material", read_timeout=60)
     if bake:
         r += " | " + _send("material_fill_layer", read_timeout=30)
