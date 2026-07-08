@@ -446,6 +446,31 @@ static void mcp_cmd_paint_to(int argc, char **argv) {
 	mcp_reply("OK\t{\"to\":true}\n");
 }
 
+// Save ArmorPaint's own lit viewport (the "last" render target = the final beauty
+// image on the mesh) to a PNG. This is the fast feedback loop: author a material, grab
+// the preview, adjust — no external round-trip. Reads the previous rendered frame.
+static void mcp_cmd_screenshot(int argc, char **argv) {
+	if (argc < 2) {
+		mcp_reply("ERR\tusage: screenshot <path>\n");
+		return;
+	}
+	render_target_t *rt = any_map_get(render_path_render_targets, "last");
+	if (rt == NULL || rt->_image == NULL) {
+		mcp_reply("ERR\tno viewport render target\n");
+		return;
+	}
+	gpu_texture_t *tex = rt->_image;
+	// Blit the viewport into a fresh RGBA32 target (GPU handles the BGRA/format
+	// conversion) exactly like viewport_capture_screenshot, then read that.
+	gpu_texture_t *shot = gpu_create_render_target(tex->width, tex->height, GPU_TEXTURE_FORMAT_RGBA32);
+	draw_begin(shot, false, 0);
+	draw_image(tex, 0, 0);
+	draw_end();
+	buffer_t *pixels = gpu_get_texture_pixels(shot);
+	iron_write_png(string_copy(argv[1]), pixels, shot->width, shot->height, 0);
+	mcp_reply(string("OK\t{\"w\":%d,\"h\":%d}\n", shot->width, shot->height));
+}
+
 static void mcp_cmd_import_texture(int argc, char **argv) {
 	if (argc < 2) {
 		mcp_reply("ERR\tusage: import_texture <path>\n");
@@ -650,6 +675,9 @@ static void mcp_dispatch(char *line) {
 		// Bake the active material's node graph into a new fill layer.
 		layers_create_fill_layer(UV_TYPE_UVMAP, mat4_nan(), -1);
 		mcp_reply("OK\t{\"fill_layer\":true}\n");
+	}
+	else if (strcmp(cmd, "screenshot") == 0) {
+		mcp_cmd_screenshot(argc, argv);
 	}
 	else if (strcmp(cmd, "import_texture") == 0) {
 		mcp_cmd_import_texture(argc, argv);

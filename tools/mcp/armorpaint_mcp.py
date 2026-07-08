@@ -573,6 +573,14 @@ def ap_material_painted_scratched(
     return r
 
 
+@mcp.tool()
+def ap_screenshot(path: str) -> str:
+    """Save ArmorPaint's own lit viewport (the material on the mesh, its lighting) to a
+    PNG at path. This is the fast feedback loop for judging realism: author a material,
+    screenshot, adjust — no external round-trip. Returns the image size."""
+    return _send(f"screenshot\t{path}", read_timeout=30)
+
+
 # --- brush painting (hand-placed detail) ------------------------------------
 
 @mcp.tool()
