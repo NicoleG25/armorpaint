@@ -103,8 +103,21 @@ mode 1 = 2D (UV space; needs the 2D view). Each dab consumes one rendered frame
 (`pdirty`), so space calls ~one frame apart. Implementation: a `down` flag OR'd into
 the brush uniform (uniforms.c) makes the brush paint when `pdirty>0` without a real
 mouse. Bridge: `ap_paint_dab`, `ap_paint_stroke([[u,v],...])`. Verified: dabs stamp
-as clean brush circles on the mesh. Paint color is the active swatch (per-dab color
-control is future work).
+as clean brush circles on the mesh.
+
+Brush color: the brush stamps the ACTIVE MATERIAL's output color (make_paint.c
+out_basecol), not a swatch. `paint_color <hex> [rough] [metal]` reduces the material to
+a solid color so painting paints it; change it between dabs to paint multiple colors
+(verified blue + red). Bridge `ap_paint_color`. To brush a procedural/textured material,
+just set that material, then paint.
+
+### Baking mesh masks
+
+`bake <type>` bakes mesh-derived data into the current layer (a real 3D mask, unlike
+the GEOMETRY node's screen-space pointiness): 0 curvature (edges), 3 height, 10
+occlusion (AO / cavity dirt); sets tool=BAKE + bake_type, reparses the bake shader, and
+paints one frame. Bridge `ap_bake`. Use the baked layer as a wear/dirt mask driving
+roughness/mix. (Occlusion/thickness are raytrace bakes.)
 
 ### Building graphs incrementally
 

@@ -561,6 +561,26 @@ def ap_material_painted_scratched(
 # --- brush painting (hand-placed detail) ------------------------------------
 
 @mcp.tool()
+def ap_paint_color(color_hex: str, roughness: float = 0.5, metallic: float = 0.0) -> str:
+    """Set the brush paint color (+ roughness/metallic). The brush stamps the active
+    material's output, so this reduces the material to a solid color. color_hex is
+    RRGGBB or AARRGGBB. Call before ap_paint_dab/ap_paint_stroke; change it mid-stroke
+    to paint multiple colors."""
+    h = color_hex.lstrip("#")
+    if len(h) == 8:
+        h = h[2:]  # drop alpha for RRGGBB
+    return _send(f"paint_color\t{h}\t{roughness}\t{metallic}", read_timeout=30)
+
+
+@mcp.tool()
+def ap_bake(bake_type: int = 0) -> str:
+    """Bake mesh-derived data into the current layer as a real 3D mask: 0 curvature
+    (edges), 3 height, 10 occlusion (AO / cavity dirt). Better than the GEOMETRY node's
+    screen-space pointiness. Use the baked layer as a wear/dirt mask."""
+    return _send(f"bake\t{bake_type}", read_timeout=60)
+
+
+@mcp.tool()
 def ap_paint_dab(u: float, v: float, radius: float = 0.25, opacity: float = 1.0, mode: int = 0) -> str:
     """Stamp the brush once onto the current paint layer. mode 0 = 3D (u,v are
     normalized screen coords 0..1; the brush raycasts onto the mesh in the viewport),

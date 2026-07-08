@@ -294,6 +294,75 @@ static void mcp_set_socket_values(ui_node_socket_t *sock, int argc, char **argv,
 // Import an image file into the project's texture assets so a TEX_IMAGE node can
 // reference it (button[0] indexes g_project->_->assets). Returns the asset index —
 // the realism path: use real scanned PBR maps instead of only procedural noise.
+// The brush stamps the ACTIVE MATERIAL's output color (make_paint.c out_basecol), not
+// a swatch — so set a solid-color material and painting paints that color. Reduces the
+// material to its output node with the given base/roughness/metallic, then reparses.
+static void mcp_cmd_paint_color(int argc, char **argv) {
+	// paint_color <hexRRGGBB|AARRGGBB> [rough] [metal]
+	if (argc < 2) {
+		mcp_reply("ERR\tusage: paint_color <hexRRGGBB> [rough] [metal]\n");
+		return;
+	}
+	if (g_context->material == NULL || g_context->material->canvas == NULL) {
+		mcp_reply("ERR\tno active material\n");
+		return;
+	}
+	ui_node_canvas_t *c   = g_context->material->canvas;
+	ui_node_t        *out = NULL;
+	for (int i = 0; i < c->nodes->length; ++i) {
+		if (string_equals(c->nodes->buffer[i]->type, "OUTPUT_MATERIAL_PBR")) {
+			out = c->nodes->buffer[i];
+			break;
+		}
+	}
+	if (out == NULL) {
+		mcp_reply("ERR\tno output node\n");
+		return;
+	}
+	c->nodes->buffer[0] = out; // reduce to a solid material (output only, no links)
+	c->nodes->length    = 1;
+	c->links->length    = 0;
+
+	uint32_t hex = (uint32_t)strtoul(argv[1], NULL, 16);
+	f32      r   = ((hex >> 16) & 0xff) / 255.0f;
+	f32      g   = ((hex >> 8) & 0xff) / 255.0f;
+	f32      b   = (hex & 0xff) / 255.0f;
+	if (out->inputs != NULL && out->inputs->length > 4) {
+		f32_array_t *base = f32_array_create(4);
+		base->buffer[0] = r; base->buffer[1] = g; base->buffer[2] = b; base->buffer[3] = 1.0f;
+		base->length    = 4;
+		out->inputs->buffer[0]->default_value = base;
+		if (argc > 2) {
+			f32_array_t *rough = f32_array_create(1);
+			rough->buffer[0] = (f32)atof(argv[2]); rough->length = 1;
+			out->inputs->buffer[3]->default_value = rough;
+		}
+		if (argc > 3) {
+			f32_array_t *metal = f32_array_create(1);
+			metal->buffer[0] = (f32)atof(argv[3]); metal->length = 1;
+			out->inputs->buffer[4]->default_value = metal;
+		}
+	}
+	make_material_parse_paint_material(true);
+	mcp_reply("OK\t{\"color\":true}\n");
+}
+
+// Bake mesh-derived data (curvature, occlusion, etc.) into the current layer — a real
+// 3D wear/dirt mask (unlike the material GEOMETRY node's screen-space pointiness).
+// bake_type: 0 curvature, 3 height, 10 occlusion (see BAKE_TYPE_*).
+static void mcp_cmd_bake(int argc, char **argv) {
+	if (argc < 2) {
+		mcp_reply("ERR\tusage: bake <type: 0 curvature, 10 occlusion, ...>\n");
+		return;
+	}
+	g_context->tool      = TOOL_TYPE_BAKE;
+	g_context->bake_type = atoi(argv[1]);
+	make_material_parse_paint_material(false); // regen shader as the bake shader
+	g_context->pdirty = 2;
+	mcp_paint_active  = true;
+	mcp_reply(string("OK\t{\"bake\":%d}\n", g_context->bake_type));
+}
+
 // Stamp the brush at a UV coordinate on the current paint layer. The per-frame
 // render_path_paint_draw() paints whenever pdirty>0, so we set the coords + brush +
 // pdirty and mcp_paint_active (which makes the brush "down"); the next rendered frame
@@ -550,6 +619,12 @@ static void mcp_dispatch(char *line) {
 	}
 	else if (strcmp(cmd, "import_texture") == 0) {
 		mcp_cmd_import_texture(argc, argv);
+	}
+	else if (strcmp(cmd, "paint_color") == 0) {
+		mcp_cmd_paint_color(argc, argv);
+	}
+	else if (strcmp(cmd, "bake") == 0) {
+		mcp_cmd_bake(argc, argv);
 	}
 	else if (strcmp(cmd, "paint_dab") == 0) {
 		mcp_cmd_paint_dab(argc, argv);
