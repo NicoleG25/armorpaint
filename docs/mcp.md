@@ -75,6 +75,26 @@ primitives `ap_add_node`/`ap_set_node_input`/`ap_set_node_output`/`ap_set_node_b
 The FAULTLINE importer (ArmorPaintMaterialImporter.Build(name, tiling, maxSize))
 takes a UV tiling and a max texture size for texel density / VRAM control.
 
+### Realism from scratch (no imports)
+
+Pure single-noise recipes read as stylized. Realistic *procedural* materials come from
+technique, not scanned maps:
+- **Layer noise octaves** — a macro noise (patches/blotches) + a fine noise (grain);
+  real surfaces have variation at multiple scales.
+- **Correlate the PBR channels** — drive base color, roughness, metallic AND bump from
+  ONE shared mask so they move together (rust is redder AND rougher AND non-metallic
+  AND bumpier; clean metal is darker AND smoother AND reflective). Uncorrelated channels
+  are the tell of a fake material.
+- **Tame with color ramps** — VALTORGB remaps a 0..1 noise into a controlled coverage /
+  contrast range instead of full-swing.
+- **Bake-driven wear** — curvature/occlusion bakes are computed from the mesh (still
+  from scratch), so use them for edge wear + cavity dirt that follows the geometry.
+
+`ap_material_rusted_metal` is the worked example (macro+fine noise, a ramped rust mask
+driving color/rough/metal/bump); `ap_material_worn_edges` adds a baked mask. Same
+pattern extends to concrete, wood, fabric, etc. Verified: renders as believable rusted
+metal in URP.
+
 ### Realistic materials (real scanned textures)
 
 Procedural noise tops out at stylized. Photoreal comes from real scanned PBR maps,

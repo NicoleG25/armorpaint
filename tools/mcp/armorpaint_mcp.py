@@ -680,6 +680,72 @@ def ap_material_from_pbr_set(
 
 
 @mcp.tool()
+def ap_material_rusted_metal(
+    steel_hex: str = "ff3a3d42",
+    rust_dark_hex: str = "ff4a2a16",
+    rust_light_hex: str = "ff8a4a24",
+    rust_coverage: float = 0.5,
+    macro_scale: float = 3.0,
+    fine_scale: float = 13.0,
+    bake=True,
+) -> str:
+    """Realistic rusted metal, fully procedural (no imported textures). Layers a macro
+    noise (rust patches, ramped for coverage) with a fine noise (grain), and drives
+    color, roughness, metallic AND normal from a shared rust mask so they stay
+    correlated (rust is redder, rougher, non-metallic, and bumpier than the steel).
+    rust_coverage 0..1 shifts how much rust. Shows how to reach realism from scratch."""
+    steel = _hex_to_rgba(steel_hex)
+    rust_d, rust_l = _hex_to_rgba(rust_dark_hex), _hex_to_rgba(rust_light_hex)
+    out = json.loads(_send("clear_material"))["output_id"]
+
+    n_macro = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+    _send(f"set_input\t{n_macro}\t1\t{_floats([macro_scale])}")
+    n_fine = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+    _send(f"set_input\t{n_fine}\t1\t{_floats([fine_scale])}")
+
+    # rust mask = ramp(macro noise); ramp stops set by coverage (sharp-ish transition)
+    ramp = json.loads(_send("add_node\tVALTORGB"))["id"]
+    _send(f"link\t{n_macro}\t0\t{ramp}\t0")
+    lo = max(0.0, rust_coverage - 0.12)
+    hi = min(1.0, rust_coverage + 0.12)
+    _send(f"set_button\t{ramp}\t0\t{_floats([0,0,0,1, lo,  1,1,1,1, hi])}")
+
+    # rust color = mix(dark, light) by fine noise -> varied rust
+    rust_mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
+    _send(f"set_input\t{rust_mix}\t1\t{_floats(rust_d)}")
+    _send(f"set_input\t{rust_mix}\t2\t{_floats(rust_l)}")
+    _send(f"link\t{n_fine}\t0\t{rust_mix}\t0")
+
+    # base = mix(steel, rust_color) by rust mask
+    base_mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
+    _send(f"set_input\t{base_mix}\t1\t{_floats(steel)}")
+    _send(f"link\t{rust_mix}\t0\t{base_mix}\t2")
+    _send(f"link\t{ramp}\t0\t{base_mix}\t0")
+    _send(f"link\t{base_mix}\t0\t{out}\t0")
+
+    # roughness: steel smoother, rust rougher, driven by the same mask
+    _ramp_scalar(out, ramp, 0, 3, 0.35, 0.92)
+
+    # metallic: steel metal, rust not — invert the mask via mix(white, black)
+    metal_mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
+    _send(f"set_input\t{metal_mix}\t1\t{_floats([1,1,1,1])}")  # clean = metal
+    _send(f"set_input\t{metal_mix}\t2\t{_floats([0,0,0,1])}")  # rust = non-metal
+    _send(f"link\t{ramp}\t0\t{metal_mix}\t0")
+    _send(f"link\t{metal_mix}\t0\t{out}\t4")
+
+    # bump: fine noise gives micro relief, stronger where rust
+    bump = json.loads(_send("add_node\tBUMP"))["id"]
+    _send(f"set_input\t{bump}\t0\t{_floats([0.5])}")
+    _send(f"link\t{n_fine}\t0\t{bump}\t2")
+    _send(f"link\t{bump}\t0\t{out}\t5")
+
+    r = _send("commit_material", read_timeout=60)
+    if bake:
+        r += " | " + _send("material_fill_layer", read_timeout=40)
+    return r
+
+
+@mcp.tool()
 def ap_material_worn_edges(
     clean_hex: str = "ff33363c",
     worn_hex: str = "ffb0aea6",
