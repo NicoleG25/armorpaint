@@ -327,6 +327,35 @@ static void mcp_cmd_set_socket(int argc, char **argv, bool is_input) {
 	mcp_reply("OK\t{\"set\":true}\n");
 }
 
+static void mcp_cmd_set_button(int argc, char **argv) {
+	// set_button <node_id> <button_index> <f0> [f1 ..]
+	// Buttons hold node parameters that aren't sockets: enum selections (blend
+	// type), bools (invert), and CUSTOM data like a VALTORGB color ramp, whose
+	// default_value is N stops of [r,g,b,a,position] (5 floats each).
+	if (argc < 4) {
+		mcp_reply("ERR\tusage: set_button <node_id> <index> <f..>\n");
+		return;
+	}
+	ui_node_t *n = mcp_find_node(atoi(argv[1]));
+	if (n == NULL) {
+		mcp_reply("ERR\tnode not found\n");
+		return;
+	}
+	int idx = atoi(argv[2]);
+	if (n->buttons == NULL || idx < 0 || idx >= n->buttons->length) {
+		mcp_reply("ERR\tbutton index out of range\n");
+		return;
+	}
+	int          cnt = argc - 3;
+	f32_array_t *arr = f32_array_create(cnt);
+	for (int i = 0; i < cnt; ++i) {
+		arr->buffer[i] = (float)atof(argv[3 + i]);
+	}
+	arr->length                        = cnt;
+	n->buttons->buffer[idx]->default_value = arr;
+	mcp_reply("OK\t{\"set\":true}\n");
+}
+
 static void mcp_cmd_link(int argc, char **argv) {
 	// link <from_id> <from_socket> <to_id> <to_socket>
 	if (argc < 5) {
@@ -451,6 +480,9 @@ static void mcp_dispatch(char *line) {
 	}
 	else if (strcmp(cmd, "set_output") == 0) {
 		mcp_cmd_set_socket(argc, argv, false);
+	}
+	else if (strcmp(cmd, "set_button") == 0) {
+		mcp_cmd_set_button(argc, argv);
 	}
 	else if (strcmp(cmd, "link") == 0) {
 		mcp_cmd_link(argc, argv);
