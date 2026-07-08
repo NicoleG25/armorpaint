@@ -78,6 +78,25 @@ static int mcp_split(char *line, char **argv, int max) {
 	return n;
 }
 
+// Classify a slot for the client: layer / mask / group / filter. The engine has no
+// type field on slot_layer — it's inferred from which textures exist (see slot_layer.c
+// slot_layer_is_*). Mirror that here so the stack read-back matches the app's own view.
+static const char *mcp_slot_kind(slot_layer_t *l) {
+	if (l == NULL) {
+		return "null";
+	}
+	if (slot_layer_is_group(l)) {
+		return "group";
+	}
+	if (slot_layer_is_mask(l)) {
+		return "mask";
+	}
+	if (slot_layer_is_filter(l)) {
+		return "filter";
+	}
+	return "layer";
+}
+
 static void mcp_cmd_list_layers(void) {
 	char buf[MCP_LINE_MAX];
 	int  off = snprintf(buf, sizeof(buf), "OK\t[");
@@ -86,15 +105,143 @@ static void mcp_cmd_list_layers(void) {
 		for (int i = 0; i < layers->length; ++i) {
 			slot_layer_t *l    = layers->buffer[i];
 			const char   *name = (l != NULL && l->name != NULL) ? l->name : "";
-			off += snprintf(buf + off, sizeof(buf) - off, "%s{\"index\":%d,\"id\":%d,\"name\":\"%s\"}",
-			                i == 0 ? "" : ",", i, l != NULL ? l->id : -1, name);
-			if (off > (int)sizeof(buf) - 128) {
+			int parent = (l != NULL && l->parent != NULL) ? array_index_of(layers, l->parent) : -1;
+			off += snprintf(buf + off, sizeof(buf) - off,
+			                "%s{\"index\":%d,\"id\":%d,\"name\":\"%s\",\"kind\":\"%s\",\"blend\":%d,"
+			                "\"opacity\":%.3f,\"visible\":%s,\"parent\":%d,\"selected\":%s}",
+			                i == 0 ? "" : ",", i, l != NULL ? l->id : -1, name, mcp_slot_kind(l),
+			                l != NULL ? (int)l->blending : 0, l != NULL ? l->mask_opacity : 1.0f,
+			                (l != NULL && l->visible) ? "true" : "false", parent,
+			                l == g_context->layer ? "true" : "false");
+			if (off > (int)sizeof(buf) - 160) {
 				break;
 			}
 		}
 	}
 	snprintf(buf + off, sizeof(buf) - off, "]\n");
 	mcp_reply(buf);
+}
+
+// Index of the currently-selected slot in the project layer array, or -1.
+static int mcp_current_layer_index(void) {
+	if (g_project == NULL || g_project->_ == NULL || g_context->layer == NULL) {
+		return -1;
+	}
+	return array_index_of(g_project->_->layers, g_context->layer);
+}
+
+// --- layer stack: artist-style buildup (base + masked wear/grime layers) -----
+
+// New empty paint layer on top of the selected one, and select it. This is the stack
+// primitive: build a base (fill_layer/material_fill_layer), add_layer for wear, blend
+// it, then mask it. Returns the new index+id.
+static void mcp_cmd_add_layer(void) {
+	slot_layer_t *l = layers_new_layer(true, -1, NULL);
+	if (l == NULL) {
+		mcp_reply("ERR\tlayer create failed (max layers?)\n");
+		return;
+	}
+	context_set_layer(l);
+	mcp_reply(string("OK\t{\"index\":%d,\"id\":%d}\n", mcp_current_layer_index(), l->id));
+}
+
+// New group (folder) at the top. Groups let a set of layers share one mask/opacity.
+static void mcp_cmd_add_group(void) {
+	slot_layer_t *l = layers_new_group();
+	if (l == NULL) {
+		mcp_reply("ERR\tgroup create failed (max layers?)\n");
+		return;
+	}
+	context_set_layer(l);
+	mcp_reply(string("OK\t{\"index\":%d,\"id\":%d}\n", mcp_current_layer_index(), l->id));
+}
+
+// Add a mask to the selected layer/group and select the mask. Fill it afterwards with a
+// bake (curvature/AO wear) or fill_mask_material (procedural grunge) to reveal the layer
+// only where the mask is bright — the core of realistic layered wear.
+static void mcp_cmd_add_mask(void) {
+	slot_layer_t *parent = g_context->layer;
+	if (parent == NULL) {
+		mcp_reply("ERR\tno selected layer to mask\n");
+		return;
+	}
+	// A mask attaches to a paintable layer/group, not to another mask/filter.
+	if (slot_layer_is_mask(parent) || slot_layer_is_filter(parent)) {
+		parent = parent->parent;
+	}
+	slot_layer_t *m = layers_new_mask(true, parent, -1);
+	if (m == NULL) {
+		mcp_reply("ERR\tmask create failed (max layers?)\n");
+		return;
+	}
+	context_set_layer(m);
+	mcp_reply(string("OK\t{\"index\":%d,\"id\":%d}\n", mcp_current_layer_index(), m->id));
+}
+
+// Select a slot by index so subsequent bake/paint/blend/opacity ops target it.
+static void mcp_cmd_select_layer(int argc, char **argv) {
+	if (argc < 2) {
+		mcp_reply("ERR\tusage: select_layer <index>\n");
+		return;
+	}
+	if (g_project == NULL || g_project->_ == NULL) {
+		mcp_reply("ERR\tno project\n");
+		return;
+	}
+	int i = atoi(argv[1]);
+	if (i < 0 || i >= g_project->_->layers->length) {
+		mcp_reply("ERR\tindex out of range\n");
+		return;
+	}
+	context_set_layer(g_project->_->layers->buffer[i]);
+	mcp_reply(string("OK\t{\"index\":%d}\n", i));
+}
+
+// Set the selected layer's blend mode (blend_type_t: 0 mix, 2 multiply, 5 screen,
+// 7 add, 8 overlay, 9 soft-light, ...). Multiply = grime darkening, screen/add = glow.
+static void mcp_cmd_set_layer_blend(int argc, char **argv) {
+	if (argc < 2) {
+		mcp_reply("ERR\tusage: set_layer_blend <blend_type>\n");
+		return;
+	}
+	if (g_context->layer == NULL) {
+		mcp_reply("ERR\tno selected layer\n");
+		return;
+	}
+	g_context->layer->blending      = (blend_type_t)atoi(argv[1]);
+	g_context->layer_preview_dirty  = true;
+	mcp_reply(string("OK\t{\"blend\":%d}\n", (int)g_context->layer->blending));
+}
+
+// Set the selected layer's opacity (0..1). On a mask this scales the mask's strength.
+static void mcp_cmd_set_layer_opacity(int argc, char **argv) {
+	if (argc < 2) {
+		mcp_reply("ERR\tusage: set_layer_opacity <0..1>\n");
+		return;
+	}
+	if (g_context->layer == NULL) {
+		mcp_reply("ERR\tno selected layer\n");
+		return;
+	}
+	g_context->layer->mask_opacity  = (f32)atof(argv[1]);
+	g_context->layer_preview_dirty  = true;
+	mcp_reply(string("OK\t{\"opacity\":%.3f}\n", g_context->layer->mask_opacity));
+}
+
+// Fill the selected mask procedurally from the active material graph (e.g. a noise/
+// voronoi grunge graph). The material's base color becomes the mask value, so build a
+// grayscale mask graph, set it as the material, then call this on the mask.
+static void mcp_cmd_fill_mask_material(void) {
+	if (g_context->layer == NULL || !slot_layer_is_mask(g_context->layer)) {
+		mcp_reply("ERR\tselect a mask first (add_mask)\n");
+		return;
+	}
+	if (g_context->material == NULL) {
+		mcp_reply("ERR\tno active material\n");
+		return;
+	}
+	slot_layer_to_fill_layer(g_context->layer);
+	mcp_reply("OK\t{\"fill_mask\":true}\n");
 }
 
 static void mcp_cmd_fill_layer(int argc, char **argv) {
@@ -664,6 +811,27 @@ static void mcp_dispatch(char *line) {
 	}
 	else if (strcmp(cmd, "list_layers") == 0) {
 		mcp_cmd_list_layers();
+	}
+	else if (strcmp(cmd, "add_layer") == 0) {
+		mcp_cmd_add_layer();
+	}
+	else if (strcmp(cmd, "add_group") == 0) {
+		mcp_cmd_add_group();
+	}
+	else if (strcmp(cmd, "add_mask") == 0) {
+		mcp_cmd_add_mask();
+	}
+	else if (strcmp(cmd, "select_layer") == 0) {
+		mcp_cmd_select_layer(argc, argv);
+	}
+	else if (strcmp(cmd, "set_layer_blend") == 0) {
+		mcp_cmd_set_layer_blend(argc, argv);
+	}
+	else if (strcmp(cmd, "set_layer_opacity") == 0) {
+		mcp_cmd_set_layer_opacity(argc, argv);
+	}
+	else if (strcmp(cmd, "fill_mask_material") == 0) {
+		mcp_cmd_fill_mask_material();
 	}
 	else if (strcmp(cmd, "get_material_json") == 0) {
 		mcp_cmd_get_material_json();

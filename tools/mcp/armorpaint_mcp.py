@@ -123,8 +123,77 @@ def ap_fill_layer(
 
 @mcp.tool()
 def ap_list_layers() -> str:
-    """List the current project's layers as JSON (index, id, name)."""
+    """List the layer stack as JSON. Each entry: index, id, name, kind
+    (layer/mask/group/filter), blend (blend_type_t), opacity, visible, parent
+    (index of the group/layer it belongs to, -1 if none), selected."""
     return _send("list_layers")
+
+
+# --- layer stack: artist-style buildup (base + masked wear/grime) -----------
+#
+# The realism unlock: instead of one flat graph, stack real layers the way a texture
+# artist does — a base material, then wear/grime layers ON TOP, each revealed by a
+# mask. Fill a mask with a mesh bake (curvature = edge wear, occlusion = cavity dirt)
+# or a procedural grunge graph, so the wear follows the geometry and reads as real.
+#
+# Typical loop:
+#   base:  a recipe / graph  -> ap_material_fill_layer
+#   wear:  ap_add_layer -> ap_paint_color(rustcolor, rough=0.9) (or a graph fill)
+#          ap_set_layer_blend(2)  # multiply grime, or leave 0 to overlay
+#          ap_add_mask -> ap_bake(0)  # curvature into the mask = edge-only wear
+#   grime: ap_add_layer -> ... -> ap_add_mask -> ap_bake(10)  # AO into mask = cavities
+
+
+@mcp.tool()
+def ap_add_layer() -> str:
+    """Add a new empty paint layer on top of the selected one and select it.
+    Returns {index, id}. Build a base first, then stack wear layers with this."""
+    return _send("add_layer")
+
+
+@mcp.tool()
+def ap_add_group() -> str:
+    """Add a group (folder) at the top and select it. A group's mask/opacity apply
+    to all layers inside it. Returns {index, id}."""
+    return _send("add_group")
+
+
+@mcp.tool()
+def ap_add_mask() -> str:
+    """Add a mask to the SELECTED layer/group and select the mask, so the next
+    ap_bake / ap_paint / ap_fill_mask_material fills it. A bright mask reveals the
+    layer, black hides it. Returns {index, id}."""
+    return _send("add_mask")
+
+
+@mcp.tool()
+def ap_select_layer(index: int) -> str:
+    """Select a slot by its index (from ap_list_layers) so subsequent
+    bake/paint/blend/opacity ops target it."""
+    return _send(f"select_layer\t{index}")
+
+
+@mcp.tool()
+def ap_set_layer_blend(blend_type: int = 0) -> str:
+    """Set the SELECTED layer's blend mode. blend_type_t: 0 mix, 1 darken,
+    2 multiply, 4 lighten, 5 screen, 6 dodge, 7 add, 8 overlay, 9 soft-light,
+    10 linear-light, 12 subtract. Multiply = grime darkening; screen/add = glow."""
+    return _send(f"set_layer_blend\t{blend_type}")
+
+
+@mcp.tool()
+def ap_set_layer_opacity(opacity: float = 1.0) -> str:
+    """Set the SELECTED layer's opacity (0..1). On a mask, scales its strength —
+    lower it to make wear subtle."""
+    return _send(f"set_layer_opacity\t{opacity}")
+
+
+@mcp.tool()
+def ap_fill_mask_material() -> str:
+    """Fill the SELECTED mask procedurally from the active material graph (build a
+    grayscale noise/voronoi grunge graph, set it as the material, then call this).
+    The material's base color becomes the mask value."""
+    return _send("fill_mask_material", read_timeout=30)
 
 
 @mcp.tool()

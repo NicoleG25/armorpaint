@@ -56,6 +56,42 @@ Tab-delimited fields, newline-terminated. Reply is one line: `OK\t<json>` or `ER
 | `set_button\t<node_id>\t<index>\t<f..>` | Set a node BUTTON (enum/bool, or a VALTORGB ramp) |
 | `link\t<from_id>\t<from_socket>\t<to_id>\t<to_socket>` | Link output→input (sockets by **index**) |
 | `commit_material` | Reparse the shader + rebake fill layers after edits |
+| `add_layer` | New empty paint layer on top, selected; returns `{index,id}` |
+| `add_group` | New group (folder) at top, selected; returns `{index,id}` |
+| `add_mask` | Add a mask to the selected layer/group, select it; returns `{index,id}` |
+| `select_layer\t<index>` | Select a slot so bake/paint/blend/opacity target it |
+| `set_layer_blend\t<blend_type>` | Selected layer blend (0 mix, 2 multiply, 5 screen, 7 add, 8 overlay, ...) |
+| `set_layer_opacity\t<0..1>` | Selected layer opacity (on a mask, its strength) |
+| `fill_mask_material` | Fill the selected mask from the active material graph (procedural grunge) |
+
+### Layer stack — artist-style buildup (the realism unlock)
+
+Instead of one flat graph, stack real layers the way a texture artist does: a base
+material, then wear/grime layers ON TOP, each revealed by a **mask**. Fill the mask
+with a mesh **bake** (`bake 0` curvature = edge wear, `bake 10` occlusion = cavity
+dirt) or a procedural grunge graph, so the wear follows the geometry and reads as
+real. `list_layers` now returns `kind` (layer/mask/group/filter), `blend`, `opacity`,
+`visible`, `parent` (index), `selected`.
+
+A mask has no type field in the engine — it's a slot_layer with `texpaint` but no
+`texpaint_nor` (see `slot_layer_is_mask`); it stores just before its owning layer in
+the array, with `parent` pointing at that layer. `bake` and paint target
+`g_context->layer`, so `add_mask` (which selects the new mask) then `bake` writes the
+bake straight into the mask.
+
+Worked loop (verified — base + curvature-masked multiply wear composites in the lit
+preview):
+```
+paint_color 8899aa 0.4 1.0   # base metal
+material_fill_layer
+add_layer                    # wear layer on top
+paint_color 553322 0.9 0.0   # rust color, rough, non-metal
+set_layer_blend 2            # multiply = grime darkening
+add_mask                     # mask on the wear layer, selected
+bake 0                       # curvature into the mask = edge-only wear
+```
+Bridge: `ap_add_layer`, `ap_add_group`, `ap_add_mask`, `ap_select_layer`,
+`ap_set_layer_blend`, `ap_set_layer_opacity`, `ap_fill_mask_material`.
 
 Buttons hold parameters that aren't sockets. A VALTORGB (color ramp) button is N
 stops of `[r,g,b,a,position]` (5 floats each) — set it to remap a 0..1 driver
