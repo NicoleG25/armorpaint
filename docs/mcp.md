@@ -93,6 +93,19 @@ Note on edge wear: the GEOMETRY node's Pointiness output is screen-space (ddx/dd
 the normal), so when baked in UV space it keys on UV seams rather than true 3D edges —
 not a reliable wear mask. Real edge wear needs a curvature/AO bake (future work).
 
+### Brush painting (hand-placed detail)
+
+The third creation mode, alongside procedural graphs and scanned textures. `paint_dab
+<u> <v> [radius] [opacity] [mode]` stamps the brush onto the current paint layer;
+`paint_move <u> <v>` sets a stroke's start. mode 0 = 3D (u,v are normalized screen
+coords; the brush raycasts onto the mesh via the rendered gbuffer — works headlessly),
+mode 1 = 2D (UV space; needs the 2D view). Each dab consumes one rendered frame
+(`pdirty`), so space calls ~one frame apart. Implementation: a `down` flag OR'd into
+the brush uniform (uniforms.c) makes the brush paint when `pdirty>0` without a real
+mouse. Bridge: `ap_paint_dab`, `ap_paint_stroke([[u,v],...])`. Verified: dabs stamp
+as clean brush circles on the mesh. Paint color is the active swatch (per-dab color
+control is future work).
+
 ### Building graphs incrementally
 
 `clear_material` → `add_node` / `set_input` / `set_output` / `link` → `commit_material`

@@ -558,6 +558,30 @@ def ap_material_painted_scratched(
     return r
 
 
+# --- brush painting (hand-placed detail) ------------------------------------
+
+@mcp.tool()
+def ap_paint_dab(u: float, v: float, radius: float = 0.25, opacity: float = 1.0, mode: int = 0) -> str:
+    """Stamp the brush once onto the current paint layer. mode 0 = 3D (u,v are
+    normalized screen coords 0..1; the brush raycasts onto the mesh in the viewport),
+    mode 1 = 2D (UV space; needs the 2D view). Default brush color is the active
+    swatch. Each dab needs a rendered frame, so space calls out slightly."""
+    return _send(f"paint_dab\t{u}\t{v}\t{radius}\t{opacity}\t{mode}")
+
+
+@mcp.tool()
+def ap_paint_stroke(points: list[list[float]], radius: float = 0.2, opacity: float = 1.0, mode: int = 0) -> str:
+    """Paint a stroke as a sequence of dabs. points is a list of [u,v] (screen coords
+    for mode 0). Dabs are spaced one render frame apart. Use many close points for a
+    continuous line."""
+    n = 0
+    for p in points:
+        _send(f"paint_dab\t{p[0]}\t{p[1]}\t{radius}\t{opacity}\t{mode}")
+        time.sleep(0.11)  # one dab per rendered frame
+        n += 1
+    return json.dumps({"dabs": n})
+
+
 # --- real scanned textures (the realism path) -------------------------------
 
 # TEX_IMAGE color spaces: 0 Auto, 1 Linear, 2 sRGB, 3 DirectX Normal.
