@@ -782,6 +782,23 @@ def _mix(node_a, socket_a, node_b, socket_b, blend=0, factor=1.0):
     return m
 
 
+def _fbm(base_scale, octaves=3):
+    """Fractal (multi-octave) noise: sum TEX_NOISE octaves at rising scale and
+    falling amplitude via add-mix. Real surfaces are fractal — single-scale noise
+    reads soft and fake; FBM gives correlated macro+micro grit. Returns the top
+    node id (grayscale on output 0)."""
+    cur = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+    _send(f"set_input\t{cur}\t1\t{_floats([base_scale])}")
+    amp, sc = 0.5, base_scale
+    for _ in range(octaves - 1):
+        sc *= 2.4
+        nx = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+        _send(f"set_input\t{nx}\t1\t{_floats([sc])}")
+        cur = _mix(cur, 0, nx, 0, blend=7, factor=amp)  # add octave
+        amp *= 0.5
+    return cur
+
+
 @mcp.tool()
 def ap_material_rusted_metal(
     steel_hex: str = "ff3a3d42",
@@ -792,15 +809,18 @@ def ap_material_rusted_metal(
     streaks: bool = True,
     bake: bool = True,
 ) -> str:
-    """Realistic rusted metal, fully procedural (no imported textures). Multi-octave
-    rust mask (macro patches x meso detail), optional curvature-baked EDGE rust (rust
-    eats exposed edges) and vertical STREAKS (rust runs down). One shared mask drives
-    base color, roughness, metallic and bump so the channels stay correlated. This is
-    the from-scratch realism showcase."""
+    """Realistic rusted metal, fully procedural (no imported textures). FBM (fractal
+    multi-octave) rust mask AND-ed with big macro patches so bare-steel patches survive,
+    optional curvature-baked EDGE rust (rust eats exposed edges) and de-streaked vertical
+    drips. One shared mask drives base color, roughness, metallic and a gritty FBM bump so
+    the channels stay correlated. Steel darkens with the macro and rust varies tonally, so
+    it reads as metal THAT IS RUSTING, not a flat brown. From-scratch realism showcase."""
     steel = _hex_to_rgba(steel_hex)
     rust_d, rust_l = _hex_to_rgba(rust_dark_hex), _hex_to_rgba(rust_light_hex)
+    steel_dark = [c * 0.72 for c in steel[:3]] + [1.0]  # darkened steel for tonal life
 
-    # Optional: bake curvature edge mask (mesh-derived, still no imports)
+    # Optional: bake curvature edge mask (mesh-derived, still no imports) so rust
+    # concentrates on exposed edges.
     edge_png = None
     if edge_rust:
         import tempfile
@@ -814,44 +834,57 @@ def ap_material_rusted_metal(
     _send("new_project\t0", 20); time.sleep(1.5)
     out = json.loads(_send("clear_material"))["output_id"]
 
-    # multi-octave patch mask: macro x meso
-    n_macro = json.loads(_send("add_node\tTEX_NOISE"))["id"]; _send(f"set_input\t{n_macro}\t1\t{_floats([3.0])}")
-    n_meso = json.loads(_send("add_node\tTEX_NOISE"))["id"]; _send(f"set_input\t{n_meso}\t1\t{_floats([7.5])}")
-    patch = _mix(n_macro, 0, n_meso, 0, blend=2)  # multiply octaves
-    n_fine = json.loads(_send("add_node\tTEX_NOISE"))["id"]; _send(f"set_input\t{n_fine}\t1\t{_floats([16.0])}")
+    # WHERE rust lives: big macro patches multiplied with FBM meso detail. The multiply
+    # (AND) keeps bare-steel patches instead of the whole surface going uniformly rusty.
+    n_macro = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+    _send(f"set_input\t{n_macro}\t1\t{_floats([2.5])}")
+    patch = _fbm(3.0, octaves=3)
+    combo = _mix(n_macro, 0, patch, 0, blend=2)  # multiply keeps steel patches
 
-    mask_src, mask_socket = patch, 0
-    if streaks:  # vertical drips: anisotropic noise, screened into the mask
-        n_streak = _mapped_noise(scale_xyz=(4.0, 22.0, 1.0))
-        streaked = _mix(patch, 0, n_streak, 0, blend=5)  # screen
-        mask_src, mask_socket = streaked, 0
+    mask_src, mask_socket = combo, 0
+    if streaks:  # vertical drips, BROKEN UP by a cross noise so they don't comb-band
+        n_streak = _mapped_noise(scale_xyz=(3.0, 9.0, 1.0))
+        n_break = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+        _send(f"set_input\t{n_break}\t1\t{_floats([5.0])}")
+        drip = _mix(n_streak, 0, n_break, 0, blend=2)            # multiply = irregular runs
+        mask_src = _mix(combo, 0, drip, 0, blend=5, factor=0.3)  # screen in gently
+        mask_socket = 0
     if edge_png:  # rust concentrates on exposed edges
         eid = _image_node(edge_png, 1)
-        edged = _mix(mask_src, mask_socket, eid, 0, blend=7)  # add edge rust
-        mask_src, mask_socket = edged, 0
+        mask_src = _mix(mask_src, mask_socket, eid, 0, blend=7)  # add edge rust
+        mask_socket = 0
 
-    # coverage ramp -> final rust mask
+    # coverage ramp -> final rust mask. High window + wide transition: only strong areas
+    # rust fully, with a real partial-rust gradient between (FBM add-mix lifts the mean).
     ramp = json.loads(_send("add_node\tVALTORGB"))["id"]
     _send(f"link\t{mask_src}\t{mask_socket}\t{ramp}\t0")
-    lo = max(0.0, rust_coverage - 0.12); hi = min(1.0, rust_coverage + 0.14)
+    lo = max(0.0, rust_coverage - 0.08); hi = min(1.0, rust_coverage + 0.30)
     _send(f"set_button\t{ramp}\t0\t{_floats([0,0,0,1, lo,  1,1,1,1, hi])}")
 
+    # rust tone varies with a fine FBM; steel darkens with the macro so neither is flat
+    finecol = _fbm(12.0, octaves=2)
     rust_mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
     _send(f"set_input\t{rust_mix}\t1\t{_floats(rust_d)}"); _send(f"set_input\t{rust_mix}\t2\t{_floats(rust_l)}")
-    _send(f"link\t{n_fine}\t0\t{rust_mix}\t0")
+    _send(f"link\t{finecol}\t0\t{rust_mix}\t0")
+    steel_var = json.loads(_send("add_node\tMIX_RGB"))["id"]
+    _send(f"set_input\t{steel_var}\t1\t{_floats(steel)}"); _send(f"set_input\t{steel_var}\t2\t{_floats(steel_dark)}")
+    _send(f"link\t{n_macro}\t0\t{steel_var}\t0")
 
     base_mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
-    _send(f"set_input\t{base_mix}\t1\t{_floats(steel)}")
+    _send(f"link\t{steel_var}\t0\t{base_mix}\t1")
     _send(f"link\t{rust_mix}\t0\t{base_mix}\t2"); _send(f"link\t{ramp}\t0\t{base_mix}\t0")
     _send(f"link\t{base_mix}\t0\t{out}\t0")
 
-    _ramp_scalar(out, ramp, 0, 3, 0.32, 0.94)  # roughness correlated with rust
+    # hard-correlated channels: bare steel smooth+metallic, rust matte+dielectric
+    _ramp_scalar(out, ramp, 0, 3, 0.30, 0.95)  # roughness
     metal_mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
     _send(f"set_input\t{metal_mix}\t1\t{_floats([1,1,1,1])}"); _send(f"set_input\t{metal_mix}\t2\t{_floats([0,0,0,1])}")
     _send(f"link\t{ramp}\t0\t{metal_mix}\t0"); _send(f"link\t{metal_mix}\t0\t{out}\t4")
 
-    bump = json.loads(_send("add_node\tBUMP"))["id"]; _send(f"set_input\t{bump}\t0\t{_floats([0.6])}")
-    _send(f"link\t{n_fine}\t0\t{bump}\t2"); _send(f"link\t{bump}\t0\t{out}\t5")
+    # gritty pitting relief: FBM micro detail into bump (multi-scale, correlated)
+    grit = _fbm(20.0, octaves=3)
+    bump = json.loads(_send("add_node\tBUMP"))["id"]; _send(f"set_input\t{bump}\t0\t{_floats([0.7])}")
+    _send(f"link\t{grit}\t0\t{bump}\t2"); _send(f"link\t{bump}\t0\t{out}\t5")
 
     r = _send("commit_material", read_timeout=60)
     if bake:
