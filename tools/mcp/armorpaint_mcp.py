@@ -438,35 +438,50 @@ def ap_material_brushed_steel(
 @mcp.tool()
 def ap_material_concrete(
     color_light: str = "ff9a9790",
-    color_dark: str = "ff6d6a63",
-    rough_lo: float = 0.6,
-    rough_hi: float = 0.9,
-    bump_strength: float = 0.5,
+    color_dark: str = "ff5d5a53",
+    stain_hex: str = "ff43413b",
+    cracks: bool = True,
+    bump_strength: float = 0.55,
     bake: bool = True,
 ) -> str:
-    """Rough concrete: blotchy grey base (noise-mixed), high roughness remapped via a
-    color ramp, non-metallic, with fine surface relief. Good for walls/floors."""
-    light, dark = _hex_to_rgba(color_light), _hex_to_rgba(color_dark)
+    """Realistic concrete, from scratch: multi-octave grey variation (macro stains x
+    meso mottle + fine grain), optional VORONOI hairline cracks darkening the surface,
+    correlated high roughness + relief, non-metallic. Good for walls/floors/bunkers."""
+    light, dark, stain = _hex_to_rgba(color_light), _hex_to_rgba(color_dark), _hex_to_rgba(stain_hex)
     out = json.loads(_send("clear_material"))["output_id"]
-    n_blotch = json.loads(_send("add_node\tTEX_NOISE"))["id"]
-    _send(f"set_input\t{n_blotch}\t1\t{_floats([3.0])}")
-    n_fine = json.loads(_send("add_node\tTEX_NOISE"))["id"]
-    _send(f"set_input\t{n_fine}\t1\t{_floats([12.0])}")
-    mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
-    _send(f"set_input\t{mix}\t1\t{_floats(light)}")
-    _send(f"set_input\t{mix}\t2\t{_floats(dark)}")
-    _send(f"link\t{n_blotch}\t0\t{mix}\t0")
-    _send(f"link\t{mix}\t0\t{out}\t0")
-    _ramp_scalar(out, n_blotch, 0, 3, rough_lo, rough_hi)  # roughness in [lo,hi]
-    _send(f"set_input\t{out}\t4\t{_floats([0.0])}")        # non-metal
-    bump = json.loads(_send("add_node\tBUMP"))["id"]
-    _send(f"set_input\t{bump}\t0\t{_floats([bump_strength])}")
-    _send(f"link\t{n_fine}\t0\t{bump}\t2")
-    _send(f"link\t{bump}\t0\t{out}\t5")
+    n_macro = json.loads(_send("add_node\tTEX_NOISE"))["id"]; _send(f"set_input\t{n_macro}\t1\t{_floats([2.5])}")
+    n_meso = json.loads(_send("add_node\tTEX_NOISE"))["id"]; _send(f"set_input\t{n_meso}\t1\t{_floats([6.0])}")
+    n_fine = json.loads(_send("add_node\tTEX_NOISE"))["id"]; _send(f"set_input\t{n_fine}\t1\t{_floats([15.0])}")
+    # base tone: mix light<->dark by macro, then darken with meso stains
+    base1 = _mix_by(light, dark, n_macro, 0)
+    stainmix = json.loads(_send("add_node\tMIX_RGB"))["id"]
+    _send(f"set_input\t{stainmix}\t2\t{_floats(stain)}")
+    _send(f"link\t{base1}\t0\t{stainmix}\t1"); _send(f"link\t{n_meso}\t0\t{stainmix}\t0")
+    _send(f"set_input\t{stainmix}\t0\t{_floats([0.35])}")  # subtle stains
+    base_node, base_socket = stainmix, 0
+    if cracks:
+        voro = json.loads(_send("add_node\tTEX_VORONOI"))["id"]; _send(f"set_input\t{voro}\t1\t{_floats([9.0])}")
+        # voronoi Distance is dark at cell borders -> hairline cracks; multiply darkens
+        crackmix = _mix(stainmix, 0, voro, 0, blend=2)  # multiply cracks in
+        base_node, base_socket = crackmix, 0
+    _send(f"link\t{base_node}\t{base_socket}\t{out}\t0")
+    _ramp_scalar(out, n_macro, 0, 3, 0.62, 0.9)   # high, varied roughness
+    _send(f"set_input\t{out}\t4\t{_floats([0.0])}")  # non-metal
+    bump = json.loads(_send("add_node\tBUMP"))["id"]; _send(f"set_input\t{bump}\t0\t{_floats([bump_strength])}")
+    _send(f"link\t{n_fine}\t0\t{bump}\t2"); _send(f"link\t{bump}\t0\t{out}\t5")
     r = _send("commit_material", read_timeout=60)
     if bake:
         r += " | " + _send("material_fill_layer", read_timeout=30)
     return r
+
+
+def _mix_by(color1, color2, factor_node, factor_socket):
+    """MIX_RGB(color1, color2) with factor from a node output. Returns mix node id."""
+    m = json.loads(_send("add_node\tMIX_RGB"))["id"]
+    _send(f"set_input\t{m}\t1\t{_floats(color1)}")
+    _send(f"set_input\t{m}\t2\t{_floats(color2)}")
+    _send(f"link\t{factor_node}\t{factor_socket}\t{m}\t0")
+    return m
 
 
 @mcp.tool()
@@ -679,65 +694,87 @@ def ap_material_from_pbr_set(
     return r
 
 
+def _mix(node_a, socket_a, node_b, socket_b, blend=0, factor=1.0):
+    """Add a MIX_RGB combining two inputs. blend: 0 Mix,2 Multiply,5 Screen,7 Add.
+    Returns the mix node id (output 0)."""
+    m = json.loads(_send("add_node\tMIX_RGB"))["id"]
+    _send(f"set_button\t{m}\t0\t{float(blend)}")     # blend_type enum
+    _send(f"set_input\t{m}\t0\t{_floats([factor])}")  # factor
+    _send(f"link\t{node_a}\t{socket_a}\t{m}\t1")
+    _send(f"link\t{node_b}\t{socket_b}\t{m}\t2")
+    return m
+
+
 @mcp.tool()
 def ap_material_rusted_metal(
     steel_hex: str = "ff3a3d42",
     rust_dark_hex: str = "ff4a2a16",
     rust_light_hex: str = "ff8a4a24",
     rust_coverage: float = 0.5,
-    macro_scale: float = 3.0,
-    fine_scale: float = 13.0,
-    bake=True,
+    edge_rust: bool = True,
+    streaks: bool = True,
+    bake: bool = True,
 ) -> str:
-    """Realistic rusted metal, fully procedural (no imported textures). Layers a macro
-    noise (rust patches, ramped for coverage) with a fine noise (grain), and drives
-    color, roughness, metallic AND normal from a shared rust mask so they stay
-    correlated (rust is redder, rougher, non-metallic, and bumpier than the steel).
-    rust_coverage 0..1 shifts how much rust. Shows how to reach realism from scratch."""
+    """Realistic rusted metal, fully procedural (no imported textures). Multi-octave
+    rust mask (macro patches x meso detail), optional curvature-baked EDGE rust (rust
+    eats exposed edges) and vertical STREAKS (rust runs down). One shared mask drives
+    base color, roughness, metallic and bump so the channels stay correlated. This is
+    the from-scratch realism showcase."""
     steel = _hex_to_rgba(steel_hex)
     rust_d, rust_l = _hex_to_rgba(rust_dark_hex), _hex_to_rgba(rust_light_hex)
+
+    # Optional: bake curvature edge mask (mesh-derived, still no imports)
+    edge_png = None
+    if edge_rust:
+        import tempfile
+        _send("new_project\t0", 20); time.sleep(1.5)
+        _send("bake\t0", 30); time.sleep(0.8)  # curvature
+        ed = tempfile.mkdtemp(prefix="ap_edge_")
+        _send(f"export_textures\tpng\tbase_color\t{ed}", 40); time.sleep(0.4)
+        p = os.path.join(ed, "untitled_base.png")
+        edge_png = p if os.path.exists(p) else None
+
+    _send("new_project\t0", 20); time.sleep(1.5)
     out = json.loads(_send("clear_material"))["output_id"]
 
-    n_macro = json.loads(_send("add_node\tTEX_NOISE"))["id"]
-    _send(f"set_input\t{n_macro}\t1\t{_floats([macro_scale])}")
-    n_fine = json.loads(_send("add_node\tTEX_NOISE"))["id"]
-    _send(f"set_input\t{n_fine}\t1\t{_floats([fine_scale])}")
+    # multi-octave patch mask: macro x meso
+    n_macro = json.loads(_send("add_node\tTEX_NOISE"))["id"]; _send(f"set_input\t{n_macro}\t1\t{_floats([3.0])}")
+    n_meso = json.loads(_send("add_node\tTEX_NOISE"))["id"]; _send(f"set_input\t{n_meso}\t1\t{_floats([7.5])}")
+    patch = _mix(n_macro, 0, n_meso, 0, blend=2)  # multiply octaves
+    n_fine = json.loads(_send("add_node\tTEX_NOISE"))["id"]; _send(f"set_input\t{n_fine}\t1\t{_floats([16.0])}")
 
-    # rust mask = ramp(macro noise); ramp stops set by coverage (sharp-ish transition)
+    mask_src, mask_socket = patch, 0
+    if streaks:  # vertical drips: anisotropic noise, screened into the mask
+        n_streak = _mapped_noise(scale_xyz=(4.0, 22.0, 1.0))
+        streaked = _mix(patch, 0, n_streak, 0, blend=5)  # screen
+        mask_src, mask_socket = streaked, 0
+    if edge_png:  # rust concentrates on exposed edges
+        eid = _image_node(edge_png, 1)
+        edged = _mix(mask_src, mask_socket, eid, 0, blend=7)  # add edge rust
+        mask_src, mask_socket = edged, 0
+
+    # coverage ramp -> final rust mask
     ramp = json.loads(_send("add_node\tVALTORGB"))["id"]
-    _send(f"link\t{n_macro}\t0\t{ramp}\t0")
-    lo = max(0.0, rust_coverage - 0.12)
-    hi = min(1.0, rust_coverage + 0.12)
+    _send(f"link\t{mask_src}\t{mask_socket}\t{ramp}\t0")
+    lo = max(0.0, rust_coverage - 0.12); hi = min(1.0, rust_coverage + 0.14)
     _send(f"set_button\t{ramp}\t0\t{_floats([0,0,0,1, lo,  1,1,1,1, hi])}")
 
-    # rust color = mix(dark, light) by fine noise -> varied rust
     rust_mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
-    _send(f"set_input\t{rust_mix}\t1\t{_floats(rust_d)}")
-    _send(f"set_input\t{rust_mix}\t2\t{_floats(rust_l)}")
+    _send(f"set_input\t{rust_mix}\t1\t{_floats(rust_d)}"); _send(f"set_input\t{rust_mix}\t2\t{_floats(rust_l)}")
     _send(f"link\t{n_fine}\t0\t{rust_mix}\t0")
 
-    # base = mix(steel, rust_color) by rust mask
     base_mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
     _send(f"set_input\t{base_mix}\t1\t{_floats(steel)}")
-    _send(f"link\t{rust_mix}\t0\t{base_mix}\t2")
-    _send(f"link\t{ramp}\t0\t{base_mix}\t0")
+    _send(f"link\t{rust_mix}\t0\t{base_mix}\t2"); _send(f"link\t{ramp}\t0\t{base_mix}\t0")
     _send(f"link\t{base_mix}\t0\t{out}\t0")
 
-    # roughness: steel smoother, rust rougher, driven by the same mask
-    _ramp_scalar(out, ramp, 0, 3, 0.35, 0.92)
-
-    # metallic: steel metal, rust not — invert the mask via mix(white, black)
+    _ramp_scalar(out, ramp, 0, 3, 0.32, 0.94)  # roughness correlated with rust
     metal_mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
-    _send(f"set_input\t{metal_mix}\t1\t{_floats([1,1,1,1])}")  # clean = metal
-    _send(f"set_input\t{metal_mix}\t2\t{_floats([0,0,0,1])}")  # rust = non-metal
-    _send(f"link\t{ramp}\t0\t{metal_mix}\t0")
-    _send(f"link\t{metal_mix}\t0\t{out}\t4")
+    _send(f"set_input\t{metal_mix}\t1\t{_floats([1,1,1,1])}"); _send(f"set_input\t{metal_mix}\t2\t{_floats([0,0,0,1])}")
+    _send(f"link\t{ramp}\t0\t{metal_mix}\t0"); _send(f"link\t{metal_mix}\t0\t{out}\t4")
 
-    # bump: fine noise gives micro relief, stronger where rust
-    bump = json.loads(_send("add_node\tBUMP"))["id"]
-    _send(f"set_input\t{bump}\t0\t{_floats([0.5])}")
-    _send(f"link\t{n_fine}\t0\t{bump}\t2")
-    _send(f"link\t{bump}\t0\t{out}\t5")
+    bump = json.loads(_send("add_node\tBUMP"))["id"]; _send(f"set_input\t{bump}\t0\t{_floats([0.6])}")
+    _send(f"link\t{n_fine}\t0\t{bump}\t2"); _send(f"link\t{bump}\t0\t{out}\t5")
 
     r = _send("commit_material", read_timeout=60)
     if bake:
