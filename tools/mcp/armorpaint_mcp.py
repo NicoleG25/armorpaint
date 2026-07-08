@@ -561,6 +561,26 @@ def ap_material_painted_scratched(
 # --- brush painting (hand-placed detail) ------------------------------------
 
 @mcp.tool()
+def ap_paint_color(color_hex: str, roughness: float = 0.5, metallic: float = 0.0) -> str:
+    """Set the brush paint color (+ roughness/metallic). The brush stamps the active
+    material's output, so this reduces the material to a solid color. color_hex is
+    RRGGBB or AARRGGBB. Call before ap_paint_dab/ap_paint_stroke; change it mid-stroke
+    to paint multiple colors."""
+    h = color_hex.lstrip("#")
+    if len(h) == 8:
+        h = h[2:]  # drop alpha for RRGGBB
+    return _send(f"paint_color\t{h}\t{roughness}\t{metallic}", read_timeout=30)
+
+
+@mcp.tool()
+def ap_bake(bake_type: int = 0) -> str:
+    """Bake mesh-derived data into the current layer as a real 3D mask: 0 curvature
+    (edges), 3 height, 10 occlusion (AO / cavity dirt). Better than the GEOMETRY node's
+    screen-space pointiness. Use the baked layer as a wear/dirt mask."""
+    return _send(f"bake\t{bake_type}", read_timeout=60)
+
+
+@mcp.tool()
 def ap_paint_dab(u: float, v: float, radius: float = 0.25, opacity: float = 1.0, mode: int = 0) -> str:
     """Stamp the brush once onto the current paint layer. mode 0 = 3D (u,v are
     normalized screen coords 0..1; the brush raycasts onto the mesh in the viewport),
@@ -570,16 +590,29 @@ def ap_paint_dab(u: float, v: float, radius: float = 0.25, opacity: float = 1.0,
 
 
 @mcp.tool()
-def ap_paint_stroke(points: list[list[float]], radius: float = 0.2, opacity: float = 1.0, mode: int = 0) -> str:
-    """Paint a stroke as a sequence of dabs. points is a list of [u,v] (screen coords
-    for mode 0). Dabs are spaced one render frame apart. Use many close points for a
-    continuous line."""
-    n = 0
-    for p in points:
-        _send(f"paint_dab\t{p[0]}\t{p[1]}\t{radius}\t{opacity}\t{mode}")
-        time.sleep(0.11)  # one dab per rendered frame
-        n += 1
-    return json.dumps({"dabs": n})
+def ap_paint_stroke(
+    points: list[list[float]],
+    radius: float = 0.15,
+    opacity: float = 1.0,
+    mode: int = 0,
+    colors: list[str] = None,
+) -> str:
+    """Paint a CONTINUOUS brush stroke through points (a list of [u,v], screen coords
+    for mode 0) — real brushing, connected segments, not isolated dots. Moves to the
+    first point, then draws a connected segment to each next point (one render frame
+    each). Optional colors is a per-point list of hex RRGGBB to blend color along the
+    stroke (a gradient); it calls paint_color before each segment."""
+    if not points:
+        return json.dumps({"segments": 0})
+    _send(f"paint_move\t{points[0][0]}\t{points[0][1]}")
+    segs = 0
+    for i, p in enumerate(points[1:], start=1):
+        if colors and i - 1 < len(colors):
+            _send(f"paint_color\t{colors[i-1].lstrip('#')[-6:]}\t0.4\t0.0", read_timeout=30)
+        _send(f"paint_to\t{p[0]}\t{p[1]}\t{radius}\t{opacity}\t{mode}")
+        time.sleep(0.11)  # one segment per rendered frame
+        segs += 1
+    return json.dumps({"segments": segs})
 
 
 # --- real scanned textures (the realism path) -------------------------------
@@ -640,6 +673,113 @@ def ap_material_from_pbr_set(
         nm = json.loads(_send("add_node\tNORMAL_MAP"))["id"]
         _send(f"link\t{n}\t0\t{nm}\t1")   # image color -> normal map input
         _send(f"link\t{nm}\t0\t{out}\t5")  # -> output normal
+    r = _send("commit_material", read_timeout=60)
+    if bake:
+        r += " | " + _send("material_fill_layer", read_timeout=40)
+    return r
+
+
+@mcp.tool()
+def ap_material_rusted_metal(
+    steel_hex: str = "ff3a3d42",
+    rust_dark_hex: str = "ff4a2a16",
+    rust_light_hex: str = "ff8a4a24",
+    rust_coverage: float = 0.5,
+    macro_scale: float = 3.0,
+    fine_scale: float = 13.0,
+    bake=True,
+) -> str:
+    """Realistic rusted metal, fully procedural (no imported textures). Layers a macro
+    noise (rust patches, ramped for coverage) with a fine noise (grain), and drives
+    color, roughness, metallic AND normal from a shared rust mask so they stay
+    correlated (rust is redder, rougher, non-metallic, and bumpier than the steel).
+    rust_coverage 0..1 shifts how much rust. Shows how to reach realism from scratch."""
+    steel = _hex_to_rgba(steel_hex)
+    rust_d, rust_l = _hex_to_rgba(rust_dark_hex), _hex_to_rgba(rust_light_hex)
+    out = json.loads(_send("clear_material"))["output_id"]
+
+    n_macro = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+    _send(f"set_input\t{n_macro}\t1\t{_floats([macro_scale])}")
+    n_fine = json.loads(_send("add_node\tTEX_NOISE"))["id"]
+    _send(f"set_input\t{n_fine}\t1\t{_floats([fine_scale])}")
+
+    # rust mask = ramp(macro noise); ramp stops set by coverage (sharp-ish transition)
+    ramp = json.loads(_send("add_node\tVALTORGB"))["id"]
+    _send(f"link\t{n_macro}\t0\t{ramp}\t0")
+    lo = max(0.0, rust_coverage - 0.12)
+    hi = min(1.0, rust_coverage + 0.12)
+    _send(f"set_button\t{ramp}\t0\t{_floats([0,0,0,1, lo,  1,1,1,1, hi])}")
+
+    # rust color = mix(dark, light) by fine noise -> varied rust
+    rust_mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
+    _send(f"set_input\t{rust_mix}\t1\t{_floats(rust_d)}")
+    _send(f"set_input\t{rust_mix}\t2\t{_floats(rust_l)}")
+    _send(f"link\t{n_fine}\t0\t{rust_mix}\t0")
+
+    # base = mix(steel, rust_color) by rust mask
+    base_mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
+    _send(f"set_input\t{base_mix}\t1\t{_floats(steel)}")
+    _send(f"link\t{rust_mix}\t0\t{base_mix}\t2")
+    _send(f"link\t{ramp}\t0\t{base_mix}\t0")
+    _send(f"link\t{base_mix}\t0\t{out}\t0")
+
+    # roughness: steel smoother, rust rougher, driven by the same mask
+    _ramp_scalar(out, ramp, 0, 3, 0.35, 0.92)
+
+    # metallic: steel metal, rust not — invert the mask via mix(white, black)
+    metal_mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
+    _send(f"set_input\t{metal_mix}\t1\t{_floats([1,1,1,1])}")  # clean = metal
+    _send(f"set_input\t{metal_mix}\t2\t{_floats([0,0,0,1])}")  # rust = non-metal
+    _send(f"link\t{ramp}\t0\t{metal_mix}\t0")
+    _send(f"link\t{metal_mix}\t0\t{out}\t4")
+
+    # bump: fine noise gives micro relief, stronger where rust
+    bump = json.loads(_send("add_node\tBUMP"))["id"]
+    _send(f"set_input\t{bump}\t0\t{_floats([0.5])}")
+    _send(f"link\t{n_fine}\t0\t{bump}\t2")
+    _send(f"link\t{bump}\t0\t{out}\t5")
+
+    r = _send("commit_material", read_timeout=60)
+    if bake:
+        r += " | " + _send("material_fill_layer", read_timeout=40)
+    return r
+
+
+@mcp.tool()
+def ap_material_worn_edges(
+    clean_hex: str = "ff33363c",
+    worn_hex: str = "ffb0aea6",
+    clean_rough: float = 0.5,
+    worn_rough: float = 0.35,
+    metallic: float = 1.0,
+    mask_type: int = 0,
+    bake: bool = True,
+) -> str:
+    """Realistic worn metal driven by a baked mesh mask: bakes curvature (mask_type 0)
+    or occlusion (10), then mixes clean<->worn base color and roughness by that mask so
+    edges show bare/worn metal (curvature) or cavities collect dirt (occlusion). This
+    is the grunge payoff that procedural noise alone can't do — it follows the geometry."""
+    import tempfile
+    clean, worn = _hex_to_rgba(clean_hex), _hex_to_rgba(worn_hex)
+    # 1. bake the mask into a layer and export it
+    _send("new_project\t0", 20); time.sleep(1.5)
+    _send(f"bake\t{mask_type}", 30); time.sleep(1.0)
+    maskdir = tempfile.mkdtemp(prefix="ap_mask_")
+    _send(f"export_textures\tpng\tbase_color\t{maskdir}", 40); time.sleep(0.5)
+    maskpng = os.path.join(maskdir, "untitled_base.png")
+    if not os.path.exists(maskpng):
+        return "ERR: mask bake/export failed"
+    # 2. build the worn material using the mask
+    _send("new_project\t0", 20); time.sleep(1.5)
+    out = json.loads(_send("clear_material"))["output_id"]
+    m = _image_node(maskpng, 1)  # linear mask
+    mix = json.loads(_send("add_node\tMIX_RGB"))["id"]
+    _send(f"set_input\t{mix}\t1\t{_floats(clean)}")
+    _send(f"set_input\t{mix}\t2\t{_floats(worn)}")
+    _send(f"link\t{m}\t0\t{mix}\t0")     # mask -> mix factor
+    _send(f"link\t{mix}\t0\t{out}\t0")   # -> base color
+    _ramp_scalar(out, m, 0, 3, worn_rough, clean_rough)  # roughness by mask
+    _send(f"set_input\t{out}\t4\t{_floats([metallic])}")
     r = _send("commit_material", read_timeout=60)
     if bake:
         r += " | " + _send("material_fill_layer", read_timeout=40)

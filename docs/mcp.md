@@ -75,6 +75,26 @@ primitives `ap_add_node`/`ap_set_node_input`/`ap_set_node_output`/`ap_set_node_b
 The FAULTLINE importer (ArmorPaintMaterialImporter.Build(name, tiling, maxSize))
 takes a UV tiling and a max texture size for texel density / VRAM control.
 
+### Realism from scratch (no imports)
+
+Pure single-noise recipes read as stylized. Realistic *procedural* materials come from
+technique, not scanned maps:
+- **Layer noise octaves** — a macro noise (patches/blotches) + a fine noise (grain);
+  real surfaces have variation at multiple scales.
+- **Correlate the PBR channels** — drive base color, roughness, metallic AND bump from
+  ONE shared mask so they move together (rust is redder AND rougher AND non-metallic
+  AND bumpier; clean metal is darker AND smoother AND reflective). Uncorrelated channels
+  are the tell of a fake material.
+- **Tame with color ramps** — VALTORGB remaps a 0..1 noise into a controlled coverage /
+  contrast range instead of full-swing.
+- **Bake-driven wear** — curvature/occlusion bakes are computed from the mesh (still
+  from scratch), so use them for edge wear + cavity dirt that follows the geometry.
+
+`ap_material_rusted_metal` is the worked example (macro+fine noise, a ramped rust mask
+driving color/rough/metal/bump); `ap_material_worn_edges` adds a baked mask. Same
+pattern extends to concrete, wood, fabric, etc. Verified: renders as believable rusted
+metal in URP.
+
 ### Realistic materials (real scanned textures)
 
 Procedural noise tops out at stylized. Photoreal comes from real scanned PBR maps,
@@ -102,9 +122,27 @@ coords; the brush raycasts onto the mesh via the rendered gbuffer — works head
 mode 1 = 2D (UV space; needs the 2D view). Each dab consumes one rendered frame
 (`pdirty`), so space calls ~one frame apart. Implementation: a `down` flag OR'd into
 the brush uniform (uniforms.c) makes the brush paint when `pdirty>0` without a real
-mouse. Bridge: `ap_paint_dab`, `ap_paint_stroke([[u,v],...])`. Verified: dabs stamp
-as clean brush circles on the mesh. Paint color is the active swatch (per-dab color
-control is future work).
+mouse. Continuous strokes: the paint shader fills the capsule between `last` and `current`,
+so `paint_move <u> <v>` (set start) then repeated `paint_to <u> <v>` (each paints a
+connected segment from the previous point) makes a real brush stroke — not isolated
+dots. Change `paint_color` between segments to blend color along the stroke (gradient).
+Bridge: `ap_paint_dab` (single stamp), `ap_paint_stroke([[u,v],...], colors=[...])`
+(continuous, optional per-point colors). Verified: a dense stroke paints a solid
+connected line with a red->yellow gradient.
+
+Brush color: the brush stamps the ACTIVE MATERIAL's output color (make_paint.c
+out_basecol), not a swatch. `paint_color <hex> [rough] [metal]` reduces the material to
+a solid color so painting paints it; change it between dabs to paint multiple colors
+(verified blue + red). Bridge `ap_paint_color`. To brush a procedural/textured material,
+just set that material, then paint.
+
+### Baking mesh masks
+
+`bake <type>` bakes mesh-derived data into the current layer (a real 3D mask, unlike
+the GEOMETRY node's screen-space pointiness): 0 curvature (edges), 3 height, 10
+occlusion (AO / cavity dirt); sets tool=BAKE + bake_type, reparses the bake shader, and
+paints one frame. Bridge `ap_bake`. Use the baked layer as a wear/dirt mask driving
+roughness/mix. (Occlusion/thickness are raytrace bakes.)
 
 ### Building graphs incrementally
 
