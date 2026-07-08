@@ -23,6 +23,10 @@
 
 // --- shared state between socket thread and main thread ---------------------
 
+// When true, the brush "down" uniform follows pdirty instead of the real mouse, so
+// paint_dab can stamp the brush headlessly. Read by uniforms.c.
+bool mcp_paint_active = false;
+
 static pthread_mutex_t mcp_mutex = PTHREAD_MUTEX_INITIALIZER;
 static char           *mcp_inbox[MCP_MAX_QUEUE];
 static int             mcp_inbox_head = 0;
@@ -290,6 +294,55 @@ static void mcp_set_socket_values(ui_node_socket_t *sock, int argc, char **argv,
 // Import an image file into the project's texture assets so a TEX_IMAGE node can
 // reference it (button[0] indexes g_project->_->assets). Returns the asset index —
 // the realism path: use real scanned PBR maps instead of only procedural noise.
+// Stamp the brush at a UV coordinate on the current paint layer. The per-frame
+// render_path_paint_draw() paints whenever pdirty>0, so we set the coords + brush +
+// pdirty and mcp_paint_active (which makes the brush "down"); the next rendered frame
+// applies it. paint2d = paint straight onto the texture in UV space (no raycast).
+static void mcp_cmd_paint_dab(int argc, char **argv) {
+	// paint_dab <u> <v> [radius] [opacity]
+	if (argc < 3) {
+		mcp_reply("ERR\tusage: paint_dab <u> <v> [radius] [opacity]\n");
+		return;
+	}
+	f32 u = (f32)atof(argv[1]);
+	f32 v = (f32)atof(argv[2]);
+	if (argc > 3) {
+		g_context->brush_radius = (f32)atof(argv[3]);
+	}
+	if (argc > 4) {
+		g_context->brush_opacity = (f32)atof(argv[4]);
+	}
+	// mode: 0 = 3D (screen coords, raycast onto the mesh via the rendered gbuffer;
+	// works headlessly since the 3D viewport renders each frame). 1 = 2D (UV space;
+	// needs the 2D view render pass). Default 3D.
+	g_context->paint2d = (argc > 5) ? (atoi(argv[5]) == 1) : false;
+	g_context->tool    = TOOL_TYPE_BRUSH;
+	// A single dab: start == end so the stroke segment is a point.
+	g_context->paint_vec.x      = u;
+	g_context->paint_vec.y      = v;
+	g_context->last_paint_vec_x = u;
+	g_context->last_paint_vec_y = v;
+	g_context->last_paint_x     = u;
+	g_context->last_paint_y     = v;
+	g_context->pdirty           = 2;
+	mcp_paint_active            = true;
+	mcp_reply("OK\t{\"dab\":true}\n");
+}
+
+// Set the start point of a stroke without painting (so the next paint_dab draws a
+// segment from here to there instead of a lone dot).
+static void mcp_cmd_paint_move(int argc, char **argv) {
+	if (argc < 3) {
+		mcp_reply("ERR\tusage: paint_move <u> <v>\n");
+		return;
+	}
+	g_context->last_paint_vec_x = (f32)atof(argv[1]);
+	g_context->last_paint_vec_y = (f32)atof(argv[2]);
+	g_context->last_paint_x     = (f32)atof(argv[1]);
+	g_context->last_paint_y     = (f32)atof(argv[2]);
+	mcp_reply("OK\t{\"moved\":true}\n");
+}
+
 static void mcp_cmd_import_texture(int argc, char **argv) {
 	if (argc < 2) {
 		mcp_reply("ERR\tusage: import_texture <path>\n");
@@ -497,6 +550,12 @@ static void mcp_dispatch(char *line) {
 	}
 	else if (strcmp(cmd, "import_texture") == 0) {
 		mcp_cmd_import_texture(argc, argv);
+	}
+	else if (strcmp(cmd, "paint_dab") == 0) {
+		mcp_cmd_paint_dab(argc, argv);
+	}
+	else if (strcmp(cmd, "paint_move") == 0) {
+		mcp_cmd_paint_move(argc, argv);
 	}
 	else if (strcmp(cmd, "add_node") == 0) {
 		mcp_cmd_add_node(argc, argv);

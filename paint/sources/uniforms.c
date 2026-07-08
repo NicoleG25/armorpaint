@@ -254,9 +254,11 @@ vec4_t uniforms_ext_vec3_link(object_t *object, material_data_t *mat, char *link
 	return v;
 }
 
+extern bool mcp_paint_active; // mcp_server.c: headless brush painting
+
 vec4_t uniforms_ext_vec4_link(object_t *object, material_data_t *mat, char *link) {
 	if (string_equals(link, "_input_brush")) {
-		bool   down = mouse_down("left") || pen_down("tip");
+		bool   down = mouse_down("left") || pen_down("tip") || (mcp_paint_active && g_context->pdirty > 0);
 		vec4_t v    = (vec4_t){g_context->paint_vec.x, g_context->paint_vec.y, down ? 1.0 : 0.0, g_context->paint2d ? 1.0 : 0.0};
 		if (g_context->paint2d) {
 			v.x = uniforms_ext_vec2d(v.x);
@@ -265,7 +267,7 @@ vec4_t uniforms_ext_vec4_link(object_t *object, material_data_t *mat, char *link
 		return v;
 	}
 	else if (string_equals(link, "_input_brush_last")) {
-		bool   down = mouse_down("left") || pen_down("tip");
+		bool   down = mouse_down("left") || pen_down("tip") || (mcp_paint_active && g_context->pdirty > 0);
 		vec4_t v    = (vec4_t){g_context->last_paint_vec_x, g_context->last_paint_vec_y, down ? 1.0 : 0.0, g_context->paint2d ? 1.0 : 0.0};
 		if (g_context->paint2d) {
 			v.x = uniforms_ext_vec2d(v.x);
